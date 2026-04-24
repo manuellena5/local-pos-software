@@ -1,5 +1,20 @@
 {
   "permissions": {
-    "allow": ["Bash(npm install *)", "Bash(npm show *)", "Bash(npm run *)"]
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm show *)",
+      "Bash(npm run *)",
+      "Bash(npx tsx *)",
+      "Bash(curl -s http://localhost:3001/api/config)",
+      "Bash(curl -s http://localhost:3001/api/business-units)",
+      "Bash(kill %1)",
+      "Bash(npx electron-rebuild *)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://localhost:3001/api/config echo \"\" echo \"=== GET /api/business-units ===\")",
+      "Bash(curl -s http://localhost:3001/api/business-units echo \"\" echo \"=== POST valid ===\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/business-units -H \"Content-Type: application/json\" -d '{\"name\":\"Test\",\"moduleId\":\"retail-general\",\"invoicePrefix\":\"C\"}' echo \"\" echo \"=== POST invalid moduleId ===\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/business-units -H \"Content-Type: application/json\" -d '{\"name\":\"Test\",\"moduleId\":\"modulo-inexistente\"}' echo \"\" echo \"=== PATCH /api/config ===\")",
+      "Bash(curl -s -X PATCH http://localhost:3001/api/config -H \"Content-Type: application/json\" -d '{\"businessName\":\"Espacio BIP\",\"cuit\":\"20000000000\"}' echo \"\" kill %1)"
+    ]
   }
 }

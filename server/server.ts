@@ -3,8 +3,12 @@ import cors from 'cors';
 import type { Application } from 'express';
 import { LOCALPOS_VERSION } from '../shared/constants';
 import { errorHandler } from './middleware/errorHandler';
+import { initDatabase } from './db/init';
+import { createCoreRouter } from './core/router';
 
 export function createApp(): Application {
+  initDatabase();
+
   const app = express();
 
   app.use(cors({ origin: 'http://localhost:5173' }));
@@ -13,6 +17,8 @@ export function createApp(): Application {
   app.get('/api/health', (_req, res) => {
     res.json({ data: { status: 'ok', version: LOCALPOS_VERSION }, error: null });
   });
+
+  app.use(createCoreRouter());
 
   app.use(errorHandler);
 

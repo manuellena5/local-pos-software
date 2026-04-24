@@ -1,6 +1,5 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { startServer } from '../server/server';
 
 const DEV_URL = 'http://localhost:5173';
 const SERVER_PORT = Number(process.env.SERVER_PORT) || 3001;
@@ -24,8 +23,14 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
-  startServer(SERVER_PORT);
+app.whenReady().then(async () => {
+  // In dev, the server runs via `npm run dev:server` (system Node.js).
+  // Dynamic import prevents better-sqlite3 from loading into Electron's
+  // Node.js (ABI mismatch) during development.
+  if (app.isPackaged) {
+    const { startServer } = await import('../server/server');
+    startServer(SERVER_PORT);
+  }
   createWindow();
 
   app.on('activate', () => {

@@ -20,6 +20,16 @@ export interface BusinessUnit {
   updatedAt: string;
 }
 
+export interface User {
+  id: number;
+  installationId: number;
+  email: string;
+  role: 'admin' | 'cashier';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ApiResponse<T> {
   data: T;
   error: null;
