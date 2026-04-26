@@ -42,3 +42,48 @@ export interface ApiErrorResponse {
     message: string;
   };
 }
+
+export interface Product {
+  id: number;
+  businessUnitId: number;
+  name: string;
+  description: string | null;
+  category: string | null;
+  sku: string;
+  costPrice: number;
+  basePrice: number;
+  taxRate: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockItem {
+  id: number;
+  productId: number;
+  businessUnitId: number;
+  quantity: number;
+  minimumThreshold: number;
+  updatedAt: string;
+}
+
+export interface StockMovement {
+  id: number;
+  stockItemId: number;
+  businessUnitId: number;
+  type: 'entry' | 'sale' | 'adjustment';
+  quantity: number;
+  reason: string;
+  userId: number | null;
+  createdAt: string;
+}
+
+export interface StockSummary {
+  productId: number;
+  name: string;
+  sku: string;
+  currentQuantity: number;
+  minimumThreshold: number;
+  status: 'ok' | 'low' | 'out';
+  lastUpdated: string;
+}

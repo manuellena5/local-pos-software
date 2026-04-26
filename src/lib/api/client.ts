@@ -17,7 +17,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
-  const body = (await res.json()) as ApiResponse<T> | ApiErrorResponse;
+
+  if (!res.ok) {
+    throw new ApiError(
+      'HTTP_ERROR',
+      `HTTP ${res.status}: ${res.statusText} on ${path}`
+    );
+  }
+
+  let body: ApiResponse<T> | ApiErrorResponse;
+  try {
+    body = (await res.json()) as ApiResponse<T> | ApiErrorResponse;
+  } catch (err) {
+    throw new ApiError(
+      'PARSE_ERROR',
+      `Failed to parse JSON response from ${path}`
+    );
+  }
+
   if (body.error !== null) {
     throw new ApiError(body.error.code, body.error.message);
   }

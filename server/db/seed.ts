@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { db } from './connection';
 import { initDatabase } from './init';
 import { installationConfig, businessUnits, users } from './schema';
+import { seedProductsAndStock } from './seeds/02_products_and_stock.seed';
 
 initDatabase();
 
@@ -55,3 +56,6 @@ console.log('[Seed]   Installation: Espacio BIP');
 console.log('[Seed]   BU 1: Front (retail-textil)');
 console.log('[Seed]   BU 2: Back (taller-medida)');
 console.log('[Seed]   Usuario: admin@espaciobip.com / admin123');
+
+// Seed products and stock
+seedProductsAndStock();

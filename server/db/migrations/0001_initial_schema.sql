@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS "business_units" (
   "invoice_prefix"      TEXT    NOT NULL DEFAULT 'A',
   "last_invoice_number" INTEGER NOT NULL DEFAULT 0,
   "created_at"          TEXT    NOT NULL DEFAULT (datetime('now')),
-  "updated_at"          TEXT    NOT NULL DEFAULT (datetime('now'))
+  "updated_at"          TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE("installation_id", "name")
 );
 
 CREATE INDEX IF NOT EXISTS "bu_installation_idx" ON "business_units" ("installation_id");

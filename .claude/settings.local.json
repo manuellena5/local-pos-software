@@ -14,7 +14,21 @@
       "Bash(curl -s http://localhost:3001/api/business-units echo \"\" echo \"=== POST valid ===\")",
       "Bash(curl -s -X POST http://localhost:3001/api/business-units -H \"Content-Type: application/json\" -d '{\"name\":\"Test\",\"moduleId\":\"retail-general\",\"invoicePrefix\":\"C\"}' echo \"\" echo \"=== POST invalid moduleId ===\")",
       "Bash(curl -s -X POST http://localhost:3001/api/business-units -H \"Content-Type: application/json\" -d '{\"name\":\"Test\",\"moduleId\":\"modulo-inexistente\"}' echo \"\" echo \"=== PATCH /api/config ===\")",
-      "Bash(curl -s -X PATCH http://localhost:3001/api/config -H \"Content-Type: application/json\" -d '{\"businessName\":\"Espacio BIP\",\"cuit\":\"20000000000\"}' echo \"\" kill %1)"
+      "Bash(curl -s -X PATCH http://localhost:3001/api/config -H \"Content-Type: application/json\" -d '{\"businessName\":\"Espacio BIP\",\"cuit\":\"20000000000\"}' echo \"\" kill %1)",
+      "Bash(curl -s \"http://localhost:3001/api/products?businessUnitId=1\")",
+      "Bash(curl -s \"http://localhost:3001/api/stock/summary?businessUnitId=1\")",
+      "Bash(pkill -f \"tsx.*server\")",
+      "Bash(pkill -9 node electron tsx)",
+      "Bash(cat)",
+      "Bash(node /tmp/check_db.js)",
+      "Bash(sqlite3 localpos.db \"SELECT id, name, isActive FROM business_units;\")",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "mcp__Claude_in_Chrome__read_network_requests",
+      "Bash(curl -s http://localhost:5173)"
     ]
   }
 }
