@@ -4,12 +4,13 @@ import { useAppStore } from '@/core/store/appStore';
 import { BusinessUnitSelector } from '@/core/business-units/BusinessUnitSelector';
 import { ProductList } from '@/core/components/ProductList';
 import { StockDashboard } from '@/core/components/StockDashboard';
+import { POSPage } from '@/core/components/POSPage';
 
 export function App() {
   const { loading, error } = useBootstrap();
   const config = useAppStore((s) => s.config);
   const activeBU = useAppStore((s) => s.activeBU);
-  const [tab, setTab] = useState<'dashboard' | 'productos'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'productos' | 'pos'>('dashboard');
 
   if (loading) {
     return (
@@ -72,11 +73,22 @@ export function App() {
           >
             Productos
           </button>
+          <button
+            onClick={() => setTab('pos')}
+            className={`px-4 py-2 font-medium text-sm border-b-2 ${
+              tab === 'pos'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            💰 Punto de venta
+          </button>
         </div>
 
         <div className="bg-white rounded-xl shadow p-6">
           {tab === 'dashboard' && <StockDashboard businessUnitId={activeBU.id} />}
           {tab === 'productos' && <ProductList businessUnitId={activeBU.id} />}
+          {tab === 'pos' && <POSPage businessUnitId={activeBU.id} />}
         </div>
       </main>
     </div>

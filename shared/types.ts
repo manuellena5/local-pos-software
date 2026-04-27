@@ -87,3 +87,57 @@ export interface StockSummary {
   status: 'ok' | 'low' | 'out';
   lastUpdated: string;
 }
+
+export interface PaymentMethod {
+  method: string;
+  amount: number;
+}
+
+export interface Sale {
+  id: number;
+  businessUnitId: number;
+  userId: number | null;
+  saleNumber: number;
+  subtotal: number;
+  discountAmount: number;
+  discountPercent: number;
+  taxableAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  paymentMethods: PaymentMethod[];
+  status: 'completed' | 'cancelled';
+  invoiceNumber: string | null;
+  createdAt: string;
+}
+
+export interface SaleItem {
+  id: number;
+  saleId: number;
+  productId: number;
+  /** Snapshot del nombre al momento de la venta */
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate: number;
+  discountPercent: number;
+  lineTotal: number;
+  createdAt: string;
+}
+
+// Estado local del carrito — NO se persiste en DB
+export interface CartItem {
+  productId: number;
+  name: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate: number;
+  discountPercent: number;
+  lineTotal: number;
+}
+
+export interface SaleWithItems {
+  sale: Sale;
+  items: SaleItem[];
+}

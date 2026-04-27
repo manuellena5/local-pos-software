@@ -1,3 +1,4 @@
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../connection';
 import { products, stockItems, stockMovements } from '../schema';
 
@@ -5,6 +6,17 @@ export function seedProductsAndStock(): void {
   // BU IDs from seed 01: Front=1, Back=2
   const BU_FRONT = 1;
   const BU_BACK = 2;
+
+  // Idempotente: saltar si ya hay productos en BU_FRONT
+  const existing = db
+    .select({ count: sql<number>`count(*)` })
+    .from(products)
+    .where(eq(products.businessUnitId, BU_FRONT))
+    .all();
+  if ((existing[0]?.count ?? 0) > 0) {
+    console.log('[Seed] Products & Stock: already seeded, skipping');
+    return;
+  }
 
   // ========== FRONT (Retail Textil) ==========
   const frontProducts = [

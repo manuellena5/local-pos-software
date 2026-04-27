@@ -61,7 +61,11 @@ export function StockDashboard({ businessUnitId }: { businessUnitId: number }) {
             </tr>
           ) : (
             summary
-              .sort((a, b) => (a.status === 'out' ? -1 : 1))
+              .slice()
+              .sort((a, b) => {
+                const order = { out: 0, low: 1, ok: 2 } as const;
+                return order[a.status] - order[b.status];
+              })
               .map((item) => (
                 <tr key={item.productId} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-2">{item.name}</td>

@@ -28,7 +28,8 @@
       "mcp__Claude_in_Chrome__computer",
       "mcp__Claude_in_Chrome__read_console_messages",
       "mcp__Claude_in_Chrome__read_network_requests",
-      "Bash(curl -s http://localhost:5173)"
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(curl -s -X POST 'http://localhost:3001/api/sales/confirm?businessUnitId=1' -H 'Content-Type: application/json' -d '{ *)"
     ]
   }
 }

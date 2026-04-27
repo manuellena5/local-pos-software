@@ -19,10 +19,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    throw new ApiError(
-      'HTTP_ERROR',
-      `HTTP ${res.status}: ${res.statusText} on ${path}`
-    );
+    // Intentar leer el mensaje del servidor antes de lanzar el error
+    try {
+      const errBody = (await res.json()) as ApiErrorResponse;
+      if (errBody.error?.message) {
+        throw new ApiError(errBody.error.code ?? 'HTTP_ERROR', errBody.error.message);
+      }
+    } catch (inner) {
+      if (inner instanceof ApiError) throw inner;
+    }
+    throw new ApiError('HTTP_ERROR', `Error ${res.status}: ${res.statusText}`);
   }
 
   let body: ApiResponse<T> | ApiErrorResponse;

@@ -1,4 +1,4 @@
-import { eq, and, like } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../../db/connection';
 import { products } from '../../db/schema';
 import type { Product } from '../../../shared/types';
@@ -81,18 +81,19 @@ export class ProductRepository {
   }
 
   search(businessUnitId: number, query: string): Product[] {
-    const searchPattern = `%${query}%`;
-    return db
-      .select()
-      .from(products)
-      .where(
-        and(
-          eq(products.businessUnitId, businessUnitId),
-          eq(products.isActive, true),
-          like(products.name, searchPattern)
-        )
-      )
-      .all();
+    // Fetch all active products for the BU and filter in JS so that
+    // accent-normalized matching works (SQLite LIKE is ASCII-only).
+    const all = this.getAll(businessUnitId);
+    /* strip combining diacritical marks (accents) then lowercase */
+    const strip = /\p{Mn}/gu;
+    const normalize = (s: string) => s.normalize('NFD').replace(strip, '').toLowerCase();
+    const q = normalize(query);
+    return all.filter(
+      (p) =>
+        normalize(p.name).includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        normalize(p.category ?? '').includes(q)
+    );
   }
 
   getBySkuInBU(sku: string, businessUnitId: number): Product | null {
