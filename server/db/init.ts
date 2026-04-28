@@ -10,6 +10,7 @@ export function initDatabase(): void {
     '0003_sales_and_sale_items.sql',
     '0004_sale_items_product_name.sql',
     '0005_products_sku_unique_idx.sql',
+    '0006_afip_fields.sql',
   ];
 
   for (const migration of migrations) {

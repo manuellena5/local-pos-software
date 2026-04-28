@@ -5,6 +5,7 @@ import { BusinessUnitSelector } from '@/core/business-units/BusinessUnitSelector
 import { ProductList } from '@/core/components/ProductList';
 import { StockDashboard } from '@/core/components/StockDashboard';
 import { POSPage } from '@/core/components/POSPage';
+import { InvoiceQueueStatus } from '@/core/components/InvoiceQueueStatus';
 
 export function App() {
   const { loading, error } = useBootstrap();
@@ -48,7 +49,10 @@ export function App() {
             {activeBU.name} — {activeBU.moduleId}
           </p>
         </div>
-        <BusinessUnitSelector />
+        <div className="flex items-center gap-3">
+          <InvoiceQueueStatus businessUnitId={activeBU?.id} />
+          <BusinessUnitSelector />
+        </div>
       </header>
 
       <main className="p-6 max-w-6xl mx-auto">

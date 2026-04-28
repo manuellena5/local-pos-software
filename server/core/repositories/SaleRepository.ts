@@ -169,4 +169,34 @@ export class SaleRepository {
       };
     })();
   }
+
+  /**
+   * Actualiza los campos AFIP en una venta existente.
+   * Llamado por InvoiceQueueService tras recibir respuesta de AFIP.
+   */
+  updateInvoiceFields(
+    saleId: number,
+    fields: {
+      invoiceNumber?: string;
+      cae?: string;
+      caeExpiration?: string;
+      invoiceStatus: 'pending' | 'issued' | 'error' | 'failed';
+      invoiceError?: string | null;
+      invoiceAttempts: number;
+      lastInvoiceAttemptAt: string;
+    }
+  ): void {
+    db.update(sales)
+      .set({
+        invoiceNumber: fields.invoiceNumber ?? null,
+        cae: fields.cae ?? null,
+        caeExpiration: fields.caeExpiration ?? null,
+        invoiceStatus: fields.invoiceStatus,
+        invoiceError: fields.invoiceError ?? null,
+        invoiceAttempts: fields.invoiceAttempts,
+        lastInvoiceAttemptAt: fields.lastInvoiceAttemptAt,
+      })
+      .where(eq(sales.id, saleId))
+      .run();
+  }
 }

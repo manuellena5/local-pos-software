@@ -50,6 +50,37 @@ export interface ConfirmSaleRequest {
   paymentMethods: Array<{ method: string; amount: number }>;
 }
 
+// ── Fase 4: AFIP ─────────────────────────────────────────────────────────────
+
+export interface AFIPCredentials {
+  cuit: string;
+  certPath: string;
+  keyPath: string;
+  environment: 'testing' | 'production' | 'mock';
+}
+
+export interface AFIPInvoiceRequest {
+  saleId: number;
+  businessUnitId: number;
+  invoiceType: 'B' | 'C';
+  pointOfSale: number;
+  totalAmount: number;
+  taxableAmount: number;
+  taxAmount: number;
+  taxRate: number;
+  /** YYYYMMDD */
+  date: string;
+}
+
+export interface AFIPInvoiceResponse {
+  success: boolean;
+  cae?: string;
+  /** YYYYMMDD */
+  caeExpiration?: string;
+  invoiceNumber?: string;
+  error?: string;
+}
+
 // DTO completo que SaleRepository recibe (ya con cálculos hechos)
 export interface CreateSaleRequest {
   businessUnitId: number;

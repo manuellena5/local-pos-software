@@ -5,6 +5,7 @@ import { LOCALPOS_VERSION } from '../shared/constants';
 import { errorHandler } from './middleware/errorHandler';
 import { initDatabase } from './db/init';
 import { createCoreRouter } from './core/router';
+import { startInvoiceProcessor } from './jobs/invoiceProcessor';
 
 export function createApp(): Application {
   initDatabase();
@@ -21,6 +22,9 @@ export function createApp(): Application {
   app.use(createCoreRouter());
 
   app.use(errorHandler);
+
+  // Fase 4: Arrancar cron de facturación AFIP
+  startInvoiceProcessor();
 
   return app;
 }

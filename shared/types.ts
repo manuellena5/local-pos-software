@@ -108,7 +108,32 @@ export interface Sale {
   paymentMethods: PaymentMethod[];
   status: 'completed' | 'cancelled';
   invoiceNumber: string | null;
+  cae: string | null;
+  caeExpiration: string | null;
+  invoiceStatus: 'pending' | 'issued' | 'error' | 'failed';
+  invoiceError: string | null;
+  invoiceAttempts: number;
+  lastInvoiceAttemptAt: string | null;
   createdAt: string;
+}
+
+export interface PendingInvoice {
+  id: number;
+  saleId: number;
+  businessUnitId: number;
+  invoiceType: 'B' | 'C';
+  retryCount: number;
+  lastRetryAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface AFIPResult {
+  success: boolean;
+  cae?: string;
+  caeExpiration?: string;
+  invoiceNumber?: string;
+  error?: string;
 }
 
 export interface SaleItem {

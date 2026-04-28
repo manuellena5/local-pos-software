@@ -112,6 +112,26 @@ export function POSReceiptModal({ sale, onClose }: POSReceiptModalProps) {
             ))}
           </div>
 
+          {/* Factura electrónica AFIP */}
+          <div className="border-t border-dashed border-gray-300 my-2" />
+          <div className="text-xs text-center space-y-0.5">
+            {s.invoiceStatus === 'issued' && s.cae ? (
+              <>
+                <p className="font-medium text-gray-700">
+                  {s.invoiceNumber ?? 'Factura emitida'}
+                </p>
+                <p className="text-gray-500">CAE: {s.cae}</p>
+                {s.caeExpiration && (
+                  <p className="text-gray-400">Vto CAE: {s.caeExpiration}</p>
+                )}
+              </>
+            ) : s.invoiceStatus === 'failed' || s.invoiceStatus === 'error' ? (
+              <p className="text-red-500">⚠ Error de facturación AFIP</p>
+            ) : (
+              <p className="text-yellow-600">🕐 Factura pendiente de emisión</p>
+            )}
+          </div>
+
           <div className="text-center text-xs text-gray-400 mt-4">
             ¡Gracias por su compra!
           </div>

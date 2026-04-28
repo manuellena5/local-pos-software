@@ -3,10 +3,11 @@ import { SaleRepository } from '../repositories/SaleRepository';
 import { SalesService } from '../services/SalesService';
 import { SalesController } from '../controllers/SalesController';
 import { ProductRepository } from '../repositories/ProductRepository';
+import { invoiceQueueService } from './invoices.routes';
 
 const saleRepo = new SaleRepository();
 const productRepo = new ProductRepository();
-const service = new SalesService(saleRepo, productRepo);
+const service = new SalesService(saleRepo, productRepo, invoiceQueueService);
 const controller = new SalesController(service);
 
 export const salesRouter = Router();

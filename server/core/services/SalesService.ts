@@ -2,12 +2,17 @@ import type { SaleWithItems } from '../../../shared/types';
 import type { ConfirmSaleRequest, SaleItemInput } from '../types';
 import type { SaleRepository } from '../repositories/SaleRepository';
 import type { ProductRepository } from '../repositories/ProductRepository';
+import type { InvoiceQueueService } from './InvoiceQueueService';
 import { NotFoundError, ValidationError, BusinessRuleError } from '../../lib/errors';
+import { logger } from '../../lib/logger';
+
+const CTX = 'SalesService';
 
 export class SalesService {
   constructor(
     private readonly saleRepo: SaleRepository,
-    private readonly productRepo: ProductRepository
+    private readonly productRepo: ProductRepository,
+    private readonly invoiceQueueService?: InvoiceQueueService,
   ) {}
 
   /**
@@ -139,7 +144,7 @@ export class SalesService {
     this.validatePaymentMethods(data.paymentMethods, totals.totalAmount);
 
     // Persistir en transacción (el repo maneja el rollback)
-    return this.saleRepo.create({
+    const result = this.saleRepo.create({
       businessUnitId: data.businessUnitId,
       userId: data.userId,
       items: itemInputs,
@@ -147,6 +152,18 @@ export class SalesService {
       taxRate,
       paymentMethods: data.paymentMethods,
     });
+
+    // ── Fase 4: Intentar facturación AFIP de forma no bloqueante ─────────────
+    if (this.invoiceQueueService) {
+      this.invoiceQueueService.tryIssueAfterSale(result.sale).catch((err: unknown) => {
+        logger.error(CTX, 'Unhandled error in tryIssueAfterSale', {
+          saleId: result.sale.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
+
+    return result;
   }
 
   getAllSales(businessUnitId: number) {

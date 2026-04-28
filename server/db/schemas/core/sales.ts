@@ -22,8 +22,38 @@ export const sales = sqliteTable('sales', {
   status: text('status', { enum: ['completed', 'cancelled'] })
     .notNull()
     .default('completed'),
-  // Reservado para Fase 4 (AFIP)
+  // ── Fase 4: Facturación AFIP ─────────────────────────────────────────────
+  /** Número de comprobante — ej: "B-0001-00000001" */
   invoiceNumber: text('invoice_number'),
+
+  /** Código de Autorización Electrónica (14 dígitos) */
+  cae: text('cae'),
+
+  /** Fecha de vencimiento del CAE (formato YYYYMMDD de AFIP, almacenado como texto) */
+  caeExpiration: text('cae_expiration'),
+
+  /**
+   * Estado de facturación:
+   * - pending : venta registrada, aún no facturada
+   * - issued  : CAE obtenido, factura emitida
+   * - error   : AFIP devolvió error de validación (no reintentable)
+   * - failed  : agotó reintentos (3x), requiere intervención manual
+   */
+  invoiceStatus: text('invoice_status', {
+    enum: ['pending', 'issued', 'error', 'failed'],
+  })
+    .notNull()
+    .default('pending'),
+
+  /** Mensaje de error de AFIP si invoiceStatus = 'error' | 'failed' */
+  invoiceError: text('invoice_error'),
+
+  /** Cantidad de intentos de facturación realizados */
+  invoiceAttempts: integer('invoice_attempts').notNull().default(0),
+
+  /** Timestamp del último intento */
+  lastInvoiceAttemptAt: text('last_invoice_attempt_at'),
+
   createdAt: text('created_at')
     .notNull()
     .default(sql`(datetime('now'))`),
