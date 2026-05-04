@@ -10,6 +10,7 @@ import { CustomerList } from '@/core/components/CustomerList';
 import { CashboxPage } from '@/core/components/CashboxPage';
 import { CashboxStatus } from '@/core/components/CashboxStatus';
 import { ReportsPage } from '@/core/components/ReportsPage';
+import { NetworkStatusBar } from '@/core/components/NetworkStatusBar';
 
 type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'reportes';
 
@@ -67,6 +68,7 @@ export function App() {
         <div className="flex items-center gap-3">
           <CashboxStatus businessUnitId={activeBU?.id} onGoToCashbox={() => setTab('caja')} />
           <InvoiceQueueStatus businessUnitId={activeBU?.id} />
+          <NetworkStatusBar />
           <BusinessUnitSelector />
         </div>
       </header>

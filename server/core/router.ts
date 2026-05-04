@@ -8,6 +8,9 @@ import { invoicesRouter } from './routes/invoices.routes';
 import { customersRouter } from './routes/customers.routes';
 import { cashboxRouter } from './routes/cashbox.routes';
 import { reportsRouter } from './routes/reports.routes';
+import { publicRouter } from './routes/public.routes';
+import { syncService } from './services/SyncService';
+import type { Request, Response } from 'express';
 
 export function createCoreRouter(): Router {
   const router = Router();
@@ -20,5 +23,14 @@ export function createCoreRouter(): Router {
   router.use('/api', customersRouter);
   router.use('/api', cashboxRouter);
   router.use('/api', reportsRouter);
+  // Fase 6: API pública (catálogo read-only, CORS abierto)
+  router.use('/api/public', publicRouter);
+
+  // Fase 6: Disparar sync manual desde el frontend
+  router.post('/api/sync/trigger', async (_req: Request, res: Response) => {
+    void syncService.syncAll().catch(() => {});
+    res.json({ data: { message: 'Sync iniciado' }, error: null });
+  });
+
   return router;
 }

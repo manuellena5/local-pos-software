@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { initDatabase } from './db/init';
 import { createCoreRouter } from './core/router';
 import { startInvoiceProcessor } from './jobs/invoiceProcessor';
+import { startSyncScheduler } from './jobs/syncScheduler';
 
 export function createApp(): Application {
   initDatabase();
@@ -25,6 +26,9 @@ export function createApp(): Application {
 
   // Fase 4: Arrancar cron de facturación AFIP
   startInvoiceProcessor();
+
+  // Fase 6: Arrancar sync con Supabase (no bloquea si no está configurado)
+  startSyncScheduler();
 
   return app;
 }

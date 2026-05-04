@@ -13,6 +13,7 @@ export function initDatabase(): void {
     '0006_afip_fields.sql',
     '0007_customers_cashbox.sql',
     '0008_customers_locality_province.sql',
+    '0009_sync_tables.sql',
   ];
 
   for (const migration of migrations) {
