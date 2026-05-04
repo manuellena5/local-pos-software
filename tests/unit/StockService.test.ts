@@ -47,13 +47,13 @@ function makeRepos(stockOverrides = {}, productOverrides = {}) {
     getMovementHistory: vi.fn().mockReturnValue([makeMovement()]),
     getStockSummary: vi.fn().mockReturnValue([]),
     ...stockOverrides,
-  } as any;
+  } as unknown as never;
 
   const productRepo = {
     getById: vi.fn().mockReturnValue(makeProduct()),
     getAll: vi.fn().mockReturnValue([makeProduct()]),
     ...productOverrides,
-  } as any;
+  } as unknown as never;
 
   return { stockRepo, productRepo };
 }

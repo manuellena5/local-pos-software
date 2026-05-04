@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 
-const dbPath = path.join(process.cwd(), 'localpos.db');
 const files = ['localpos.db', 'localpos.db-shm', 'localpos.db-wal'];
 
 for (const file of files) {

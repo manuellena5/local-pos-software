@@ -1,4 +1,5 @@
 import { useAppStore } from '@/core/store/appStore';
+import { formatCurrency } from '@/lib/utils/pricing';
 import type { SaleWithItems } from '@shared/types';
 
 const METHOD_LABELS: Record<string, string> = {
@@ -66,10 +67,10 @@ export function POSReceiptModal({ sale, onClose }: POSReceiptModalProps) {
                   <span className="flex-1 truncate text-gray-800">
                     {item.quantity}x {item.productName}
                   </span>
-                  <span>${item.lineTotal.toFixed(2)}</span>
+                  <span>{formatCurrency(item.lineTotal)}</span>
                 </div>
                 <div className="text-xs text-gray-400 pl-4">
-                  ${item.unitPrice.toFixed(2)} c/u
+                  {formatCurrency(item.unitPrice)} c/u
                   {item.discountPercent > 0 && ` · desc ${item.discountPercent}%`}
                 </div>
               </div>
@@ -78,25 +79,36 @@ export function POSReceiptModal({ sale, onClose }: POSReceiptModalProps) {
 
           <div className="border-t border-dashed border-gray-300 my-2" />
 
-          {/* Totales */}
+          {/* Total */}
           <div className="space-y-0.5 text-xs">
-            <div className="flex justify-between text-gray-600">
-              <span>Subtotal</span>
-              <span>${s.subtotal.toFixed(2)}</span>
-            </div>
             {s.discountAmount > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>Descuento</span>
-                <span>−${s.discountAmount.toFixed(2)}</span>
+                <span>−{formatCurrency(s.discountAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-gray-600">
-              <span>IVA ({s.taxRate}%)</span>
-              <span>${s.taxAmount.toFixed(2)}</span>
-            </div>
             <div className="flex justify-between font-bold text-gray-900 text-sm border-t pt-1 mt-1">
               <span>TOTAL</span>
-              <span>${s.totalAmount.toFixed(2)}</span>
+              <span>{formatCurrency(s.totalAmount)}</span>
+            </div>
+          </div>
+
+          <div className="border-t border-dashed border-gray-300 my-2" />
+
+          {/* Desglose fiscal */}
+          <div className="space-y-0.5 text-xs">
+            <p className="text-gray-400 uppercase tracking-wide text-center mb-1">Desglose fiscal</p>
+            <div className="flex justify-between text-gray-600">
+              <span>Sin IVA</span>
+              <span>{formatCurrency(s.taxableAmount)}</span>
+            </div>
+            <div className="flex justify-between text-gray-600">
+              <span>IVA {s.taxRate}% (incl)</span>
+              <span>{formatCurrency(s.taxAmount)}</span>
+            </div>
+            <div className="flex justify-between text-gray-700 font-medium border-t pt-0.5 mt-0.5">
+              <span>TOTAL</span>
+              <span>{formatCurrency(s.totalAmount)}</span>
             </div>
           </div>
 

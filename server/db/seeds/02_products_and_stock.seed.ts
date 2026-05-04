@@ -74,8 +74,6 @@ export function seedProductsAndStock(): void {
     .returning()
     .all();
 
-  const allProducts = [...frontProductRows, ...backProductRows];
-
   // ========== STOCK ITEMS ==========
   // Create stock_items for each product with various quantities
   const stockItemData = [

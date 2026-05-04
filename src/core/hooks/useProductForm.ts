@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { createProductSchema, updateProductSchema } from '@/lib/validations/core/products';
+import { createProductSchema } from '@/lib/validations/core/products';
 import { productsApi } from '@/lib/api/products';
-import type { Product } from '@shared/types';
 
 export function useProductForm(businessUnitId: number, onSuccess?: () => void) {
   const [formData, setFormData] = useState({

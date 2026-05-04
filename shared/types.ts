@@ -106,6 +106,7 @@ export interface Sale {
   taxAmount: number;
   totalAmount: number;
   paymentMethods: PaymentMethod[];
+  customerId: number | null;
   status: 'completed' | 'cancelled';
   invoiceNumber: string | null;
   cae: string | null;
@@ -165,4 +166,76 @@ export interface CartItem {
 export interface SaleWithItems {
   sale: Sale;
   items: SaleItem[];
+}
+
+// ── Fase 5: Clientes ──────────────────────────────────────────────────────
+
+export interface Customer {
+  id: number;
+  name: string;
+  documentType: 'DNI' | 'CUIT' | 'PASAPORTE' | null;
+  document: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  locality: string | null;
+  province: string | null;
+  notes: string | null;
+  creditLimit: number;
+  creditUsed: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Fase 5: Caja ──────────────────────────────────────────────────────────
+
+export type CashMovementType = 'sale' | 'refund' | 'deposit' | 'withdrawal' | 'other';
+
+export interface CashMovement {
+  id: number;
+  businessUnitId: number;
+  type: CashMovementType;
+  amount: number;
+  description: string;
+  saleId: number | null;
+  userId: number | null;
+  createdAt: string;
+}
+
+export interface CashAudit {
+  id: number;
+  businessUnitId: number;
+  auditDate: string;
+  theoreticalBalance: number;
+  realBalance: number;
+  difference: number;
+  notes: string | null;
+  status: 'balanced' | 'discrepancy' | 'discrepancy_resolved';
+  createdAt: string;
+}
+
+// ── Fase 5: Reportes ──────────────────────────────────────────────────────
+
+export interface SalesReport {
+  date: string;
+  totalSales: number;
+  totalAmount: number;
+  avgTicket: number;
+  paymentBreakdown: { method: string; count: number; amount: number }[];
+}
+
+export interface TopProductsReport {
+  productId: number;
+  name: string;
+  category: string | null;
+  quantity: number;
+  revenue: number;
+}
+
+export interface TopCustomersReport {
+  customerId: number | null;
+  name: string;
+  purchaseCount: number;
+  totalSpent: number;
 }

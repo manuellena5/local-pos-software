@@ -6,12 +6,27 @@ import { ProductList } from '@/core/components/ProductList';
 import { StockDashboard } from '@/core/components/StockDashboard';
 import { POSPage } from '@/core/components/POSPage';
 import { InvoiceQueueStatus } from '@/core/components/InvoiceQueueStatus';
+import { CustomerList } from '@/core/components/CustomerList';
+import { CashboxPage } from '@/core/components/CashboxPage';
+import { CashboxStatus } from '@/core/components/CashboxStatus';
+import { ReportsPage } from '@/core/components/ReportsPage';
+
+type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'reportes';
+
+const TABS: { key: AppTab; label: string; icon: string }[] = [
+  { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
+  { key: 'productos', label: 'Productos', icon: '📦' },
+  { key: 'pos', label: 'Punto de venta', icon: '💰' },
+  { key: 'clientes', label: 'Clientes', icon: '👥' },
+  { key: 'caja', label: 'Caja', icon: '🏦' },
+  { key: 'reportes', label: 'Reportes', icon: '📊' },
+];
 
 export function App() {
   const { loading, error } = useBootstrap();
   const config = useAppStore((s) => s.config);
   const activeBU = useAppStore((s) => s.activeBU);
-  const [tab, setTab] = useState<'dashboard' | 'productos' | 'pos'>('dashboard');
+  const [tab, setTab] = useState<AppTab>('dashboard');
 
   if (loading) {
     return (
@@ -42,7 +57,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{config?.businessName ?? 'LocalPos'}</h1>
           <p className="text-xs text-gray-400 mt-0.5">
@@ -50,49 +65,39 @@ export function App() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <CashboxStatus businessUnitId={activeBU?.id} onGoToCashbox={() => setTab('caja')} />
           <InvoiceQueueStatus businessUnitId={activeBU?.id} />
           <BusinessUnitSelector />
         </div>
       </header>
 
-      <main className="p-6 max-w-6xl mx-auto">
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
-          <button
-            onClick={() => setTab('dashboard')}
-            className={`px-4 py-2 font-medium text-sm border-b-2 ${
-              tab === 'dashboard'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={() => setTab('productos')}
-            className={`px-4 py-2 font-medium text-sm border-b-2 ${
-              tab === 'productos'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Productos
-          </button>
-          <button
-            onClick={() => setTab('pos')}
-            className={`px-4 py-2 font-medium text-sm border-b-2 ${
-              tab === 'pos'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            💰 Punto de venta
-          </button>
+      <div className="border-b border-gray-200 bg-white px-6">
+        <div className="flex gap-1 max-w-6xl mx-auto">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                tab === t.key
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              <span className="text-base">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
         </div>
+      </div>
 
+      <main className="p-6 max-w-6xl mx-auto">
         <div className="bg-white rounded-xl shadow p-6">
           {tab === 'dashboard' && <StockDashboard businessUnitId={activeBU.id} />}
           {tab === 'productos' && <ProductList businessUnitId={activeBU.id} />}
           {tab === 'pos' && <POSPage businessUnitId={activeBU.id} />}
+          {tab === 'clientes' && <CustomerList />}
+          {tab === 'caja' && <CashboxPage businessUnitId={activeBU.id} />}
+          {tab === 'reportes' && <ReportsPage businessUnitId={activeBU.id} />}
         </div>
       </main>
     </div>

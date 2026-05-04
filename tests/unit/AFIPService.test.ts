@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Forzar modo mock
 vi.stubEnv('AFIP_ENVIRONMENT', 'mock');

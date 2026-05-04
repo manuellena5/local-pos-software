@@ -3,6 +3,7 @@ import type { ConfirmSaleRequest, SaleItemInput } from '../types';
 import type { SaleRepository } from '../repositories/SaleRepository';
 import type { ProductRepository } from '../repositories/ProductRepository';
 import type { InvoiceQueueService } from './InvoiceQueueService';
+import type { CashboxService } from './CashboxService';
 import { NotFoundError, ValidationError, BusinessRuleError } from '../../lib/errors';
 import { logger } from '../../lib/logger';
 
@@ -13,6 +14,7 @@ export class SalesService {
     private readonly saleRepo: SaleRepository,
     private readonly productRepo: ProductRepository,
     private readonly invoiceQueueService?: InvoiceQueueService,
+    private readonly cashboxService?: CashboxService,
   ) {}
 
   /**
@@ -63,9 +65,12 @@ export class SalesService {
       resolvedDiscountPercent = 0;
     }
 
-    const taxableAmount = Math.round((subtotal - resolvedDiscountAmount) * 100) / 100;
-    const taxAmount = Math.round(taxableAmount * (taxRate / 100) * 100) / 100;
-    const totalAmount = Math.round((taxableAmount + taxAmount) * 100) / 100;
+    // lineTotals ya llegan CON IVA incluido (unitPrice = displayPrice del frontend)
+    // → totalAmount = subtotal - descuento (IVA no se suma de nuevo)
+    // → taxableAmount y taxAmount se obtienen extrayendo IVA del total
+    const totalAmount = Math.round((subtotal - resolvedDiscountAmount) * 100) / 100;
+    const taxableAmount = Math.round((totalAmount / (1 + taxRate / 100)) * 100) / 100;
+    const taxAmount = Math.round((totalAmount - taxableAmount) * 100) / 100;
 
     return {
       subtotal,
@@ -79,7 +84,7 @@ export class SalesService {
 
   /**
    * Valida que la suma de medios de pago cubra el total.
-   * Tolerancia $1 para redondeos.
+   * Permite overpayment (vuelto). Tolerancia $1 para redondeos de centavos.
    */
   validatePaymentMethods(
     paymentMethods: Array<{ method: string; amount: number }>,
@@ -90,9 +95,9 @@ export class SalesService {
     }
 
     const paid = paymentMethods.reduce((sum, p) => sum + p.amount, 0);
-    const diff = Math.abs(paid - totalAmount);
 
-    if (diff > 1) {
+    // Solo rechazar si falta dinero (underpayment). El vuelto es válido.
+    if (paid < totalAmount - 1) {
       throw new BusinessRuleError(
         `Los medios de pago ($${paid.toFixed(2)}) no cubren el total ($${totalAmount.toFixed(2)})`
       );
@@ -147,11 +152,33 @@ export class SalesService {
     const result = this.saleRepo.create({
       businessUnitId: data.businessUnitId,
       userId: data.userId,
+      customerId: data.customerId,
       items: itemInputs,
       ...totals,
       taxRate,
       paymentMethods: data.paymentMethods,
     });
+
+    // ── Fase 5: Registrar movimiento de caja automáticamente ─────────────────
+    if (this.cashboxService) {
+      try {
+        this.cashboxService.recordMovement(
+          data.businessUnitId,
+          {
+            type: 'sale',
+            amount: result.sale.totalAmount,
+            description: `Venta #${result.sale.saleNumber}`,
+            saleId: result.sale.id,
+          },
+          data.userId,
+        );
+      } catch (err: unknown) {
+        logger.warn(CTX, 'Could not record cash movement for sale', {
+          saleId: result.sale.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
 
     // ── Fase 4: Intentar facturación AFIP de forma no bloqueante ─────────────
     if (this.invoiceQueueService) {

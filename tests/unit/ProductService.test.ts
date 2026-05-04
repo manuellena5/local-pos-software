@@ -36,7 +36,7 @@ function makeProductRepo(overrides: Record<string, unknown> = {}) {
     search: vi.fn().mockReturnValue([makeProduct()]),
     getBySkuInBU: vi.fn().mockReturnValue(null),
     ...overrides,
-  } as any;
+  } as unknown as never;
 }
 
 describe('ProductService', () => {

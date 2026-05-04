@@ -16,6 +16,7 @@ export const cartItemSchema = z.object({
 
 export const confirmSaleSchema = z.object({
   businessUnitId: z.number().int().positive(),
+  customerId: z.number().int().positive().optional(),
   items: z.array(cartItemSchema).min(1, 'El carrito no puede estar vacío'),
   discountPercent: z.number().min(0).max(100).optional().default(0),
   discountAmount: z.number().min(0).optional().default(0),

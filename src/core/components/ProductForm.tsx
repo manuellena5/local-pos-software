@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useProductForm } from '@/core/hooks/useProductForm';
 
 interface ProductFormProps {

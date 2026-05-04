@@ -20,9 +20,8 @@ export function useStock(businessUnitId: number) {
     }
   };
 
-  useEffect(() => {
-    refetch();
-  }, [businessUnitId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { refetch(); }, [businessUnitId]);
 
   return { summary, loading, error, refetch };
 }

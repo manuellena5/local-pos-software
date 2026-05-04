@@ -37,6 +37,7 @@ export interface SaleItemInput {
 export interface ConfirmSaleRequest {
   businessUnitId: number;
   userId?: number;
+  customerId?: number;
   items: Array<{
     productId: number;
     productName: string;
@@ -85,6 +86,7 @@ export interface AFIPInvoiceResponse {
 export interface CreateSaleRequest {
   businessUnitId: number;
   userId?: number;
+  customerId?: number;
   items: SaleItemInput[];
   subtotal: number;
   discountAmount: number;
@@ -94,4 +96,46 @@ export interface CreateSaleRequest {
   taxAmount: number;
   totalAmount: number;
   paymentMethods: Array<{ method: string; amount: number }>;
+}
+
+// ── Fase 5: Clientes ─────────────────────────────────────────────────────────
+
+export interface CreateCustomerRequest {
+  name: string;
+  documentType?: 'DNI' | 'CUIT' | 'PASAPORTE';
+  document?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  locality?: string;
+  province?: string;
+  notes?: string;
+  creditLimit?: number;
+}
+
+export interface UpdateCustomerRequest {
+  name?: string;
+  documentType?: 'DNI' | 'CUIT' | 'PASAPORTE';
+  document?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  locality?: string;
+  province?: string;
+  notes?: string;
+  creditLimit?: number;
+}
+
+// ── Fase 5: Caja ─────────────────────────────────────────────────────────────
+
+export interface CreateCashMovementRequest {
+  type: 'sale' | 'refund' | 'deposit' | 'withdrawal' | 'other';
+  amount: number;
+  description: string;
+  saleId?: number;
+}
+
+export interface CreateCashAuditRequest {
+  realBalance: number;
+  notes?: string;
 }

@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import type { SaleRepository } from '../repositories/SaleRepository';
 import type { PendingInvoiceRepository } from '../repositories/PendingInvoiceRepository';
 import type { InvoiceQueueService } from '../services/InvoiceQueueService';
-import { NotFoundError, ValidationError } from '../../lib/errors';
 import { logger } from '../../lib/logger';
 
 const CTX = 'InvoicesController';

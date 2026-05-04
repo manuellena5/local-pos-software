@@ -2,6 +2,8 @@ import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { businessUnits, users } from './installation';
 import { products } from './products';
+// customers importado por nombre de tabla para evitar circular dependency
+// La FK customer_id → customers se define en la migración SQL
 
 export const sales = sqliteTable('sales', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -9,6 +11,7 @@ export const sales = sqliteTable('sales', {
     .notNull()
     .references(() => businessUnits.id),
   userId: integer('user_id').references(() => users.id),
+  customerId: integer('customer_id'),
   saleNumber: integer('sale_number').notNull(),
   subtotal: real('subtotal').notNull(),
   discountAmount: real('discount_amount').notNull().default(0),

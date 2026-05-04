@@ -5,6 +5,9 @@ import { productsRouter } from './routes/products.routes';
 import { stockRouter } from './routes/stock.routes';
 import { salesRouter } from './routes/sales.routes';
 import { invoicesRouter } from './routes/invoices.routes';
+import { customersRouter } from './routes/customers.routes';
+import { cashboxRouter } from './routes/cashbox.routes';
+import { reportsRouter } from './routes/reports.routes';
 
 export function createCoreRouter(): Router {
   const router = Router();
@@ -14,5 +17,8 @@ export function createCoreRouter(): Router {
   router.use('/api', stockRouter);
   router.use('/api', salesRouter);
   router.use('/api', invoicesRouter);
+  router.use('/api', customersRouter);
+  router.use('/api', cashboxRouter);
+  router.use('/api', reportsRouter);
   return router;
 }

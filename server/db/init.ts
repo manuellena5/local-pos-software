@@ -11,6 +11,8 @@ export function initDatabase(): void {
     '0004_sale_items_product_name.sql',
     '0005_products_sku_unique_idx.sql',
     '0006_afip_fields.sql',
+    '0007_customers_cashbox.sql',
+    '0008_customers_locality_province.sql',
   ];
 
   for (const migration of migrations) {

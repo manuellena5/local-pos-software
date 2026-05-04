@@ -2,7 +2,6 @@ import { eq, and, gte, lte } from 'drizzle-orm';
 import { db } from '../../db/connection';
 import { stockItems, stockMovements, products } from '../../db/schema';
 import type { StockItem, StockMovement, StockSummary } from '../../../shared/types';
-import { NotFoundError } from '../../lib/errors';
 
 export class StockRepository {
   getByProductId(productId: number, businessUnitId: number): StockItem | null {
@@ -58,7 +57,7 @@ export class StockRepository {
     }
   ): StockMovement[] {
     // Build conditions dynamically
-    const conditions: any[] = [eq(stockMovements.businessUnitId, businessUnitId)];
+    const conditions: ReturnType<typeof eq>[] = [eq(stockMovements.businessUnitId, businessUnitId)];
 
     if (filters?.type) {
       conditions.push(eq(stockMovements.type, filters.type));

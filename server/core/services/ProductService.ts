@@ -6,7 +6,6 @@ import { NotFoundError, ValidationError, BusinessRuleError } from '../../lib/err
 import { stockItems } from '../../db/schema';
 import { db } from '../../db/connection';
 
-const VALID_MODULE_IDS = ['retail-general', 'retail-textil', 'taller-medida'];
 
 export class ProductService {
   constructor(private readonly productRepo: ProductRepository) {}

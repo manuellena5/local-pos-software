@@ -1,6 +1,6 @@
 import { db } from '../../db/connection';
 import { pendingInvoices } from '../../db/schema';
-import { eq, and, lte } from 'drizzle-orm';
+import { eq, lte } from 'drizzle-orm';
 import type { PendingInvoice } from '../../../shared/types';
 
 export class PendingInvoiceRepository {

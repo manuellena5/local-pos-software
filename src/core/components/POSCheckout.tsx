@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/core/hooks/useCart';
 import { usePOS } from '@/core/hooks/usePOS';
+import { POSDiscountSection } from './POSDiscountSection';
+import { POSPaymentMethods } from './POSPaymentMethods';
 import { POSReceiptModal } from './POSReceiptModal';
-import type { SaleWithItems, StockSummary } from '@shared/types';
+import { formatCurrency } from '@/lib/utils/pricing';
+import { customersApi } from '@/lib/api/customers';
+import type { SaleWithItems, StockSummary, Customer } from '@shared/types';
 
 interface POSCheckoutProps {
   businessUnitId: number;
@@ -11,19 +15,38 @@ interface POSCheckoutProps {
 }
 
 export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCheckoutProps) {
-  const { cart, totals, paymentMethods } = useCart();
-  const { confirmSale, isProcessing, error } = usePOS(businessUnitId);
+  const { cart, totals, paymentMethods, discountPercent, discountAmount, setDiscountPercent, setDiscountAmount } = useCart();
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
+  const { confirmSale, isProcessing, error } = usePOS(businessUnitId, selectedCustomerId);
   const [completedSale, setCompletedSale] = useState<SaleWithItems | null>(null);
 
-  const totalPaid = paymentMethods.reduce((s, p) => s + p.amount, 0);
+  // ── Clientes ────────────────────────────────────────────────────────────────
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId) ?? null;
 
-  // Verificar stock insuficiente en cualquier ítem del carrito
+  useEffect(() => {
+    customersApi.list().then(setCustomers).catch(() => {});
+  }, []);
+
+  const filteredCustomers = customerSearch
+    ? customers.filter(
+        (c) =>
+          c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+          (c.document ?? '').includes(customerSearch),
+      )
+    : customers.slice(0, 8);
+
+  // ── Stock ────────────────────────────────────────────────────────────────────
   const stockIssues = cart.filter((item) => {
     const available = stockData[item.productId]?.currentQuantity;
     return available !== undefined && item.quantity > available;
   });
   const hasStockIssues = stockIssues.length > 0;
 
+  // ── Validación confirmación ──────────────────────────────────────────────────
+  const totalPaid = paymentMethods.reduce((s, p) => s + p.amount, 0);
   const canConfirm =
     cart.length > 0 &&
     paymentMethods.length > 0 &&
@@ -31,47 +54,184 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
     !isProcessing &&
     !hasStockIssues;
 
+  // Motivo de deshabilitación del botón
+  let disabledReason: string | null = null;
+  if (cart.length === 0) disabledReason = 'Agregá productos al carrito';
+  else if (hasStockIssues) disabledReason = 'Hay productos sin stock suficiente';
+  else if (paymentMethods.length === 0) disabledReason = 'Seleccioná un medio de pago';
+  else if (totalPaid < totals.totalAmount - 1)
+    disabledReason = `Falta cubrir ${formatCurrency(totals.totalAmount - totalPaid)}`;
+
   async function handleConfirm() {
     const result = await confirmSale();
     if (result) {
       setCompletedSale(result);
-      onSaleComplete(); // refrescar stock en POSPage
+      setSelectedCustomerId(undefined);
+      setCustomerSearch('');
+      onSaleComplete();
     }
   }
 
+  // ── Label del descuento activo ───────────────────────────────────────────────
+  const hasDiscount = discountPercent > 0 || discountAmount > 0;
+  const discountLabel = discountPercent > 0
+    ? `${discountPercent}% porcentual`
+    : `$${discountAmount.toFixed(2)} fijo`;
+
+  // ── Total de unidades ───────────────────────────────────────────────────────
+  const totalUnits = cart.reduce((s, c) => s + c.quantity, 0);
+
   return (
     <>
-      <div className="space-y-3">
-        {/* Resumen */}
-        <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Productos</span>
-            <span>{cart.reduce((s, c) => s + c.quantity, 0)} uds.</span>
-          </div>
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Subtotal</span>
-            <span>${totals.subtotal.toFixed(2)}</span>
-          </div>
-          {totals.discountAmount > 0 && (
-            <div className="flex justify-between text-sm text-green-600">
-              <span>Descuento</span>
-              <span>−${totals.discountAmount.toFixed(2)}</span>
+      <div className="flex flex-col gap-4">
+
+        {/* ── CLIENTE ──────────────────────────────────────────────────────── */}
+        <section>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Cliente
+          </h3>
+          {selectedCustomer ? (
+            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+              <div>
+                <p className="text-sm font-medium text-blue-800">{selectedCustomer.name}</p>
+                {selectedCustomer.document && (
+                  <p className="text-xs text-blue-500">{selectedCustomer.documentType} {selectedCustomer.document}</p>
+                )}
+                {selectedCustomer.creditLimit > 0 && (
+                  <p className="text-xs text-blue-400">
+                    Crédito disp: {formatCurrency(selectedCustomer.creditLimit - selectedCustomer.creditUsed)}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => { setSelectedCustomerId(undefined); setShowCustomerSearch(false); }}
+                className="text-blue-400 hover:text-blue-600 text-xl leading-none ml-2"
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              <input
+                type="text"
+                value={customerSearch}
+                onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerSearch(true); }}
+                onFocus={() => setShowCustomerSearch(true)}
+                onBlur={() => setTimeout(() => setShowCustomerSearch(false), 150)}
+                placeholder="Consumidor final (opcional)"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              {showCustomerSearch && (
+                <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-44 overflow-y-auto">
+                  {filteredCustomers.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-gray-400">Sin resultados</p>
+                  ) : (
+                    filteredCustomers.map((c) => (
+                      <button
+                        key={c.id}
+                        onMouseDown={() => {
+                          setSelectedCustomerId(c.id);
+                          setCustomerSearch('');
+                          setShowCustomerSearch(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
+                      >
+                        <span className="font-medium text-gray-800">{c.name}</span>
+                        {c.document && (
+                          <span className="text-xs text-gray-400">{c.document}</span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           )}
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>IVA</span>
-            <span>${totals.taxAmount.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-lg font-bold text-gray-900 border-t pt-2 mt-1">
-            <span>TOTAL</span>
-            <span>${totals.totalAmount.toFixed(2)}</span>
-          </div>
-        </div>
+        </section>
 
-        {/* Advertencia de stock insuficiente */}
+        {/* ── DESCUENTO ────────────────────────────────────────────────────── */}
+        <section>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Descuento
+          </h3>
+          <POSDiscountSection />
+
+          {/* Badge del descuento activo */}
+          {hasDiscount && (
+            <div className="flex items-center justify-between mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <div>
+                <p className="text-xs text-amber-700 font-medium">{discountLabel}</p>
+                <p className="text-sm font-bold text-amber-800">
+                  −{formatCurrency(totals.discountAmount)}
+                </p>
+              </div>
+              <button
+                onClick={() => { setDiscountPercent(0); setDiscountAmount(0); }}
+                className="text-amber-400 hover:text-amber-600 text-xl leading-none ml-2"
+                title="Quitar descuento"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* ── RESUMEN / TOTAL ──────────────────────────────────────────────── */}
+        <section>
+          <div className="space-y-1 text-sm text-gray-600 mb-3">
+            <div className="flex justify-between">
+              <span>Productos</span>
+              <span>{totalUnits} {totalUnits === 1 ? 'ud.' : 'uds.'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Subtotal (c/ IVA)</span>
+              <span className="font-medium text-gray-800">{formatCurrency(totals.subtotal)}</span>
+            </div>
+            {totals.discountAmount > 0 && (
+              <div className="flex justify-between text-amber-700">
+                <span>Descuento</span>
+                <span>−{formatCurrency(totals.discountAmount)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Total a pagar — prominente */}
+          <div className="bg-blue-50 border-2 border-blue-400 rounded-xl px-4 py-3 flex items-center justify-between">
+            <span className="text-sm font-semibold text-blue-700">TOTAL A PAGAR</span>
+            <span className="text-3xl font-bold text-blue-800 tabular-nums">
+              {formatCurrency(totals.totalAmount)}
+            </span>
+          </div>
+
+          {/* Desglose fiscal colapsable */}
+          {cart.length > 0 && (
+            <details className="mt-2 text-xs text-gray-500 group">
+              <summary className="cursor-pointer select-none list-none flex items-center gap-1 hover:text-gray-700 transition-colors">
+                <span className="group-open:rotate-90 inline-block transition-transform duration-150">▶</span>
+                <span>Desglose fiscal (ref.)</span>
+              </summary>
+              <div className="mt-2 pl-4 space-y-1 border-l-2 border-gray-100">
+                <div className="flex justify-between">
+                  <span>Sin IVA</span>
+                  <span className="tabular-nums">{formatCurrency(totals.taxableAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>IVA {cart[0]?.taxRate ?? 21}% (incluido)</span>
+                  <span className="tabular-nums">{formatCurrency(totals.taxAmount)}</span>
+                </div>
+                <div className="flex justify-between font-medium text-gray-600 border-t pt-1">
+                  <span>Total</span>
+                  <span className="tabular-nums">{formatCurrency(totals.totalAmount)}</span>
+                </div>
+              </div>
+            </details>
+          )}
+        </section>
+
+        {/* ── STOCK ISSUES ─────────────────────────────────────────────────── */}
         {hasStockIssues && (
-          <div className="text-sm text-red-600 bg-red-50 rounded px-3 py-2 space-y-0.5">
-            <p className="font-semibold">Sin stock suficiente:</p>
+          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-1">
+            <p className="font-semibold">⚠ Stock insuficiente:</p>
             {stockIssues.map((item) => {
               const available = stockData[item.productId]?.currentQuantity ?? 0;
               return (
@@ -83,41 +243,46 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
           </div>
         )}
 
-        {/* Error de API (solo si no hay problema de stock) */}
+        {/* ── MEDIOS DE PAGO ───────────────────────────────────────────────── */}
+        <section>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Medios de pago
+          </h3>
+          <POSPaymentMethods />
+        </section>
+
+        {/* ── ERROR GENERAL ────────────────────────────────────────────────── */}
         {error && !hasStockIssues && (
-          <p className="text-sm text-red-500 bg-red-50 rounded px-3 py-2">{error}</p>
-        )}
-
-        <button
-          onClick={handleConfirm}
-          disabled={!canConfirm}
-          className={`w-full py-3 rounded-lg font-bold text-base transition-colors ${
-            canConfirm
-              ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          {isProcessing ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="animate-spin text-lg">⏳</span> Procesando...
-            </span>
-          ) : (
-            '✓ Confirmar venta'
-          )}
-        </button>
-
-        {/* Mensajes contextuales bajo el botón */}
-        {!canConfirm && cart.length === 0 && (
-          <p className="text-xs text-center text-gray-400">Agregá productos al carrito</p>
-        )}
-        {!canConfirm && cart.length > 0 && paymentMethods.length === 0 && !hasStockIssues && (
-          <p className="text-xs text-center text-gray-400">Seleccioná un medio de pago</p>
-        )}
-        {!canConfirm && paymentMethods.length > 0 && totalPaid < totals.totalAmount - 1 && !hasStockIssues && (
-          <p className="text-xs text-center text-red-400">
-            Falta ${(totals.totalAmount - totalPaid).toFixed(2)} por cubrir
+          <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {error}
           </p>
         )}
+
+        {/* ── BOTÓN CONFIRMAR ──────────────────────────────────────────────── */}
+        <section>
+          <button
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+            className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-sm ${
+              canConfirm
+                ? 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.99]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {isProcessing ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin text-xl">⏳</span>
+                Procesando...
+              </span>
+            ) : (
+              '✓ Confirmar venta'
+            )}
+          </button>
+
+          {disabledReason && !isProcessing && (
+            <p className="text-xs text-center text-gray-400 mt-1.5">{disabledReason}</p>
+          )}
+        </section>
       </div>
 
       {completedSale && (

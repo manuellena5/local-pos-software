@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProducts } from '@/core/hooks/useProducts';
 import { useStockData } from '@/core/hooks/useStockData';
+import { getDisplayPrice, formatCurrency } from '@/lib/utils/pricing';
 import { ProductForm } from './ProductForm';
 
 export function ProductList({ businessUnitId }: { businessUnitId: number }) {
@@ -65,8 +66,8 @@ export function ProductList({ businessUnitId }: { businessUnitId: number }) {
                 <td className="px-4 py-2">{p.name}</td>
                 <td className="px-4 py-2 text-gray-600">{p.sku}</td>
                 <td className="px-4 py-2 text-gray-600">{p.category || '-'}</td>
-                <td className="text-right px-4 py-2">${p.basePrice.toFixed(2)}</td>
-                <td className="text-right px-4 py-2 text-gray-600">${p.costPrice.toFixed(2)}</td>
+                <td className="text-right px-4 py-2">{formatCurrency(getDisplayPrice(p.basePrice, p.taxRate))}</td>
+                <td className="text-right px-4 py-2 text-gray-600">{formatCurrency(p.costPrice)}</td>
                 <td className="text-center px-4 py-2">
                   <span className="px-2 py-1 bg-gray-100 rounded text-xs">{stockData[p.id]?.currentQuantity ?? '-'}</span>
                 </td>

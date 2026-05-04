@@ -79,6 +79,7 @@ export class SaleRepository {
         .values({
           businessUnitId: data.businessUnitId,
           userId: data.userId ?? null,
+          customerId: data.customerId ?? null,
           saleNumber,
           subtotal: data.subtotal,
           discountAmount: data.discountAmount,

@@ -5,8 +5,8 @@ describe('SalesService', () => {
   let service: SalesService;
 
   beforeEach(() => {
-    const mockSaleRepo = { create: vi.fn(), getById: vi.fn(), getAll: vi.fn() } as any;
-    const mockProductRepo = { getById: vi.fn() } as any;
+    const mockSaleRepo = { create: vi.fn(), getById: vi.fn(), getAll: vi.fn() } as unknown as never;
+    const mockProductRepo = { getById: vi.fn() } as unknown as never;
     service = new SalesService(mockSaleRepo, mockProductRepo);
   });
 
@@ -25,37 +25,51 @@ describe('SalesService', () => {
   });
 
   describe('calculateTotals', () => {
-    it('should calculate totals without discount', () => {
-      const result = service.calculateTotals([100, 200], 21, 0, 0);
-      expect(result.subtotal).toBe(300);
+    // Los lineTotals llegan CON IVA incluido (unitPrice = displayPrice).
+    // taxableAmount y taxAmount se EXTRAEN del total, no se suman encima.
+    // Ejemplo: 121 = 100 + 21% IVA → taxableAmount=100, taxAmount=21, total=121
+
+    it('should extract IVA from totals without discount', () => {
+      // lineTotals: [121, 242] → subtotal=363 (ya incluye 21% IVA)
+      const result = service.calculateTotals([121, 242], 21, 0, 0);
+      expect(result.subtotal).toBe(363);
       expect(result.discountAmount).toBe(0);
       expect(result.taxableAmount).toBe(300);
       expect(result.taxAmount).toBe(63);
       expect(result.totalAmount).toBe(363);
     });
 
-    it('should apply percent discount', () => {
-      const result = service.calculateTotals([100], 21, 10, 0);
-      expect(result.subtotal).toBe(100);
-      expect(result.discountAmount).toBe(10);
-      expect(result.taxableAmount).toBe(90);
-      expect(result.taxAmount).toBe(18.9);
+    it('should apply percent discount and extract IVA', () => {
+      // lineTotal: [121] → subtotal=121, discount 10% → total=108.9
+      const result = service.calculateTotals([121], 21, 10, 0);
+      expect(result.subtotal).toBe(121);
+      expect(result.discountAmount).toBe(12.1);
       expect(result.totalAmount).toBe(108.9);
+      expect(result.taxableAmount).toBe(Math.round((108.9 / 1.21) * 100) / 100);
+      expect(result.taxAmount).toBe(Math.round((108.9 - result.taxableAmount) * 100) / 100);
     });
 
-    it('should apply fixed discount amount', () => {
-      const result = service.calculateTotals([200], 21, 0, 50);
-      expect(result.subtotal).toBe(200);
+    it('should apply fixed discount amount and extract IVA', () => {
+      // lineTotal: [242] → subtotal=242, discount $50 → total=192
+      const result = service.calculateTotals([242], 21, 0, 50);
+      expect(result.subtotal).toBe(242);
       expect(result.discountAmount).toBe(50);
-      expect(result.taxableAmount).toBe(150);
-      expect(result.taxAmount).toBe(31.5);
-      expect(result.totalAmount).toBe(181.5);
+      expect(result.totalAmount).toBe(192);
+      expect(result.taxableAmount).toBe(Math.round((192 / 1.21) * 100) / 100);
     });
 
     it('should prioritize fixed amount over percent', () => {
-      const result = service.calculateTotals([100], 21, 10, 20);
-      // discountAmount=20 tiene prioridad
+      const result = service.calculateTotals([121], 21, 10, 20);
+      // discountAmount=20 tiene prioridad sobre discountPercent=10
       expect(result.discountAmount).toBe(20);
+    });
+
+    it('should handle 0% tax rate', () => {
+      const result = service.calculateTotals([500], 0, 0, 0);
+      expect(result.subtotal).toBe(500);
+      expect(result.totalAmount).toBe(500);
+      expect(result.taxableAmount).toBe(500);
+      expect(result.taxAmount).toBe(0);
     });
   });
 
@@ -97,8 +111,8 @@ describe('SalesService', () => {
 
   describe('confirmSale', () => {
     it('should throw when cart is empty', () => {
-      const mockProductRepo = { getById: vi.fn() } as any;
-      const mockSaleRepo = { create: vi.fn() } as any;
+      const mockProductRepo = { getById: vi.fn() } as unknown as never;
+      const mockSaleRepo = { create: vi.fn() } as unknown as never;
       const svc = new SalesService(mockSaleRepo, mockProductRepo);
 
       expect(() =>
@@ -111,8 +125,8 @@ describe('SalesService', () => {
     });
 
     it('should throw when product not found in BU', () => {
-      const mockProductRepo = { getById: vi.fn().mockReturnValue(null) } as any;
-      const mockSaleRepo = { create: vi.fn() } as any;
+      const mockProductRepo = { getById: vi.fn().mockReturnValue(null) } as unknown as never;
+      const mockSaleRepo = { create: vi.fn() } as unknown as never;
       const svc = new SalesService(mockSaleRepo, mockProductRepo);
 
       expect(() =>

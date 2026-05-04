@@ -3,6 +3,7 @@ import { db } from './connection';
 import { initDatabase } from './init';
 import { installationConfig, businessUnits, users } from './schema';
 import { seedProductsAndStock } from './seeds/02_products_and_stock.seed';
+import { seedCustomersAndCashbox } from './seeds/03_customers_cashbox.seed';
 
 initDatabase();
 
@@ -59,3 +60,6 @@ console.log('[Seed]   Usuario: admin@espaciobip.com / admin123');
 
 // Seed products and stock
 seedProductsAndStock();
+
+// Seed customers and cashbox
+seedCustomersAndCashbox();

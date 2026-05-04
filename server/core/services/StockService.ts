@@ -1,5 +1,4 @@
 import type { StockMovement, StockSummary } from '../../../shared/types';
-import type { AdjustStockRequest } from '../types';
 import { adjustStockSchema } from '../schemas/products.schema';
 import type { ProductRepository } from '../repositories/ProductRepository';
 import type { StockRepository } from '../repositories/StockRepository';

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useProducts } from '@/core/hooks/useProducts';
 import { usePOSStore } from '@/core/store/posStore';
+import { getDisplayPrice, formatCurrency } from '@/lib/utils/pricing';
 import type { Product, StockSummary } from '@shared/types';
 
 interface POSProductSearchProps {
@@ -42,7 +43,7 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
       name: product.name,
       sku: product.sku,
       quantity: 1,
-      unitPrice: product.basePrice,
+      unitPrice: getDisplayPrice(product.basePrice, product.taxRate),
       taxRate: product.taxRate,
       discountPercent: 0,
     });
@@ -113,7 +114,7 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
                   {getStockBadge(p.id)}
                 </div>
                 <span className={`text-sm font-bold shrink-0 ml-2 ${isOut ? 'text-gray-400' : 'text-blue-600'}`}>
-                  ${p.basePrice.toFixed(2)}
+                  {formatCurrency(getDisplayPrice(p.basePrice, p.taxRate))}
                 </span>
               </button>
             );
@@ -123,7 +124,7 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
 
       {open && debouncedQuery.length >= 1 && visibleProducts.length === 0 && (
         <div className="absolute z-50 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 px-4 py-3 text-sm text-gray-400">
-          Sin resultados para "{debouncedQuery}"
+          Sin resultados para &quot;{debouncedQuery}&quot;
         </div>
       )}
     </div>

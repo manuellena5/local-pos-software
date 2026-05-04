@@ -1,5 +1,4 @@
 import { usePOSStore } from '@/core/store/posStore';
-import type { CartItem } from '@shared/types';
 
 export function useCart() {
   const cart = usePOSStore((s) => s.cart);

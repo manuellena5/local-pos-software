@@ -3,7 +3,7 @@ import { salesApi } from '@/lib/api/sales';
 import { usePOSStore } from '@/core/store/posStore';
 import type { SaleWithItems } from '@shared/types';
 
-export function usePOS(businessUnitId: number) {
+export function usePOS(businessUnitId: number, customerId?: number) {
   const [error, setError] = useState<string | null>(null);
   const [lastSale, setLastSale] = useState<SaleWithItems | null>(null);
 
@@ -31,6 +31,7 @@ export function usePOS(businessUnitId: number) {
     try {
       const result = await salesApi.confirm({
         businessUnitId,
+        customerId: customerId ?? undefined,
         items: cart.map((c) => ({
           productId: c.productId,
           productName: c.name,

@@ -113,9 +113,11 @@ export const usePOSStore = create<POSState>((set, get) => ({
   getTotals: (): CartTotals => {
     const { cart, discountPercent, discountAmount } = get();
 
+    // subtotal = suma de lineTotals — cada lineTotal ya INCLUYE IVA
+    // (unitPrice = displayPrice = basePrice * (1 + taxRate/100))
     const subtotal = Math.round(cart.reduce((sum, c) => sum + c.lineTotal, 0) * 100) / 100;
 
-    // IVA único sobre el total (Fase 3) — taxRate del primer ítem
+    // taxRate del primer ítem para el desglose
     const taxRate = cart[0]?.taxRate ?? 21;
 
     let resolvedDiscount: number;
@@ -127,9 +129,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
       resolvedDiscount = 0;
     }
 
-    const taxableAmount = Math.round((subtotal - resolvedDiscount) * 100) / 100;
-    const taxAmount = Math.round(taxableAmount * (taxRate / 100) * 100) / 100;
-    const totalAmount = Math.round((taxableAmount + taxAmount) * 100) / 100;
+    // totalAmount = subtotal - descuento (IVA ya está incluido, no se suma de nuevo)
+    const totalAmount = Math.round((subtotal - resolvedDiscount) * 100) / 100;
+
+    // Desglose fiscal: extraer IVA del total
+    const taxableAmount = Math.round((totalAmount / (1 + taxRate / 100)) * 100) / 100;
+    const taxAmount = Math.round((totalAmount - taxableAmount) * 100) / 100;
 
     return { subtotal, discountAmount: resolvedDiscount, taxableAmount, taxAmount, totalAmount };
   },
