@@ -8,6 +8,10 @@ const baseProductSchema = z.object({
   costPrice: z.number().min(0, 'El costo debe ser positivo'),
   basePrice: z.number().min(0, 'El precio debe ser positivo'),
   taxRate: z.number().min(0).max(100).optional().default(21),
+  // retail-textil optional fields
+  code:               z.string().max(100).nullable().optional(),
+  showInCatalog:      z.boolean().optional(),
+  catalogDescription: z.string().max(2000).nullable().optional(),
 });
 
 export const createProductSchema = baseProductSchema.refine(

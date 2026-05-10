@@ -4,6 +4,8 @@ export interface InstallationConfig {
   cuit: string;
   address: string;
   logoPath: string | null;
+  whatsappNumber: string | null;
+  catalogBusinessUnitId: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,6 +56,10 @@ export interface Product {
   basePrice: number;
   taxRate: number;
   isActive: boolean;
+  // retail-textil columns (optional — present when module is active)
+  code: string | null;
+  showInCatalog: boolean;
+  catalogDescription: string | null;
   createdAt: string;
   updatedAt: string;
 }

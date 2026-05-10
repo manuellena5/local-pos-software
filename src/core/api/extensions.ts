@@ -6,12 +6,14 @@ import type { ComponentType } from 'react';
 
 export interface ProductExtension {
   name: string;
-  component: ComponentType<{ productId: number }>;
+  component: ComponentType<{ productId: number; businessUnitId: number }>;
 }
 
 const productExtensions: ProductExtension[] = [];
 
 export function registerProductExtension(ext: ProductExtension): void {
+  // Guard against duplicate registration (HMR re-runs module-level code)
+  if (productExtensions.some((e) => e.name === ext.name)) return;
   productExtensions.push(ext);
 }
 

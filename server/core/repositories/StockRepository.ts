@@ -114,34 +114,32 @@ export class StockRepository {
   }
 
   getStockSummary(businessUnitId: number): StockSummary[] {
+    // LEFT JOIN para incluir productos que aún no tienen stock_item creado
     const rows = db
       .select({
-        productId: products.id,
-        name: products.name,
-        sku: products.sku,
-        quantity: stockItems.quantity,
+        productId:        products.id,
+        name:             products.name,
+        sku:              products.sku,
+        quantity:         stockItems.quantity,
         minimumThreshold: stockItems.minimumThreshold,
-        updatedAt: stockItems.updatedAt,
+        updatedAt:        stockItems.updatedAt,
       })
       .from(products)
-      .innerJoin(stockItems, eq(products.id, stockItems.productId))
-      .where(
-        and(
-          eq(products.businessUnitId, businessUnitId),
-          eq(products.isActive, true),
-          eq(stockItems.businessUnitId, businessUnitId)
-        )
+      .leftJoin(
+        stockItems,
+        and(eq(products.id, stockItems.productId), eq(stockItems.businessUnitId, businessUnitId)),
       )
+      .where(and(eq(products.businessUnitId, businessUnitId), eq(products.isActive, true)))
       .all();
 
     return rows.map((row) => ({
-      productId: row.productId,
-      name: row.name,
-      sku: row.sku,
-      currentQuantity: row.quantity,
-      minimumThreshold: row.minimumThreshold,
-      status: this.getStockStatus(row.quantity, row.minimumThreshold),
-      lastUpdated: row.updatedAt,
+      productId:        row.productId,
+      name:             row.name,
+      sku:              row.sku,
+      currentQuantity:  row.quantity ?? 0,
+      minimumThreshold: row.minimumThreshold ?? 5,
+      status:           this.getStockStatus(row.quantity ?? 0, row.minimumThreshold ?? 5),
+      lastUpdated:      row.updatedAt ?? new Date().toISOString(),
     }));
   }
 

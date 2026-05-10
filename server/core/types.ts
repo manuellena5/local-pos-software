@@ -15,6 +15,10 @@ export interface UpdateProductRequest {
   basePrice?: number;
   costPrice?: number;
   taxRate?: number;
+  // retail-textil optional fields
+  code?: string | null;
+  showInCatalog?: boolean;
+  catalogDescription?: string | null;
 }
 
 export interface AdjustStockRequest {

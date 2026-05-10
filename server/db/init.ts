@@ -14,6 +14,9 @@ export function initDatabase(): void {
     '0007_customers_cashbox.sql',
     '0008_customers_locality_province.sql',
     '0009_sync_tables.sql',
+    '0010_retail_textil_module.sql',
+    '0011_products_retail_columns.sql',
+    '0012_installation_catalog_config.sql',
   ];
 
   for (const migration of migrations) {

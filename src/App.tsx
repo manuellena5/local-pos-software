@@ -10,9 +10,14 @@ import { CustomerList } from '@/core/components/CustomerList';
 import { CashboxPage } from '@/core/components/CashboxPage';
 import { CashboxStatus } from '@/core/components/CashboxStatus';
 import { ReportsPage } from '@/core/components/ReportsPage';
+import { SettingsPage } from '@/core/components/SettingsPage';
 import { NetworkStatusBar } from '@/core/components/NetworkStatusBar';
+import { initRetailTextilModule } from '@/modules/retail-textil';
 
-type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'reportes';
+// Inicializar módulos verticales (registra extensiones del formulario de producto, etc.)
+initRetailTextilModule();
+
+type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'reportes' | 'configuracion';
 
 const TABS: { key: AppTab; label: string; icon: string }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
@@ -21,6 +26,7 @@ const TABS: { key: AppTab; label: string; icon: string }[] = [
   { key: 'clientes', label: 'Clientes', icon: '👥' },
   { key: 'caja', label: 'Caja', icon: '🏦' },
   { key: 'reportes', label: 'Reportes', icon: '📊' },
+  { key: 'configuracion', label: 'Configuración', icon: '⚙️' },
 ];
 
 export function App() {
@@ -100,6 +106,7 @@ export function App() {
           {tab === 'clientes' && <CustomerList />}
           {tab === 'caja' && <CashboxPage businessUnitId={activeBU.id} />}
           {tab === 'reportes' && <ReportsPage businessUnitId={activeBU.id} />}
+          {tab === 'configuracion' && <SettingsPage />}
         </div>
       </main>
     </div>
