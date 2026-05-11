@@ -15,6 +15,12 @@ export function createApp(): Application {
 
   app.use(cors({ origin: 'http://localhost:5173' }));
   app.use(express.json());
+  // Forzar charset UTF-8 explícito en todas las respuestas JSON para evitar
+  // que Electron/Chromium infiera incorrectamente la codificación (ej: tildes rotas).
+  app.use((_req, res, next) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    next();
+  });
 
   app.get('/api/health', (_req, res) => {
     res.json({ data: { status: 'ok', version: LOCALPOS_VERSION }, error: null });

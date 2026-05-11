@@ -117,6 +117,7 @@ export class DashboardService {
       .innerJoin(products, eq(stockItems.productId, products.id))
       .where(and(
         eq(stockItems.businessUnitId, businessUnitId),
+        eq(products.businessUnitId, businessUnitId),   // evita mezclar productos de otra BU
         eq(products.isActive, true),
         sql`${stockItems.quantity} <= ${stockItems.minimumThreshold}`,
       ))

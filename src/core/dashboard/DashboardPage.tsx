@@ -65,13 +65,13 @@ function CashboxWidget({ data }: { data: DashboardData }) {
 
   return (
     <div className={`border rounded-xl p-5 ${hasDiscrepancy ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-100'}`}>
-      <p className="text-xs font-medium uppercase tracking-wide mb-3 text-green-500">
+      <p className="text-xs font-medium uppercase tracking-wide mb-3 text-gray-500">
         {hasDiscrepancy ? '⚠️ Caja — Discrepancia' : '🏦 Caja'}
       </p>
       <p className={`text-3xl font-bold ${hasDiscrepancy ? 'text-yellow-700' : 'text-green-700'}`}>
         ${balance.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
       </p>
-      <p className="text-sm mt-1 text-green-500">
+      <p className={`text-sm mt-1 ${isOpenToday ? 'text-green-600' : 'text-gray-400'}`}>
         {isOpenToday ? 'Arqueo del día registrado' : 'Sin arqueo hoy'}
       </p>
     </div>
