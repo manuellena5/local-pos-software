@@ -11,6 +11,8 @@ interface FormData {
   costPrice: number;
   basePrice: number;
   taxRate: number;
+  barcode: string;
+  supplierCode: string;
 }
 
 const EMPTY: FormData = {
@@ -21,6 +23,8 @@ const EMPTY: FormData = {
   costPrice: 0,
   basePrice: 0,
   taxRate: 21,
+  barcode: '',
+  supplierCode: '',
 };
 
 /**
@@ -38,13 +42,15 @@ export function useProductForm(
   const [formData, setFormData] = useState<FormData>(() =>
     existingProduct
       ? {
-          name:        existingProduct.name,
-          description: existingProduct.description ?? '',
-          category:    existingProduct.category ?? '',
-          sku:         existingProduct.sku,
-          costPrice:   existingProduct.costPrice,
-          basePrice:   existingProduct.basePrice,
-          taxRate:     existingProduct.taxRate,
+          name:         existingProduct.name,
+          description:  existingProduct.description ?? '',
+          category:     existingProduct.category ?? '',
+          sku:          existingProduct.sku,
+          costPrice:    existingProduct.costPrice,
+          basePrice:    existingProduct.basePrice,
+          taxRate:      existingProduct.taxRate,
+          barcode:      existingProduct.barcode ?? '',
+          supplierCode: existingProduct.supplierCode ?? '',
         }
       : EMPTY,
   );
@@ -53,13 +59,15 @@ export function useProductForm(
   useEffect(() => {
     if (existingProduct) {
       setFormData({
-        name:        existingProduct.name,
-        description: existingProduct.description ?? '',
-        category:    existingProduct.category ?? '',
-        sku:         existingProduct.sku,
-        costPrice:   existingProduct.costPrice,
-        basePrice:   existingProduct.basePrice,
-        taxRate:     existingProduct.taxRate,
+        name:         existingProduct.name,
+        description:  existingProduct.description ?? '',
+        category:     existingProduct.category ?? '',
+        sku:          existingProduct.sku,
+        costPrice:    existingProduct.costPrice,
+        basePrice:    existingProduct.basePrice,
+        taxRate:      existingProduct.taxRate,
+        barcode:      existingProduct.barcode ?? '',
+        supplierCode: existingProduct.supplierCode ?? '',
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,10 +94,16 @@ export function useProductForm(
     if (!validate()) return;
     try {
       setIsSubmitting(true);
+      // Normalizar campos opcionales: string vacío → null para que el servidor no guarde ""
+      const payload = {
+        ...formData,
+        barcode:      formData.barcode.trim()      || null,
+        supplierCode: formData.supplierCode.trim() || null,
+      };
       if (isEditMode && existingProduct) {
-        await productsApi.update(existingProduct.id, businessUnitId, formData);
+        await productsApi.update(existingProduct.id, businessUnitId, payload);
       } else {
-        await productsApi.create(businessUnitId, formData);
+        await productsApi.create(businessUnitId, payload);
         setFormData(EMPTY);
       }
       onSuccess?.();

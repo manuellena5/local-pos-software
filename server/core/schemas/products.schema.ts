@@ -12,6 +12,9 @@ const baseProductSchema = z.object({
   code:               z.string().max(100).nullable().optional(),
   showInCatalog:      z.boolean().optional(),
   catalogDescription: z.string().max(2000).nullable().optional(),
+  // identificadores adicionales
+  barcode:      z.string().max(100).nullable().optional(),
+  supplierCode: z.string().max(100).nullable().optional(),
 });
 
 export const createProductSchema = baseProductSchema.refine(

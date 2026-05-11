@@ -14,9 +14,11 @@ export const products = sqliteTable('products', {
   costPrice: real('cost_price').notNull(),
   basePrice: real('base_price').notNull(),
   taxRate: real('tax_rate').notNull().default(21),
-  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  isActive:     integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  barcode:      text('barcode'),
+  supplierCode: text('supplier_code'),
+  createdAt:    text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt:    text('updated_at').notNull().default(sql`(datetime('now'))`),
 });
 
 export const stockItems = sqliteTable('stock_items', {

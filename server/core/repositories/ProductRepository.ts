@@ -5,9 +5,17 @@ import type { Product } from '../../../shared/types';
 import type { CreateProductRequest, UpdateProductRequest } from '../types';
 import { NotFoundError } from '../../lib/errors';
 
-type RetailExtra = { code: string | null; show_in_catalog: number; catalog_description: string | null };
+type RetailExtra = {
+  code: string | null;
+  show_in_catalog: number;
+  catalog_description: string | null;
+};
 
-/** Enriquece un row de Drizzle con las columnas aditivas del módulo retail-textil. */
+/**
+ * Enriquece un row de Drizzle con las columnas aditivas del módulo retail-textil
+ * (code, show_in_catalog, catalog_description) que no están en el schema Drizzle tipado.
+ * barcode y supplier_code SÍ están en el schema, por lo que vienen directamente en el row.
+ */
 function enrich(raw: unknown): Product {
   const p = raw as Product;
   try {
@@ -15,7 +23,12 @@ function enrich(raw: unknown): Product {
       .prepare('SELECT code, show_in_catalog, catalog_description FROM products WHERE id = ?')
       .get(p.id) as RetailExtra | undefined;
     if (extra) {
-      return { ...p, code: extra.code ?? null, showInCatalog: Boolean(extra.show_in_catalog), catalogDescription: extra.catalog_description ?? null };
+      return {
+        ...p,
+        code:               extra.code ?? null,
+        showInCatalog:      Boolean(extra.show_in_catalog),
+        catalogDescription: extra.catalog_description ?? null,
+      };
     }
   } catch { /* columnas aún no migradas */ }
   return { ...p, code: null, showInCatalog: false, catalogDescription: null };
@@ -64,12 +77,14 @@ export class ProductRepository {
     const row = db
       .update(products)
       .set({
-        ...(data.name !== undefined        && { name:        data.name }),
-        ...(data.description !== undefined && { description: data.description }),
-        ...(data.category !== undefined    && { category:    data.category }),
-        ...(data.basePrice !== undefined   && { basePrice:   data.basePrice }),
-        ...(data.costPrice !== undefined   && { costPrice:   data.costPrice }),
-        ...(data.taxRate !== undefined     && { taxRate:     data.taxRate }),
+        ...(data.name !== undefined         && { name:         data.name }),
+        ...(data.description !== undefined  && { description:  data.description }),
+        ...(data.category !== undefined     && { category:     data.category }),
+        ...(data.basePrice !== undefined    && { basePrice:    data.basePrice }),
+        ...(data.costPrice !== undefined    && { costPrice:    data.costPrice }),
+        ...(data.taxRate !== undefined      && { taxRate:      data.taxRate }),
+        ...(data.barcode !== undefined      && { barcode:      data.barcode }),
+        ...(data.supplierCode !== undefined && { supplierCode: data.supplierCode }),
         updatedAt: new Date().toISOString(),
       })
       .where(and(eq(products.id, id), eq(products.businessUnitId, businessUnitId)))
@@ -109,7 +124,12 @@ export class ProductRepository {
     const normalize = (s: string) => s.normalize('NFD').replace(strip, '').toLowerCase();
     const q = normalize(query);
     return all.filter(
-      (p) => normalize(p.name).includes(q) || p.sku.toLowerCase().includes(q) || normalize(p.category ?? '').includes(q),
+      (p) =>
+        normalize(p.name).includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        normalize(p.category ?? '').includes(q) ||
+        (p.barcode ?? '').toLowerCase().includes(q) ||         // búsqueda por código de barras
+        (p.supplierCode ?? '').toLowerCase().includes(q),      // búsqueda por código proveedor
     );
   }
 

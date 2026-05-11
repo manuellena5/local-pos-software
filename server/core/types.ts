@@ -19,6 +19,9 @@ export interface UpdateProductRequest {
   code?: string | null;
   showInCatalog?: boolean;
   catalogDescription?: string | null;
+  // identificadores adicionales
+  barcode?: string | null;
+  supplierCode?: string | null;
 }
 
 export interface AdjustStockRequest {

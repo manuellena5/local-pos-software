@@ -93,6 +93,36 @@ export function ProductForm({ businessUnitId, onClose, onSuccess, existingProduc
             {errors._form && <p className="text-red-500 text-sm">{errors._form}</p>}
           </div>
 
+          {/* Códigos e identificadores — sección colapsable */}
+          <details className="mt-4 border border-gray-200 rounded-lg group">
+            <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg list-none">
+              <span className="group-open:rotate-90 inline-block transition-transform duration-150 text-xs">▶</span>
+              Códigos e identificadores
+            </summary>
+            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-gray-100">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Código de barras (EAN/UPC)</label>
+                <input
+                  type="text"
+                  placeholder="Escaneá o ingresá el código"
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Código proveedor</label>
+                <input
+                  type="text"
+                  placeholder="Ej: TEX-4521-B"
+                  value={formData.supplierCode}
+                  onChange={(e) => setFormData({ ...formData, supplierCode: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </details>
+
           {/* Extensiones de módulos (solo en modo edición, cuando ya existe productId) */}
           {isEditMode && productId !== undefined && extensions.map((Ext) => (
             <Ext.component key={Ext.name} productId={productId} businessUnitId={businessUnitId} />
