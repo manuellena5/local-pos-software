@@ -6,3 +6,4 @@ export * from './schemas/core/customers';
 export * from './schemas/core/cashbox';
 export * from './schemas/core/sync';
 export * from './schemas/modules/retail-textil';
+export * from './schemas/modules/taller-medida';

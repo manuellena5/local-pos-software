@@ -116,7 +116,7 @@ export function SettingsPage() {
                 ))}
             </select>
             <p className="text-xs text-gray-400 mt-1">
-              Solo los productos con "Mostrar en catálogo web" activado serán visibles.
+              Solo los productos con &quot;Mostrar en catálogo web&quot; activado serán visibles.
             </p>
           </div>
 

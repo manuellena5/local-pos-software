@@ -1,6 +1,6 @@
 import type { ProductAttribute, ProductImage, UpsertAttributesRequest } from '../types';
 
-const SERVER = 'http://localhost:3001';
+const SERVER = window.location.protocol === 'file:' ? 'http://localhost:3001' : '';
 const BASE = `${SERVER}/api/modules/retail-textil`;
 
 async function handleResponse<T>(res: Response): Promise<T> {
