@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useCart } from '@/core/hooks/useCart';
 import { formatCurrency } from '@/lib/utils/pricing';
 import type { StockSummary } from '@shared/types';
@@ -8,6 +9,8 @@ interface POSCartProps {
 
 export function POSCart({ stockData }: POSCartProps) {
   const { cart, removeFromCart, updateQuantity, updateItemDiscount } = useCart();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState('');
 
   if (cart.length === 0) {
     return (
@@ -58,9 +61,38 @@ export function POSCart({ stockData }: POSCartProps) {
                     >
                       −
                     </button>
-                    <span className={`w-8 text-center font-medium ${insufficient ? 'text-red-600' : ''}`}>
-                      {item.quantity}
-                    </span>
+                    {editingId === item.productId ? (
+                      <input
+                        type="number"
+                        min={1}
+                        autoFocus
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={() => {
+                          const val = parseInt(editingValue, 10);
+                          if (!isNaN(val) && val > 0) updateQuantity(item.productId, val);
+                          setEditingId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === 'Escape') {
+                            if (e.key === 'Enter') {
+                              const val = parseInt(editingValue, 10);
+                              if (!isNaN(val) && val > 0) updateQuantity(item.productId, val);
+                            }
+                            setEditingId(null);
+                          }
+                        }}
+                        className="w-10 text-center font-medium border border-blue-400 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                    ) : (
+                      <span
+                        onClick={() => { setEditingId(item.productId); setEditingValue(String(item.quantity)); }}
+                        className={`w-8 text-center font-medium cursor-pointer hover:bg-blue-50 rounded px-1 ${insufficient ? 'text-red-600' : ''}`}
+                        title="Click para editar cantidad"
+                      >
+                        {item.quantity}
+                      </span>
+                    )}
                     <button
                       onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                       className="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-700 font-bold text-base leading-none"

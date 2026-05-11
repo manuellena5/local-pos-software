@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useCart } from '@/core/hooks/useCart';
 import { usePOS } from '@/core/hooks/usePOS';
 import { POSDiscountSection } from './POSDiscountSection';
@@ -15,7 +15,7 @@ interface POSCheckoutProps {
 }
 
 export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCheckoutProps) {
-  const { cart, totals, paymentMethods, discountPercent, discountAmount, setDiscountPercent, setDiscountAmount } = useCart();
+  const { cart, totals, paymentMethods, discountPercent, discountAmount, setDiscountPercent, setDiscountAmount, clearCart } = useCart();
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
   const { confirmSale, isProcessing, error } = usePOS(businessUnitId, selectedCustomerId);
   const [completedSale, setCompletedSale] = useState<SaleWithItems | null>(null);
@@ -62,7 +62,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   else if (totalPaid < totals.totalAmount - 1)
     disabledReason = `Falta cubrir ${formatCurrency(totals.totalAmount - totalPaid)}`;
 
-  async function handleConfirm() {
+  const handleConfirm = useCallback(async () => {
     const result = await confirmSale();
     if (result) {
       setCompletedSale(result);
@@ -70,7 +70,36 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
       setCustomerSearch('');
       onSaleComplete();
     }
-  }
+  }, [confirmSale, onSaleComplete]);
+
+  // Shortcuts globales: Enter → confirmar, Esc → vaciar carrito
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Ignorar si el foco está en un input/textarea/select (el usuario está escribiendo)
+      const tag = (e.target as HTMLElement).tagName;
+      const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+      if (e.key === 'Enter' && !isEditable) {
+        if (canConfirm) {
+          e.preventDefault();
+          void handleConfirm();
+        }
+      }
+
+      if (e.key === 'Escape' && !isEditable) {
+        if (cart.length > 0) {
+          e.preventDefault();
+          if (window.confirm('¿Vaciar el carrito?')) {
+            clearCart();
+            setSelectedCustomerId(undefined);
+            setCustomerSearch('');
+          }
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [canConfirm, cart.length, handleConfirm, clearCart]);
 
   // ── Label del descuento activo ───────────────────────────────────────────────
   const hasDiscount = discountPercent > 0 || discountAmount > 0;
@@ -276,6 +305,8 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
                 <span className="animate-spin text-xl">⏳</span>
                 Procesando...
               </span>
+            ) : canConfirm ? (
+              <span>✓ Confirmar — {formatCurrency(totals.totalAmount)}</span>
             ) : (
               '✓ Confirmar venta'
             )}

@@ -13,6 +13,7 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const addToCart = usePOSStore((s) => s.addToCart);
 
   // Debounce: esperar 300ms antes de buscar
@@ -35,6 +36,19 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // F2 → foco en búsqueda
+  useEffect(() => {
+    function handleF2(e: KeyboardEvent) {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+    }
+    document.addEventListener('keydown', handleF2);
+    return () => document.removeEventListener('keydown', handleF2);
   }, []);
 
   function handleSelect(product: Product) {
@@ -79,6 +93,7 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
   return (
     <div ref={wrapperRef} className="relative">
       <input
+        ref={inputRef}
         type="text"
         value={query}
         onChange={(e) => {
@@ -86,7 +101,7 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
           setOpen(true);
         }}
         onFocus={() => query.length >= 1 && setOpen(true)}
-        placeholder="Buscar producto por nombre o SKU..."
+        placeholder="Buscar producto por nombre, SKU o código de barras… (F2)"
         className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
         autoComplete="off"
       />
