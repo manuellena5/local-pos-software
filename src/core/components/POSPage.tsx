@@ -11,11 +11,14 @@ export function POSPage({ businessUnitId }: POSPageProps) {
   const { stockData, refetch: refetchStock } = useStockData(businessUnitId);
 
   return (
-    <div className="flex gap-0 h-full overflow-hidden">
+    <div
+      className="flex gap-0 overflow-hidden min-h-[480px]"
+      style={{ height: 'calc(100vh - 200px)' }}
+    >
       {/* ── Columna izquierda: búsqueda fija + carrito scrollable ── */}
-      <div className="flex-1 flex flex-col gap-3 min-w-0 min-h-0 pr-4 overflow-hidden">
-        {/* Búsqueda: altura fija, no crece */}
-        <div className="shrink-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 pr-3 overflow-hidden">
+        {/* Búsqueda: altura fija */}
+        <div className="shrink-0 pb-2">
           <POSProductSearch businessUnitId={businessUnitId} stockData={stockData} />
         </div>
         {/* Carrito: ocupa el resto, scrollea internamente */}
@@ -24,18 +27,13 @@ export function POSPage({ businessUnitId }: POSPageProps) {
         </div>
       </div>
 
-      {/* ── Columna derecha: 380px fija, scroll interno ── */}
-      <div className="w-96 shrink-0 min-h-0 flex flex-col border-l border-gray-200 pl-4 overflow-hidden">
-        <h2 className="shrink-0 text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 pt-1">
-          Resumen de la venta
-        </h2>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <POSCheckout
-            businessUnitId={businessUnitId}
-            stockData={stockData}
-            onSaleComplete={refetchStock}
-          />
-        </div>
+      {/* ── Columna derecha: 340px fija, NO scroll externo ── */}
+      <div className="w-[340px] shrink-0 min-h-0 flex flex-col border-l border-gray-200 overflow-hidden">
+        <POSCheckout
+          businessUnitId={businessUnitId}
+          stockData={stockData}
+          onSaleComplete={refetchStock}
+        />
       </div>
     </div>
   );
