@@ -637,10 +637,10 @@ El core expone "hooks" (no los de React, sino puntos de extensión) que los mód
 
 | Entidad                 | Descripción                   |
 | ----------------------- | ----------------------------- |
-| `custom_orders`         | Pedidos a medida              |
-| `custom_order_payments` | Pagos parciales (seña, saldo) |
-| `customer_measurements` | Medidas del cliente           |
-| `custom_order_photos`   | Fotos de pruebas              |
+| `taller_orders`              | Pedidos a medida                        |
+| `taller_order_payments`      | Pagos parciales (seña, saldo)           |
+| `taller_client_measurements` | Medidas del cliente                     |
+| `custom_order_photos`        | Fotos de pruebas (pendiente — RF-TM-05) |
 
 ### 10.3 Reglas de integridad
 
@@ -779,23 +779,23 @@ Las tablas de caja, logs internos, credenciales y pagos parciales **nunca** van 
 
 | Fase                                           | Duración  | Entregable                                      |
 | ---------------------------------------------- | --------- | ----------------------------------------------- |
-| Fase 0: Setup y arquitectura base              | 1 semana  | Proyecto configurado, hello-world end-to-end    |
-| Fase 1: Business Units + configuración inicial | 1 semana  | Wizard de setup, gestión de BUs, selector de BU |
-| Fase 2: CRUD Productos y Stock (core)          | 2 semanas | Productos base + stock sin variantes            |
-| Fase 3: POS básico                             | 2 semanas | Ventas completas con ticket térmico             |
-| Fase 4: Caja y Clientes                        | 1 semana  | Caja diaria + base de clientes                  |
-| Fase 5: Facturación AFIP                       | 2 semanas | Factura electrónica funcionando                 |
-| Fase 6: Modo offline y cola de sync            | 1 semana  | Resiliencia sin internet validada               |
+| ✅ Fase 0: Setup y arquitectura base           | 1 semana  | Proyecto configurado, hello-world end-to-end    |
+| ✅ Fase 1: Business Units + configuración inicial | 1 semana  | Wizard de setup, gestión de BUs, selector de BU |
+| ✅ Fase 2: CRUD Productos y Stock (core)       | 2 semanas | Productos base + stock sin variantes            |
+| ✅ Fase 3: POS básico                          | 2 semanas | Ventas completas con ticket térmico             |
+| ✅ Fase 4: Caja y Clientes                     | 1 semana  | Caja diaria + base de clientes                  |
+| ✅ Fase 5: Facturación AFIP                    | 2 semanas | Factura electrónica funcionando                 |
+| ✅ Fase 6: Modo offline y cola de sync         | 1 semana  | Resiliencia sin internet validada               |
 
 **Hito Etapa 1:** al final de Fase 6, se puede abrir un comercio simple usando solo el core + módulo `retail-general`.
 
 #### Etapa 2 — Módulos verticales para Espacio BIP
 
-| Fase                                  | Duración  | Entregable                                        |
-| ------------------------------------- | --------- | ------------------------------------------------- |
-| Fase 7: Módulo `retail-textil`        | 2 semanas | Variantes, imágenes, operativo en BU "Front"      |
-| Fase 8: Módulo `taller-medida`        | 2 semanas | Pedidos, medidas, estados, operativo en BU "Back" |
-| Fase 9: Reportes, Dashboard, Supabase | 2 semanas | Métricas, exportación, catálogo web               |
+| Fase                                        | Duración  | Entregable                                        |
+| ------------------------------------------- | --------- | ------------------------------------------------- |
+| ✅ Fase 7: Módulo `retail-textil`           | 2 semanas | Variantes, imágenes, operativo en BU "Front"      |
+| ✅ Fase 8: Módulo `taller-medida`           | 2 semanas | Pedidos, medidas, estados, operativo en BU "Back" |
+| Fase 9: Dashboard + Reportes                | 2 semanas | Métricas por BU, exportación Excel (sin Supabase) |
 
 **Hito Etapa 2:** Espacio BIP operativo con sus dos unidades de negocio.
 
@@ -859,6 +859,14 @@ El sistema se acepta cuando:
 
 ---
 
+## 16. Deuda Técnica Documentada
+
+| ID    | RF       | Descripción                                                                                             | Fase sugerida |
+| ----- | -------- | ------------------------------------------------------------------------------------------------------- | ------------- |
+| DT-01 | RF-TM-05 | Fotos de pruebas intermedias en taller-medida. Tabla `custom_order_photos` no creada ni implementada.  | Fase 11       |
+
+---
+
 ## 15. Glosario
 
 | Término               | Definición                                                                      |
@@ -892,6 +900,7 @@ El sistema se acepta cuando:
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.0     | Abril 2026 | Versión inicial                                                                                                                                                           |
 | 2.0     | Abril 2026 | Reestructurado como producto LocalPosSoftware modular. Introducción de Business Units y módulos verticales. Separación core vs módulos. Primera instalación: Espacio BIP. |
+| 2.1     | Mayo 2026  | Actualización post-Fase 8: nomenclatura real de tablas taller-medida, deuda técnica DT-01, fases 0-8 marcadas como completas.                                             |
 
 ---
 

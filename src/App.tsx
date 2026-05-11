@@ -3,7 +3,6 @@ import { useBootstrap } from '@/core/config/useBootstrap';
 import { useAppStore } from '@/core/store/appStore';
 import { BusinessUnitSelector } from '@/core/business-units/BusinessUnitSelector';
 import { ProductList } from '@/core/components/ProductList';
-import { StockDashboard } from '@/core/components/StockDashboard';
 import { POSPage } from '@/core/components/POSPage';
 import { InvoiceQueueStatus } from '@/core/components/InvoiceQueueStatus';
 import { CustomerList } from '@/core/components/CustomerList';
@@ -12,6 +11,7 @@ import { CashboxStatus } from '@/core/components/CashboxStatus';
 import { ReportsPage } from '@/core/components/ReportsPage';
 import { SettingsPage } from '@/core/components/SettingsPage';
 import { NetworkStatusBar } from '@/core/components/NetworkStatusBar';
+import { DashboardPage } from '@/core/dashboard/DashboardPage';
 import { initRetailTextilModule } from '@/modules/retail-textil';
 import { initTallerMedidaModule } from '@/modules/taller-medida';
 import { TallerMedidaPage } from '@/modules/taller-medida/components/TallerMedidaPage';
@@ -118,7 +118,13 @@ export function App() {
 
       <main className="p-6 max-w-6xl mx-auto">
         <div className="bg-white rounded-xl shadow p-6">
-          {tab === 'dashboard'     && <StockDashboard businessUnitId={activeBU.id} />}
+          {tab === 'dashboard'     && (
+            <DashboardPage
+              businessUnitId={activeBU.id}
+              moduleId={activeBU.moduleId}
+              onNavigate={(t) => setTab(t as AppTab)}
+            />
+          )}
           {tab === 'productos'     && <ProductList businessUnitId={activeBU.id} />}
           {tab === 'pos'           && <POSPage businessUnitId={activeBU.id} />}
           {tab === 'clientes'      && <CustomerList />}

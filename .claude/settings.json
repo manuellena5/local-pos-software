@@ -1,0 +1,8 @@
+{
+  "model": "claude-sonnet-4-5",
+  "context_files": [
+    "AGENT_INSTRUCTIONS.md",
+    "PROJECT.md",
+    "README.md"
+  ]
+}

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import * as XLSX from 'xlsx';
 import { useSalesReport } from '@/core/hooks/useReports';
 import { reportsApi } from '@/lib/api/reports';
 
@@ -55,10 +57,29 @@ export function SalesReportPage({ businessUnitId }: Props) {
     { sales: 0, amount: 0 },
   );
 
-  function handleExport() {
+  function handleExportCSV() {
     const url = reportsApi.getExportURL(businessUnitId, 'sales', { fromDate, toDate });
     window.open(url, '_blank');
   }
+
+  function handleExportExcel() {
+    const rows = data.map((r) => ({
+      Fecha: r.date,
+      Ventas: r.totalSales,
+      Total: r.totalAmount,
+      'Ticket promedio': r.avgTicket,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+    XLSX.writeFile(wb, `ventas-${fromDate}-${toDate}.xlsx`);
+  }
+
+  const chartData = data.map((r) => ({
+    date: new Date(r.date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+    total: r.totalAmount,
+    ventas: r.totalSales,
+  }));
 
   return (
     <div className="space-y-4">
@@ -86,12 +107,21 @@ export function SalesReportPage({ businessUnitId }: Props) {
           </div>
         )}
 
-        <button
-          onClick={handleExport}
-          className="ml-auto px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-        >
-          ↓ Exportar CSV
-        </button>
+        <div className="ml-auto flex gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+          >
+            ↓ CSV
+          </button>
+          <button
+            onClick={handleExportExcel}
+            disabled={data.length === 0}
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+          >
+            ↓ Excel
+          </button>
+        </div>
       </div>
 
       {/* Resumen */}
@@ -111,6 +141,21 @@ export function SalesReportPage({ businessUnitId }: Props) {
             </p>
             <p className="text-xs text-purple-500 mt-0.5">Ticket promedio</p>
           </div>
+        </div>
+      )}
+
+      {/* Gráfico de barras */}
+      {!loading && chartData.length > 1 && (
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} width={60} tickFormatter={(v: number) => `$${v.toFixed(0)}`} />
+              <Tooltip formatter={(v) => [`$${Number(v).toFixed(2)}`, 'Total']} />
+              <Bar dataKey="total" fill="#2563eb" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
 

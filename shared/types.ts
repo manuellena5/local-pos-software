@@ -245,3 +245,13 @@ export interface TopCustomersReport {
   purchaseCount: number;
   totalSpent: number;
 }
+
+// ── Fase 9: Dashboard ─────────────────────────────────────────────────────
+
+export interface DashboardData {
+  salesToday: { count: number; total: number };
+  cashbox: { balance: number; lastAuditDate: string | null; lastAuditStatus: string | null };
+  criticalStock: { productId: number; name: string; current: number; threshold: number; status: 'low' | 'out' }[];
+  upcomingOrders?: { id: number; customerName: string; description: string; estimatedDelivery: string; daysLeft: number; status: string }[];
+  topProductsWeek?: { productId: number; name: string; quantity: number; revenue: number }[];
+}

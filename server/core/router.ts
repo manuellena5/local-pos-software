@@ -9,6 +9,7 @@ import { invoicesRouter } from './routes/invoices.routes';
 import { customersRouter } from './routes/customers.routes';
 import { cashboxRouter } from './routes/cashbox.routes';
 import { reportsRouter } from './routes/reports.routes';
+import { dashboardRouter } from './routes/dashboard.routes';
 import { publicRouter } from './routes/public.routes';
 import { catalogRouter } from './routes/catalog.routes';
 import { syncService } from './services/SyncService';
@@ -27,6 +28,7 @@ export function createCoreRouter(): Router {
   router.use('/api', customersRouter);
   router.use('/api', cashboxRouter);
   router.use('/api', reportsRouter);
+  router.use('/api', dashboardRouter);
   // Fase 6: API pública (catálogo read-only, CORS abierto)
   router.use('/api/public', publicRouter);
   // Fase 7: Catálogo web HTML

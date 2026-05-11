@@ -5,7 +5,7 @@
  */
 import { registerScreen, registerMenuItem, registerReport } from '@/core/api';
 import { TallerMedidaPage } from './components/TallerMedidaPage';
-import { OrderReportWrapper } from './components/OrderReportWrapper';
+import { TallerOrdersReport } from './components/TallerOrdersReport';
 
 export function initTallerMedidaModule(): void {
   registerScreen({
@@ -25,6 +25,6 @@ export function initTallerMedidaModule(): void {
   registerReport({
     id:        'taller-medida:pedidos',
     name:      'Pedidos por estado',
-    component: OrderReportWrapper,
+    component: TallerOrdersReport,
   });
 }

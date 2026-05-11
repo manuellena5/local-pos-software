@@ -3,27 +3,34 @@ import { SalesReportPage } from './SalesReportPage';
 import { TopProductsReport } from './TopProductsReport';
 import { TopCustomersReport } from './TopCustomersReport';
 import { StockMovementReport } from './StockMovementReport';
+import { getRegisteredReports } from '@/core/api';
 
-type ReportTab = 'sales' | 'products' | 'customers' | 'stock';
+type CoreTab = 'sales' | 'products' | 'customers' | 'stock';
 
 interface Props {
   businessUnitId: number;
 }
 
-const TABS: { key: ReportTab; label: string; icon: string }[] = [
-  { key: 'sales', label: 'Ventas', icon: '📊' },
-  { key: 'products', label: 'Productos', icon: '📦' },
-  { key: 'customers', label: 'Clientes', icon: '👥' },
-  { key: 'stock', label: 'Stock', icon: '🗂️' },
+const CORE_TABS: { key: CoreTab; label: string; icon: string }[] = [
+  { key: 'sales',     label: 'Ventas',    icon: '📊' },
+  { key: 'products',  label: 'Productos', icon: '📦' },
+  { key: 'customers', label: 'Clientes',  icon: '👥' },
+  { key: 'stock',     label: 'Stock',     icon: '🗂️' },
 ];
 
 export function ReportsPage({ businessUnitId }: Props) {
-  const [tab, setTab] = useState<ReportTab>('sales');
+  const customReports = getRegisteredReports();
+  const [tab, setTab] = useState<string>('sales');
+
+  const allTabs = [
+    ...CORE_TABS,
+    ...customReports.map((r) => ({ key: r.id, label: r.name, icon: '🧵' })),
+  ];
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
+      <div className="flex gap-1 border-b border-gray-200 flex-wrap">
+        {allTabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -40,10 +47,11 @@ export function ReportsPage({ businessUnitId }: Props) {
       </div>
 
       <div className="bg-white rounded-lg">
-        {tab === 'sales' && <SalesReportPage businessUnitId={businessUnitId} />}
-        {tab === 'products' && <TopProductsReport businessUnitId={businessUnitId} />}
+        {tab === 'sales'     && <SalesReportPage businessUnitId={businessUnitId} />}
+        {tab === 'products'  && <TopProductsReport businessUnitId={businessUnitId} />}
         {tab === 'customers' && <TopCustomersReport businessUnitId={businessUnitId} />}
-        {tab === 'stock' && <StockMovementReport businessUnitId={businessUnitId} />}
+        {tab === 'stock'     && <StockMovementReport businessUnitId={businessUnitId} />}
+        {customReports.map((r) => tab === r.id && <r.component key={r.id} />)}
       </div>
     </div>
   );
