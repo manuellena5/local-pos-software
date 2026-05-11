@@ -118,9 +118,9 @@ export function App() {
 
       {/* POS: layout full-height sin scroll exterior */}
       {tab === 'pos' ? (
-        <main className="flex-1 min-h-0 overflow-hidden p-6 flex flex-col">
+        <main className="flex-1 min-h-0 overflow-hidden pt-2 pb-2 px-6 flex flex-col">
           <div className="max-w-6xl mx-auto w-full flex-1 min-h-0 flex flex-col">
-            <div className="bg-white rounded-xl shadow p-6 flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div className="bg-white rounded-xl shadow px-6 pt-3 pb-2 flex-1 min-h-0 flex flex-col overflow-hidden">
               <POSPage businessUnitId={activeBU.id} />
             </div>
           </div>

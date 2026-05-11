@@ -114,8 +114,11 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
 
   return (
     <>
-      {/* Columna derecha: flex-col, overflow-hidden, NO scroll externo */}
+      {/* Columna derecha: flex-col, overflow-hidden, botón siempre visible */}
       <div className="flex flex-col h-full overflow-hidden">
+
+        {/* ── BLOQUE SCROLLEABLE (todo excepto botón + hint) ───────────────── */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
 
         {/* Título */}
         <div className="shrink-0 px-3 pt-2 pb-1 border-b border-gray-100">
@@ -244,11 +247,13 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
           </div>
         )}
 
-        {/* ── MEDIOS DE PAGO (flex-1, ocupa el espacio restante) ───────────── */}
-        <div className="flex-1 min-h-0 overflow-hidden px-3 py-1.5 border-b border-gray-100">
+        {/* ── MEDIOS DE PAGO ───────────────────────────────────────────────── */}
+        <div className="shrink-0 px-3 py-1.5 border-b border-gray-100">
           <SectionLabel>Medios de pago</SectionLabel>
           <POSPaymentMethods />
         </div>
+
+        </div>{/* fin bloque scrolleable */}
 
         {/* ── ERROR GENERAL ────────────────────────────────────────────────── */}
         {error && !hasStockIssues && (

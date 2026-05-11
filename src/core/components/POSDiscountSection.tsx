@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useCart } from '@/core/hooks/useCart';
 
 export function POSDiscountSection() {
-  const { discountPercent, discountAmount, setDiscountPercent, setDiscountAmount, totals } =
+  const { discountPercent, discountAmount, setDiscountPercent, setDiscountAmount } =
     useCart();
   const [mode, setMode] = useState<'percent' | 'amount'>('percent');
   const [inputValue, setInputValue] = useState('');

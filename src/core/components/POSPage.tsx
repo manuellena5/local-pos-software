@@ -13,7 +13,7 @@ export function POSPage({ businessUnitId }: POSPageProps) {
   return (
     <div
       className="flex gap-0 overflow-hidden min-h-[480px]"
-      style={{ height: 'calc(100vh - 200px)' }}
+      style={{ height: 'calc(100vh - 160px)' }}
     >
       {/* ── Columna izquierda: búsqueda fija + carrito scrollable ── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 pr-3 overflow-hidden">
