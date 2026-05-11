@@ -13,26 +13,33 @@ import { ReportsPage } from '@/core/components/ReportsPage';
 import { SettingsPage } from '@/core/components/SettingsPage';
 import { NetworkStatusBar } from '@/core/components/NetworkStatusBar';
 import { initRetailTextilModule } from '@/modules/retail-textil';
+import { initTallerMedidaModule } from '@/modules/taller-medida';
+import { TallerMedidaPage } from '@/modules/taller-medida/components/TallerMedidaPage';
 
 // Inicializar módulos verticales (registra extensiones del formulario de producto, etc.)
 initRetailTextilModule();
+initTallerMedidaModule();
 
-type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'reportes' | 'configuracion';
+type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'pedidos' | 'reportes' | 'configuracion';
 
-const TABS: { key: AppTab; label: string; icon: string }[] = [
-  { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
-  { key: 'productos', label: 'Productos', icon: '📦' },
-  { key: 'pos', label: 'Punto de venta', icon: '💰' },
-  { key: 'clientes', label: 'Clientes', icon: '👥' },
-  { key: 'caja', label: 'Caja', icon: '🏦' },
-  { key: 'reportes', label: 'Reportes', icon: '📊' },
-  { key: 'configuracion', label: 'Configuración', icon: '⚙️' },
+const CORE_TABS: { key: AppTab; label: string; icon: string }[] = [
+  { key: 'dashboard',     label: 'Dashboard',       icon: '🏠' },
+  { key: 'productos',     label: 'Productos',        icon: '📦' },
+  { key: 'pos',           label: 'Punto de venta',   icon: '💰' },
+  { key: 'clientes',      label: 'Clientes',         icon: '👥' },
+  { key: 'caja',          label: 'Caja',             icon: '🏦' },
+  { key: 'reportes',      label: 'Reportes',         icon: '📊' },
+  { key: 'configuracion', label: 'Configuración',    icon: '⚙️' },
 ];
+
+const TALLER_TAB: { key: AppTab; label: string; icon: string } = {
+  key: 'pedidos', label: 'Pedidos', icon: '🧵',
+};
 
 export function App() {
   const { loading, error } = useBootstrap();
-  const config = useAppStore((s) => s.config);
-  const activeBU = useAppStore((s) => s.activeBU);
+  const config    = useAppStore((s) => s.config);
+  const activeBU  = useAppStore((s) => s.activeBU);
   const [tab, setTab] = useState<AppTab>('dashboard');
 
   if (loading) {
@@ -61,6 +68,17 @@ export function App() {
       </div>
     );
   }
+
+  const isTallerBU = activeBU.moduleId === 'taller-medida';
+
+  // Insertar tab Pedidos entre Caja y Reportes solo para BU taller-medida
+  const TABS = isTallerBU
+    ? [
+        ...CORE_TABS.slice(0, 5),   // dashboard → caja
+        TALLER_TAB,
+        ...CORE_TABS.slice(5),      // reportes → configuracion
+      ]
+    : CORE_TABS;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -100,12 +118,13 @@ export function App() {
 
       <main className="p-6 max-w-6xl mx-auto">
         <div className="bg-white rounded-xl shadow p-6">
-          {tab === 'dashboard' && <StockDashboard businessUnitId={activeBU.id} />}
-          {tab === 'productos' && <ProductList businessUnitId={activeBU.id} />}
-          {tab === 'pos' && <POSPage businessUnitId={activeBU.id} />}
-          {tab === 'clientes' && <CustomerList />}
-          {tab === 'caja' && <CashboxPage businessUnitId={activeBU.id} />}
-          {tab === 'reportes' && <ReportsPage businessUnitId={activeBU.id} />}
+          {tab === 'dashboard'     && <StockDashboard businessUnitId={activeBU.id} />}
+          {tab === 'productos'     && <ProductList businessUnitId={activeBU.id} />}
+          {tab === 'pos'           && <POSPage businessUnitId={activeBU.id} />}
+          {tab === 'clientes'      && <CustomerList />}
+          {tab === 'caja'          && <CashboxPage businessUnitId={activeBU.id} />}
+          {tab === 'pedidos'       && <TallerMedidaPage />}
+          {tab === 'reportes'      && <ReportsPage businessUnitId={activeBU.id} />}
           {tab === 'configuracion' && <SettingsPage />}
         </div>
       </main>

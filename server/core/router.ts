@@ -13,6 +13,7 @@ import { publicRouter } from './routes/public.routes';
 import { catalogRouter } from './routes/catalog.routes';
 import { syncService } from './services/SyncService';
 import { retailTextilRouter } from '../modules/retail-textil/router';
+import { tallerMedidaRouter } from '../modules/taller-medida/router';
 import type { Request, Response } from 'express';
 
 export function createCoreRouter(): Router {
@@ -32,6 +33,8 @@ export function createCoreRouter(): Router {
   router.use(catalogRouter);
   // Fase 7: Módulo retail-textil
   router.use('/api/modules/retail-textil', retailTextilRouter);
+  // Fase 8: Módulo taller-medida
+  router.use('/api/modules/taller-medida', tallerMedidaRouter);
   // Fase 7: Servir imágenes de productos como estáticos
   router.use('/assets/products', express.static(path.join(process.cwd(), 'assets', 'products')));
 

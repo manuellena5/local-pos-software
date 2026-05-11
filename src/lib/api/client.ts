@@ -1,6 +1,7 @@
 import type { ApiResponse, ApiErrorResponse } from '@shared/types';
 
-const BASE_URL = 'http://localhost:3001';
+// En Electron usa puerto absoluto; en browser/preview usa ruta relativa (proxy Vite)
+const BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:3001' : '';
 
 class ApiError extends Error {
   constructor(

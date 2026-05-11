@@ -17,6 +17,7 @@ export function initDatabase(): void {
     '0010_retail_textil_module.sql',
     '0011_products_retail_columns.sql',
     '0012_installation_catalog_config.sql',
+    '0013_taller_medida_module.sql',
   ];
 
   for (const migration of migrations) {
