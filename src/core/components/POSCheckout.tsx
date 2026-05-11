@@ -200,28 +200,23 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
           {/* ── DESCUENTO — solo visible cuando hay ítems en el carrito ─── */}
           {cart.length > 0 && (
             <div className="mb-3">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                 Descuento
               </h3>
               <POSDiscountSection />
 
-              {/* Badge del descuento activo */}
+              {/* Indicador compacto del descuento activo */}
               {hasDiscount && (
-                <div className="flex items-center justify-between mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  <div>
-                    <p className="text-xs text-amber-700 font-medium">{discountLabel}</p>
-                    <p className="text-sm font-bold text-amber-800">
-                      −{formatCurrency(totals.discountAmount)}
-                    </p>
-                  </div>
+                <p className="text-xs text-amber-700 mt-1.5 flex items-center gap-1.5">
+                  <span>{discountLabel} · −{formatCurrency(totals.discountAmount)}</span>
                   <button
                     onClick={() => { setDiscountPercent(0); setDiscountAmount(0); }}
-                    className="text-amber-400 hover:text-amber-600 text-xl leading-none ml-2"
+                    className="text-amber-400 hover:text-amber-600 font-bold leading-none"
                     title="Quitar descuento"
                   >
                     ×
                   </button>
-                </div>
+                </p>
               )}
             </div>
           )}

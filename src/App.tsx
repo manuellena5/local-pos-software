@@ -81,8 +81,8 @@ export function App() {
     : CORE_TABS;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+    <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
+      <header className="shrink-0 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{config?.businessName ?? 'LocalPos'}</h1>
           <p className="text-sm font-medium text-gray-600 mt-0.5">
@@ -97,7 +97,7 @@ export function App() {
         </div>
       </header>
 
-      <div className="border-b border-gray-200 bg-white px-6">
+      <div className="shrink-0 border-b border-gray-200 bg-white px-6">
         <div className="flex gap-1 max-w-6xl mx-auto">
           {TABS.map((t) => (
             <button
@@ -116,24 +116,36 @@ export function App() {
         </div>
       </div>
 
-      <main className="p-6 max-w-6xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-6">
-          {tab === 'dashboard'     && (
-            <DashboardPage
-              businessUnitId={activeBU.id}
-              moduleId={activeBU.moduleId}
-              onNavigate={(t) => setTab(t as AppTab)}
-            />
-          )}
-          {tab === 'productos'     && <ProductList businessUnitId={activeBU.id} />}
-          {tab === 'pos'           && <POSPage businessUnitId={activeBU.id} />}
-          {tab === 'clientes'      && <CustomerList />}
-          {tab === 'caja'          && <CashboxPage businessUnitId={activeBU.id} />}
-          {tab === 'pedidos'       && <TallerMedidaPage />}
-          {tab === 'reportes'      && <ReportsPage businessUnitId={activeBU.id} />}
-          {tab === 'configuracion' && <SettingsPage />}
-        </div>
-      </main>
+      {/* POS: layout full-height sin scroll exterior */}
+      {tab === 'pos' ? (
+        <main className="flex-1 min-h-0 overflow-hidden p-6 flex flex-col">
+          <div className="max-w-6xl mx-auto w-full flex-1 min-h-0 flex flex-col">
+            <div className="bg-white rounded-xl shadow p-6 flex-1 min-h-0 flex flex-col overflow-hidden">
+              <POSPage businessUnitId={activeBU.id} />
+            </div>
+          </div>
+        </main>
+      ) : (
+        <main className="flex-1 overflow-auto p-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white rounded-xl shadow p-6">
+              {tab === 'dashboard'     && (
+                <DashboardPage
+                  businessUnitId={activeBU.id}
+                  moduleId={activeBU.moduleId}
+                  onNavigate={(t) => setTab(t as AppTab)}
+                />
+              )}
+              {tab === 'productos'     && <ProductList businessUnitId={activeBU.id} />}
+              {tab === 'clientes'      && <CustomerList />}
+              {tab === 'caja'          && <CashboxPage businessUnitId={activeBU.id} />}
+              {tab === 'pedidos'       && <TallerMedidaPage />}
+              {tab === 'reportes'      && <ReportsPage businessUnitId={activeBU.id} />}
+              {tab === 'configuracion' && <SettingsPage />}
+            </div>
+          </div>
+        </main>
+      )}
     </div>
   );
 }
