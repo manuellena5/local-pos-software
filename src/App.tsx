@@ -85,8 +85,8 @@ export function App() {
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{config?.businessName ?? 'LocalPos'}</h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {activeBU.name} — {activeBU.moduleId}
+          <p className="text-sm font-medium text-gray-600 mt-0.5">
+            Unidad activa: {activeBU.name} — {activeBU.moduleId}
           </p>
         </div>
         <div className="flex items-center gap-3">

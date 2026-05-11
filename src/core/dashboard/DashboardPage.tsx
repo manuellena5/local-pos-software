@@ -163,9 +163,12 @@ function TopProductsWidget({ data }: { data: DashboardData }) {
   const products = data.topProductsWeek ?? [];
   if (products.length === 0) {
     return (
-      <div className="border border-gray-100 rounded-xl p-5">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Más vendidos esta semana</p>
-        <p className="text-sm text-gray-400">Sin ventas esta semana</p>
+      <div className="border border-gray-100 rounded-xl p-4 flex items-center gap-3">
+        <span className="text-2xl">📦</span>
+        <div>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Más vendidos</p>
+          <p className="text-sm text-gray-400">Las ventas de esta semana aparecerán acá</p>
+        </div>
       </div>
     );
   }

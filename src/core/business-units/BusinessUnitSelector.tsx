@@ -23,7 +23,7 @@ export function BusinessUnitSelector() {
             key={unit.id}
             onClick={() => handleSwitch(unit)}
             className={[
-              'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+              'px-4 py-2 min-h-[44px] rounded-lg text-sm font-medium transition-colors',
               activeBU?.id === unit.id
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200',

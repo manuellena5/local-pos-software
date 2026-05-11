@@ -149,33 +149,6 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
           )}
         </section>
 
-        {/* ── DESCUENTO ────────────────────────────────────────────────────── */}
-        <section>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Descuento
-          </h3>
-          <POSDiscountSection />
-
-          {/* Badge del descuento activo */}
-          {hasDiscount && (
-            <div className="flex items-center justify-between mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              <div>
-                <p className="text-xs text-amber-700 font-medium">{discountLabel}</p>
-                <p className="text-sm font-bold text-amber-800">
-                  −{formatCurrency(totals.discountAmount)}
-                </p>
-              </div>
-              <button
-                onClick={() => { setDiscountPercent(0); setDiscountAmount(0); }}
-                className="text-amber-400 hover:text-amber-600 text-xl leading-none ml-2"
-                title="Quitar descuento"
-              >
-                ×
-              </button>
-            </div>
-          )}
-        </section>
-
         {/* ── RESUMEN / TOTAL ──────────────────────────────────────────────── */}
         <section>
           <div className="space-y-1 text-sm text-gray-600 mb-3">
@@ -194,6 +167,35 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
               </div>
             )}
           </div>
+
+          {/* ── DESCUENTO — solo visible cuando hay ítems en el carrito ─── */}
+          {cart.length > 0 && (
+            <div className="mb-3">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Descuento
+              </h3>
+              <POSDiscountSection />
+
+              {/* Badge del descuento activo */}
+              {hasDiscount && (
+                <div className="flex items-center justify-between mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <div>
+                    <p className="text-xs text-amber-700 font-medium">{discountLabel}</p>
+                    <p className="text-sm font-bold text-amber-800">
+                      −{formatCurrency(totals.discountAmount)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setDiscountPercent(0); setDiscountAmount(0); }}
+                    className="text-amber-400 hover:text-amber-600 text-xl leading-none ml-2"
+                    title="Quitar descuento"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Total a pagar — prominente */}
           <div className="bg-blue-50 border-2 border-blue-400 rounded-xl px-4 py-3 flex items-center justify-between">
@@ -280,7 +282,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
           </button>
 
           {disabledReason && !isProcessing && (
-            <p className="text-xs text-center text-gray-400 mt-1.5">{disabledReason}</p>
+            <p className="text-sm text-center text-gray-500 font-medium mt-2">{disabledReason}</p>
           )}
         </section>
       </div>
