@@ -115,19 +115,21 @@ export class ReportService {
       .limit(limit)
       .all();
 
-    // Obtener categoría de cada producto
+    // Obtener nombre y categoría actuales de cada producto.
+    // Usamos products.name en lugar del productName desnormalizado en sale_items
+    // porque el campo histórico puede tener encoding incorrecto (guardado en el momento de venta).
     return itemRows.map((row) => {
       const product = db
-        .select({ category: products.category })
+        .select({ name: products.name, category: products.category })
         .from(products)
         .where(eq(products.id, row.productId))
         .get();
       return {
         productId: row.productId,
-        name: row.productName,
-        category: product?.category ?? null,
-        quantity: row.totalQty,
-        revenue: Math.round(row.totalRevenue * 100) / 100,
+        name:      product?.name ?? row.productName, // fallback si el producto fue eliminado
+        category:  product?.category ?? null,
+        quantity:  row.totalQty,
+        revenue:   Math.round(row.totalRevenue * 100) / 100,
       };
     });
   }
