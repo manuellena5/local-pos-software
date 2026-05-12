@@ -15,12 +15,15 @@ import { DashboardPage } from '@/core/dashboard/DashboardPage';
 import { initRetailTextilModule } from '@/modules/retail-textil';
 import { initTallerMedidaModule } from '@/modules/taller-medida';
 import { TallerMedidaPage } from '@/modules/taller-medida/components/TallerMedidaPage';
+import { initProveedoresModule } from '@/modules/proveedores';
+import { SuppliersView } from '@/modules/proveedores/components/SuppliersView';
 
 // Inicializar módulos verticales (registra extensiones del formulario de producto, etc.)
 initRetailTextilModule();
 initTallerMedidaModule();
+initProveedoresModule();
 
-type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'pedidos' | 'reportes' | 'configuracion';
+type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'pedidos' | 'proveedores' | 'reportes' | 'configuracion';
 
 const CORE_TABS: { key: AppTab; label: string; icon: string }[] = [
   { key: 'dashboard',     label: 'Dashboard',       icon: '🏠' },
@@ -28,6 +31,7 @@ const CORE_TABS: { key: AppTab; label: string; icon: string }[] = [
   { key: 'pos',           label: 'Punto de venta',   icon: '💰' },
   { key: 'clientes',      label: 'Clientes',         icon: '👥' },
   { key: 'caja',          label: 'Caja',             icon: '🏦' },
+  { key: 'proveedores',   label: 'Proveedores',      icon: '🏭' },
   { key: 'reportes',      label: 'Reportes',         icon: '📊' },
   { key: 'configuracion', label: 'Configuración',    icon: '⚙️' },
 ];
@@ -140,6 +144,7 @@ export function App() {
               {tab === 'clientes'      && <CustomerList />}
               {tab === 'caja'          && <CashboxPage businessUnitId={activeBU.id} />}
               {tab === 'pedidos'       && <TallerMedidaPage />}
+              {tab === 'proveedores'   && <SuppliersView />}
               {tab === 'reportes'      && <ReportsPage businessUnitId={activeBU.id} />}
               {tab === 'configuracion' && <SettingsPage />}
             </div>

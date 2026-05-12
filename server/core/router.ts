@@ -16,6 +16,7 @@ import { categoriesRouter } from './routes/categories.routes';
 import { syncService } from './services/SyncService';
 import { retailTextilRouter } from '../modules/retail-textil/router';
 import { tallerMedidaRouter } from '../modules/taller-medida/router';
+import { proveedoresRouter } from '../modules/proveedores/router';
 import type { Request, Response } from 'express';
 
 export function createCoreRouter(): Router {
@@ -39,6 +40,8 @@ export function createCoreRouter(): Router {
   router.use('/api/modules/retail-textil', retailTextilRouter);
   // Fase 8: Módulo taller-medida
   router.use('/api/modules/taller-medida', tallerMedidaRouter);
+  // Fase 10 Paso 2: Módulo proveedores (disponible para todas las BUs)
+  router.use('/api/modules/proveedores', proveedoresRouter);
   // Fase 7: Servir imágenes de productos como estáticos
   router.use('/assets/products', express.static(path.join(process.cwd(), 'assets', 'products')));
 

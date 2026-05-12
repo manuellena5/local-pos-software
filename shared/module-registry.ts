@@ -2,9 +2,11 @@ import { MODULE_IDS } from './constants';
 import type { ModuleId } from './constants';
 
 export interface ModuleDefinition {
-  id: ModuleId;
+  id: string;
   name: string;
   description: string;
+  /** true → el módulo aplica a todas las BUs, no es específico de un moduleId */
+  availableForAllBUs?: boolean;
 }
 
 export const MODULE_REGISTRY: ModuleDefinition[] = [
@@ -22,6 +24,12 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     id: MODULE_IDS.TALLER_MEDIDA,
     name: 'Taller a Medida',
     description: 'Confección a medida, sastrería — con pedidos, estados y seña',
+  },
+  {
+    id: 'proveedores',
+    name: 'Proveedores',
+    description: 'Gestión de proveedores y catálogos de compra',
+    availableForAllBUs: true,
   },
 ];
 

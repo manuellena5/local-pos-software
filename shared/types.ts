@@ -266,3 +266,21 @@ export interface Category {
   isActive: boolean;
   createdAt: string;
 }
+
+export interface Supplier {
+  id: number;
+  businessUnitId: number;
+  name: string;
+  contactName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  paymentTerms?: 'contado' | '15dias' | '30dias' | '60dias' | 'otro' | null;
+  deliveryDays?: number | null;
+  notes?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateSupplierDTO = Omit<Supplier, 'id' | 'isActive' | 'createdAt' | 'updatedAt'>;
+export type UpdateSupplierDTO = Partial<CreateSupplierDTO>;

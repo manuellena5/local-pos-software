@@ -20,6 +20,7 @@ export function initDatabase(): void {
     '0013_taller_medida_module.sql',
     '0014_products_barcode_supplier_code.sql',
     '0015_categories.sql',
+    '0016_suppliers.sql',
   ];
 
   for (const migration of migrations) {
