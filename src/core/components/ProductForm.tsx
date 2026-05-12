@@ -1,5 +1,7 @@
 import { useProductForm } from '@/core/hooks/useProductForm';
 import { useProductExtensions } from '@/core/api';
+import { useCategories } from '@/core/categories/hooks/useCategories';
+import { CategorySelector } from '@/core/categories/components/CategorySelector';
 import type { Product } from '@shared/types';
 
 interface ProductFormProps {
@@ -14,6 +16,7 @@ export function ProductForm({ businessUnitId, onClose, onSuccess, existingProduc
   const { formData, setFormData, errors, isSubmitting, onSubmit, isEditMode } =
     useProductForm(businessUnitId, onSuccess, existingProduct);
 
+  const { categories, refetch: refetchCategories } = useCategories();
   const extensions = useProductExtensions();
   // Las extensiones solo se muestran en modo edición (necesitan productId existente)
   const productId  = existingProduct?.id;
@@ -45,12 +48,15 @@ export function ProductForm({ businessUnitId, onClose, onSuccess, existingProduc
             />
             {errors.sku && <p className="text-red-500 text-xs">{errors.sku}</p>}
 
-            <input
-              type="text"
-              placeholder="Categoría"
+            <CategorySelector
+              businessUnitId={businessUnitId}
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              onChange={(val) => setFormData({ ...formData, category: val })}
+              categories={categories}
+              onCategoryCreated={(cat) => {
+                void refetchCategories();
+                setFormData((prev) => ({ ...prev, category: cat.name }));
+              }}
             />
 
             <textarea

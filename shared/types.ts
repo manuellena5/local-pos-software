@@ -258,3 +258,11 @@ export interface DashboardData {
   upcomingOrders?: { id: number; customerName: string; description: string; estimatedDelivery: string; daysLeft: number; status: string }[];
   topProductsWeek?: { productId: number; name: string; quantity: number; revenue: number }[];
 }
+
+export interface Category {
+  id: number;
+  name: string;
+  businessUnitId: number;
+  isActive: boolean;
+  createdAt: string;
+}
