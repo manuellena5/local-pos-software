@@ -284,3 +284,40 @@ export interface Supplier {
 
 export type CreateSupplierDTO = Omit<Supplier, 'id' | 'isActive' | 'createdAt' | 'updatedAt'>;
 export type UpdateSupplierDTO = Partial<CreateSupplierDTO>;
+
+export interface SupplierProduct {
+  id: number;
+  supplierId: number;
+  businessUnitId: number;
+  name: string;
+  supplierCode?: string | null;
+  unitCost: number;
+  currency: string;
+  unit: string;
+  categoryHint?: string | null;
+  isActive: boolean;
+  lastUpdated: string;
+  createdAt: string;
+}
+
+export interface RawImportRow {
+  name: string;
+  supplierCode?: string;
+  unitCost: number;
+  unit?: string;
+  categoryHint?: string;
+}
+
+export interface ImportResult {
+  created: number;
+  updated: number;
+  unchanged: number;
+  errors: Array<{
+    row: number;
+    reason: string;
+    rawData: Record<string, unknown>;
+  }>;
+}
+
+export type UpsertSupplierProductDTO = Omit<SupplierProduct, 'id' | 'isActive' | 'lastUpdated' | 'createdAt'>;
+

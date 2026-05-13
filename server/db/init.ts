@@ -21,6 +21,7 @@ export function initDatabase(): void {
     '0014_products_barcode_supplier_code.sql',
     '0015_categories.sql',
     '0016_suppliers.sql',
+    '0017_supplier_products.sql',
   ];
 
   for (const migration of migrations) {

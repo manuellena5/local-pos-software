@@ -3,6 +3,7 @@ import { useAppStore } from '@/core/store/appStore';
 import { apiClient } from '@/lib/api/client';
 import { useSuppliers } from '../hooks/useSuppliers';
 import { SupplierForm } from './SupplierForm';
+import { SupplierCatalogView } from './SupplierCatalogView';
 import type { Supplier } from '@shared/types';
 
 const PAYMENT_TERMS_LABELS: Record<string, string> = {
@@ -27,27 +28,15 @@ export function SuppliersView() {
 
   if (!activeBU) return null;
 
-  // ── Vista "catálogo" placeholder ─────────────────────────────────────────
+  // ── Vista catálogo ───────────────────────────────────────────────────────
   if (typeof viewMode === 'object' && 'catalog' in viewMode) {
     const supplier = suppliers.find((s) => s.id === viewMode.catalog);
     return (
-      <div className="space-y-4">
-        <button
-          onClick={() => setViewMode('list')}
-          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-        >
-          ← Volver a proveedores
-        </button>
-        <div className="border border-gray-200 rounded-xl p-8 text-center">
-          <p className="text-2xl mb-3">📦</p>
-          <p className="text-base font-semibold text-gray-700">
-            Catálogo de {supplier?.name ?? 'proveedor'}
-          </p>
-          <p className="text-sm text-gray-400 mt-1">
-            Próximamente — catálogo del proveedor (Paso 3)
-          </p>
-        </div>
-      </div>
+      <SupplierCatalogView
+        supplierId={viewMode.catalog}
+        supplierName={supplier?.name ?? 'Proveedor'}
+        onBack={() => setViewMode('list')}
+      />
     );
   }
 

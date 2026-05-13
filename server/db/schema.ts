@@ -9,3 +9,4 @@ export * from './schemas/core/categories';
 export * from './schemas/modules/retail-textil';
 export * from './schemas/modules/taller-medida';
 export * from './schemas/modules/suppliers';
+export * from './schemas/modules/supplierProducts';
