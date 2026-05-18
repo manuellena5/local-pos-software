@@ -143,6 +143,84 @@ export class StockRepository {
     }));
   }
 
+  /**
+   * Crea un movimiento de stock tipado (entrada/salida/ajuste) con validación de stock negativo.
+   * Para 'ajuste', qty puede ser negativo (diferencia real - actual).
+   */
+  createMovement(
+    productId: number,
+    businessUnitId: number,
+    type: 'entrada' | 'salida' | 'ajuste',
+    quantity: number,
+    unitCost?: number,
+    reason?: string,
+    userId?: number,
+  ): { movement: StockMovement; newQuantity: number } {
+    const stockItem = this.getByProductId(productId, businessUnitId);
+    if (!stockItem) throw new Error(`StockItem no encontrado para producto ${productId}`);
+
+    const dbType = type === 'entrada' ? 'entry' : type === 'salida' ? 'sale' : 'adjustment';
+    let delta: number;
+
+    if (type === 'entrada') {
+      delta = quantity;
+    } else if (type === 'salida') {
+      delta = -quantity;
+    } else {
+      // ajuste: quantity es el stock real contado; delta = real - actual
+      delta = quantity - stockItem.quantity;
+    }
+
+    const newQuantity = stockItem.quantity + delta;
+    if (newQuantity < 0) {
+      throw new Error(`Stock insuficiente. Stock actual: ${stockItem.quantity}, solicitado: ${quantity}`);
+    }
+
+    this.updateStockQuantity(stockItem.id, newQuantity);
+
+    const movement = this.recordMovementWithCost(
+      stockItem.id,
+      businessUnitId,
+      dbType,
+      Math.abs(delta),
+      reason ?? (type === 'entrada' ? 'Entrada de stock' : type === 'salida' ? 'Salida de stock' : 'Ajuste de inventario'),
+      unitCost,
+      userId,
+    );
+
+    return { movement, newQuantity };
+  }
+
+  private recordMovementWithCost(
+    stockItemId: number,
+    businessUnitId: number,
+    type: 'entry' | 'sale' | 'adjustment',
+    quantity: number,
+    reason: string,
+    unitCost?: number,
+    userId?: number,
+  ): StockMovement {
+    const rows = db
+      .insert(stockMovements)
+      .values({ stockItemId, businessUnitId, type, quantity, reason, unitCost, userId })
+      .returning()
+      .all();
+    return rows[0]!;
+  }
+
+  getLastEntryDate(productId: number, businessUnitId: number): string | null {
+    const stockItem = this.getByProductId(productId, businessUnitId);
+    if (!stockItem) return null;
+    const row = db
+      .select({ createdAt: stockMovements.createdAt })
+      .from(stockMovements)
+      .where(and(eq(stockMovements.stockItemId, stockItem.id), eq(stockMovements.type, 'entry')))
+      .orderBy(stockMovements.createdAt)
+      .limit(1)
+      .all()[0];
+    return row?.createdAt ?? null;
+  }
+
   private getStockStatus(quantity: number, threshold: number): 'ok' | 'low' | 'out' {
     if (quantity === 0) return 'out';
     if (quantity < threshold) return 'low';

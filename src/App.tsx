@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useBootstrap } from '@/core/config/useBootstrap';
 import { useAppStore } from '@/core/store/appStore';
 import { BusinessUnitSelector } from '@/core/business-units/BusinessUnitSelector';
-import { ProductList } from '@/core/components/ProductList';
+import { ProductsPage } from '@/core/products/components/ProductsPage';
 import { POSPage } from '@/core/components/POSPage';
 import { InvoiceQueueStatus } from '@/core/components/InvoiceQueueStatus';
 import { CustomerList } from '@/core/components/CustomerList';
@@ -16,7 +16,7 @@ import { initRetailTextilModule } from '@/modules/retail-textil';
 import { initTallerMedidaModule } from '@/modules/taller-medida';
 import { TallerMedidaPage } from '@/modules/taller-medida/components/TallerMedidaPage';
 import { initProveedoresModule } from '@/modules/proveedores';
-import { SuppliersView } from '@/modules/proveedores/components/SuppliersView';
+import { ProveedoresPage } from '@/modules/proveedores/components/ProveedoresPage';
 
 // Inicializar módulos verticales (registra extensiones del formulario de producto, etc.)
 initRetailTextilModule();
@@ -86,7 +86,7 @@ export function App() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
-      <header className="shrink-0 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+      <header className="shrink-0 bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{config?.businessName ?? 'LocalPos'}</h1>
           <p className="text-sm font-medium text-gray-600 mt-0.5">
@@ -107,7 +107,7 @@ export function App() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium border-b-2 transition-colors ${
                 tab === t.key
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-800'
@@ -130,9 +130,9 @@ export function App() {
           </div>
         </main>
       ) : (
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto pt-2 px-4 pb-4">
           <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-xl shadow p-6">
+            <div className="bg-white rounded-xl shadow p-3">
               {tab === 'dashboard'     && (
                 <DashboardPage
                   businessUnitId={activeBU.id}
@@ -140,11 +140,11 @@ export function App() {
                   onNavigate={(t) => setTab(t as AppTab)}
                 />
               )}
-              {tab === 'productos'     && <ProductList businessUnitId={activeBU.id} />}
+              {tab === 'productos'     && <ProductsPage businessUnitId={activeBU.id} />}
               {tab === 'clientes'      && <CustomerList />}
               {tab === 'caja'          && <CashboxPage businessUnitId={activeBU.id} />}
               {tab === 'pedidos'       && <TallerMedidaPage />}
-              {tab === 'proveedores'   && <SuppliersView />}
+              {tab === 'proveedores'   && <ProveedoresPage />}
               {tab === 'reportes'      && <ReportsPage businessUnitId={activeBU.id} />}
               {tab === 'configuracion' && <SettingsPage />}
             </div>

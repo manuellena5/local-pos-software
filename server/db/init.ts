@@ -22,6 +22,9 @@ export function initDatabase(): void {
     '0015_categories.sql',
     '0016_suppliers.sql',
     '0017_supplier_products.sql',
+    '0018_suppliers_new_fields.sql',
+    '0019_product_supplier_links.sql',
+    '0020_products_extended_fields.sql',
   ];
 
   for (const migration of migrations) {

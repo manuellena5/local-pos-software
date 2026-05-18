@@ -10,6 +10,9 @@ export const createSupplierSchema = z.object({
   email:          z.string().email('Email inválido').max(200).trim().optional().nullable().or(z.literal('')),
   paymentTerms:   z.enum(PAYMENT_TERMS).optional().nullable(),
   deliveryDays:   z.number().int().min(0).optional().nullable(),
+  minimumOrder:   z.number().min(0).optional().nullable(),
+  shippingCost:   z.number().min(0).optional().nullable(),
+  city:           z.string().max(200).trim().optional().nullable(),
   notes:          z.string().max(2000).trim().optional().nullable(),
 });
 

@@ -1,6 +1,6 @@
 import { db } from '../../db/connection';
 import { cashMovements } from '../../db/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import type { CashMovement, CashMovementType } from '../../../shared/types';
 import type { CreateCashMovementRequest } from '../types';
 
@@ -81,6 +81,19 @@ export class CashMovementRepository {
       .select()
       .from(cashMovements)
       .where(eq(cashMovements.saleId, saleId))
+      .get();
+    return row ? rowToModel(row) : null;
+  }
+
+  /**
+   * Devuelve el último movimiento de un tipo dado, o null si no existe.
+   */
+  getLatestOfType(businessUnitId: number, type: CashMovementType): CashMovement | null {
+    const row = db
+      .select()
+      .from(cashMovements)
+      .where(and(eq(cashMovements.businessUnitId, businessUnitId), eq(cashMovements.type, type)))
+      .orderBy(desc(cashMovements.createdAt))
       .get();
     return row ? rowToModel(row) : null;
   }

@@ -1,6 +1,8 @@
 import { eq, and } from 'drizzle-orm';
 import { db, sqlite } from '../../../db/connection';
 import { supplierProducts } from '../../../db/schemas/modules/supplierProducts';
+import { productSupplierLinks } from '../../../db/schemas/modules/productSupplierLinks';
+import { products } from '../../../db/schemas/core/products';
 import type { SupplierProduct, UpsertSupplierProductDTO } from '../../../../shared/types';
 
 function mapRow(row: typeof supplierProducts.$inferSelect): SupplierProduct {
@@ -21,14 +23,45 @@ function mapRow(row: typeof supplierProducts.$inferSelect): SupplierProduct {
 }
 
 export class SupplierProductRepository {
-  findAllBySupplierId(supplierId: number): SupplierProduct[] {
-    return db
-      .select()
+  findAllBySupplierId(supplierId: number, businessUnitId?: number): SupplierProduct[] {
+    if (businessUnitId == null) {
+      return db
+        .select()
+        .from(supplierProducts)
+        .where(and(eq(supplierProducts.supplierId, supplierId), eq(supplierProducts.isActive, true)))
+        .orderBy(supplierProducts.name)
+        .all()
+        .map(mapRow);
+    }
+
+    // Con buId: LEFT JOIN para detectar si el producto está vinculado
+    // y obtener nombre + precio de venta del producto propio (para margen)
+    const rows = db
+      .select({
+        sp:                    supplierProducts,
+        linkId:                productSupplierLinks.id,
+        linkedProductName:     products.name,
+        linkedProductBasePrice: products.basePrice,
+      })
       .from(supplierProducts)
+      .leftJoin(
+        productSupplierLinks,
+        and(
+          eq(productSupplierLinks.supplierProductId, supplierProducts.id),
+          eq(productSupplierLinks.businessUnitId, businessUnitId),
+        ),
+      )
+      .leftJoin(products, eq(products.id, productSupplierLinks.productId))
       .where(and(eq(supplierProducts.supplierId, supplierId), eq(supplierProducts.isActive, true)))
       .orderBy(supplierProducts.name)
-      .all()
-      .map(mapRow);
+      .all();
+
+    return rows.map((r) => ({
+      ...mapRow(r.sp),
+      isLinked:               r.linkId !== null,
+      linkedProductName:      r.linkedProductName ?? null,
+      linkedProductBasePrice: r.linkedProductBasePrice ?? null,
+    }));
   }
 
   findById(id: number): SupplierProduct | null {

@@ -14,11 +14,16 @@ export const products = sqliteTable('products', {
   costPrice: real('cost_price').notNull(),
   basePrice: real('base_price').notNull(),
   taxRate: real('tax_rate').notNull().default(21),
-  isActive:     integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  barcode:      text('barcode'),
-  supplierCode: text('supplier_code'),
-  createdAt:    text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt:    text('updated_at').notNull().default(sql`(datetime('now'))`),
+  isActive:          integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  barcode:           text('barcode'),
+  supplierCode:      text('supplier_code'),
+  minimumSalePrice:  real('minimum_sale_price'),
+  supplierId:        integer('supplier_id'),
+  supplierLeadTime:  integer('supplier_lead_time'),
+  showCatalogPrice:  integer('show_catalog_price', { mode: 'boolean' }).notNull().default(true),
+  showCatalogStock:  integer('show_catalog_stock', { mode: 'boolean' }).notNull().default(false),
+  createdAt:         text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt:         text('updated_at').notNull().default(sql`(datetime('now'))`),
 });
 
 export const stockItems = sqliteTable('stock_items', {
@@ -40,10 +45,11 @@ export const stockMovements = sqliteTable('stock_movements', {
   businessUnitId: integer('business_unit_id')
     .notNull()
     .references(() => businessUnits.id),
-  type: text('type', { enum: ['entry', 'sale', 'adjustment'] }).notNull(),
-  quantity: integer('quantity').notNull(),
-  reason: text('reason').notNull(),
-  userId: integer('user_id').references(() => users.id),
+  type:      text('type', { enum: ['entry', 'sale', 'adjustment'] }).notNull(),
+  quantity:  integer('quantity').notNull(),
+  reason:    text('reason').notNull(),
+  unitCost:  real('unit_cost'),
+  userId:    integer('user_id').references(() => users.id),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
 

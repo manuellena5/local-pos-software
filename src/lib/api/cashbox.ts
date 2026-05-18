@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { CashMovement, CashAudit } from '@shared/types';
+import type { CashMovement, CashAudit, CashSessionStatus } from '@shared/types';
 
 export interface CashBalance {
   theoretical: number;
@@ -42,5 +42,14 @@ export const cashboxApi = {
   ): Promise<CashAudit> {
     const params = new URLSearchParams({ businessUnitId: String(businessUnitId) });
     return apiClient.post(`/api/cashbox/audit?${params}`, { realBalance, notes });
+  },
+
+  getStatus(businessUnitId: number): Promise<{ status: CashSessionStatus }> {
+    return apiClient.get(`/api/cashbox/status?businessUnitId=${businessUnitId}`);
+  },
+
+  openSession(businessUnitId: number, initialAmount: number): Promise<CashMovement> {
+    const params = new URLSearchParams({ businessUnitId: String(businessUnitId) });
+    return apiClient.post(`/api/cashbox/open?${params}`, { initialAmount });
   },
 };

@@ -1,5 +1,5 @@
 import type { StockMovement, StockSummary } from '../../../shared/types';
-import { adjustStockSchema } from '../schemas/products.schema';
+import { adjustStockSchema, createStockMovementSchema } from '../schemas/products.schema';
 import type { ProductRepository } from '../repositories/ProductRepository';
 import type { StockRepository } from '../repositories/StockRepository';
 import { NotFoundError, ValidationError, BusinessRuleError } from '../../lib/errors';
@@ -75,5 +75,50 @@ export class StockService {
 
   getStockSummary(businessUnitId: number): StockSummary[] {
     return this.stockRepo.getStockSummary(businessUnitId);
+  }
+
+  /**
+   * Crea un movimiento de stock tipado (entrada/salida/ajuste).
+   * Si es entrada con unitCost, actualiza el costo del producto.
+   */
+  createMovement(
+    productId: number,
+    businessUnitId: number,
+    data: { type: 'entrada' | 'salida' | 'ajuste'; quantity: number; unitCost?: number; reason?: string },
+    userId?: number,
+  ): { movement: StockMovement; newQuantity: number } {
+    const parsed = createStockMovementSchema.safeParse(data);
+    if (!parsed.success) throw new ValidationError('Datos inválidos', parsed.error.errors);
+
+    const product = this.productRepo.getById(productId, businessUnitId);
+    if (!product) throw new NotFoundError(`Producto ${productId} no encontrado`);
+
+    try {
+      const result = this.stockRepo.createMovement(
+        productId,
+        businessUnitId,
+        parsed.data.type,
+        parsed.data.quantity,
+        parsed.data.unitCost,
+        parsed.data.reason,
+        userId,
+      );
+
+      // Si es entrada con costo unitario, actualizar costPrice del producto
+      if (parsed.data.type === 'entrada' && parsed.data.unitCost && parsed.data.unitCost > 0) {
+        this.productRepo.inlineUpdate(productId, businessUnitId, parsed.data.unitCost, product.basePrice);
+      }
+
+      return result;
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Stock insuficiente')) {
+        throw new BusinessRuleError(err.message);
+      }
+      throw err;
+    }
+  }
+
+  getLastEntryDate(productId: number, businessUnitId: number): string | null {
+    return this.stockRepo.getLastEntryDate(productId, businessUnitId);
   }
 }

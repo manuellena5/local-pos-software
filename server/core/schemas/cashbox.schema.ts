@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const createCashMovementSchema = z.object({
-  type: z.enum(['sale', 'refund', 'deposit', 'withdrawal', 'other'], {
+  type: z.enum(['opening', 'sale', 'refund', 'deposit', 'withdrawal', 'other'], {
     errorMap: () => ({ message: 'Tipo de movimiento inválido' }),
   }),
   amount: z.number().positive('El monto debe ser mayor a 0'),
@@ -14,5 +14,10 @@ export const createCashAuditSchema = z.object({
   notes: z.string().max(1000).optional(),
 });
 
+export const openSessionSchema = z.object({
+  initialAmount: z.number().min(0, 'El monto inicial no puede ser negativo'),
+});
+
 export type CreateCashMovementRequest = z.infer<typeof createCashMovementSchema>;
 export type CreateCashAuditRequest = z.infer<typeof createCashAuditSchema>;
+export type OpenSessionRequest = z.infer<typeof openSessionSchema>;

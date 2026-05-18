@@ -10,8 +10,8 @@ import type {
 export class SupplierProductService {
   constructor(private readonly repo: SupplierProductRepository) {}
 
-  listBySupplierId(supplierId: number): SupplierProduct[] {
-    return this.repo.findAllBySupplierId(supplierId);
+  listBySupplierId(supplierId: number, businessUnitId?: number): SupplierProduct[] {
+    return this.repo.findAllBySupplierId(supplierId, businessUnitId);
   }
 
   importFromData(

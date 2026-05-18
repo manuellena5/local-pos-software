@@ -1,9 +1,10 @@
-import { createCashMovementSchema, createCashAuditSchema } from '../schemas/cashbox.schema';
+import { createCashMovementSchema, createCashAuditSchema, openSessionSchema } from '../schemas/cashbox.schema';
 import { ValidationError } from '../../lib/errors';
 import type { CashMovementRepository } from '../repositories/CashMovementRepository';
 import type { CashAuditRepository } from '../repositories/CashAuditRepository';
-import type { CashMovement, CashAudit } from '../../../shared/types';
+import type { CashMovement, CashAudit, CashSessionStatus } from '../../../shared/types';
 import type { CreateCashMovementRequest, CreateCashAuditRequest } from '../types';
+import type { OpenSessionRequest } from '../schemas/cashbox.schema';
 
 const BALANCE_TOLERANCE = 0.01; // diferencia máxima para considerar "balanced"
 
@@ -79,5 +80,36 @@ export class CashboxService {
 
   getLatestAudit(businessUnitId: number): CashAudit | null {
     return this.auditRepo.getLatest(businessUnitId);
+  }
+
+  /**
+   * Abre una nueva sesión de caja registrando un movimiento de tipo 'opening'.
+   */
+  openSession(businessUnitId: number, data: OpenSessionRequest, userId?: number): CashMovement {
+    const parsed = openSessionSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.errors[0]?.message ?? 'Datos inválidos');
+    }
+    return this.movementRepo.create(
+      businessUnitId,
+      { type: 'opening', amount: parsed.data.initialAmount, description: 'Apertura de caja' },
+      userId,
+    );
+  }
+
+  /**
+   * Determina el estado actual de la sesión de caja para una BU.
+   * - 'never_opened': nunca se abrió una sesión
+   * - 'open': hay un 'opening' más reciente que el último arqueo (o no hay arqueo)
+   * - 'closed': el último arqueo es más reciente que el último 'opening'
+   */
+  getSessionStatus(businessUnitId: number): CashSessionStatus {
+    const lastOpening = this.movementRepo.getLatestOfType(businessUnitId, 'opening');
+    if (!lastOpening) return 'never_opened';
+
+    const lastAudit = this.auditRepo.getLatest(businessUnitId);
+    if (!lastAudit) return 'open';
+
+    return lastOpening.createdAt > lastAudit.createdAt ? 'open' : 'closed';
   }
 }

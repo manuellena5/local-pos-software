@@ -6,9 +6,22 @@ interface Props {
 }
 
 export function CashboxStatus({ businessUnitId, onGoToCashbox }: Props) {
-  const { balance, audits, loading } = useCashbox(businessUnitId);
+  const { balance, audits, sessionStatus, loading } = useCashbox(businessUnitId);
 
-  if (loading || !balance) return null;
+  if (loading) return null;
+
+  if (sessionStatus === 'never_opened' || sessionStatus === 'closed') {
+    return (
+      <button
+        onClick={onGoToCashbox}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-gray-100 text-gray-500 hover:bg-gray-200"
+        title="Abrir caja"
+      >
+        <span>🔒</span>
+        <span>Sin caja abierta</span>
+      </button>
+    );
+  }
 
   const lastAudit = audits[0] ?? null;
   const hasDiscrepancy = lastAudit?.status === 'discrepancy';
@@ -24,7 +37,7 @@ export function CashboxStatus({ businessUnitId, onGoToCashbox }: Props) {
       title="Ver caja"
     >
       <span>{hasDiscrepancy ? '⚠️' : '🏦'}</span>
-      <span>Caja: ${balance.theoretical.toFixed(2)}</span>
+      <span>Caja: ${balance?.theoretical.toFixed(2) ?? '0.00'}</span>
       {hasDiscrepancy && <span className="text-orange-500">· Discrepancia</span>}
     </button>
   );

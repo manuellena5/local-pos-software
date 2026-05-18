@@ -63,8 +63,87 @@ export interface Product {
   // identificadores adicionales
   barcode: string | null;
   supplierCode: string | null;
+  // campos extendidos (Fase 10 Paso 4)
+  minimumSalePrice: number | null;
+  supplierId: number | null;
+  supplierLeadTime: number | null;
+  showCatalogPrice: boolean;
+  showCatalogStock: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProductWithStock extends Product {
+  currentStock: number;
+  minimumThreshold: number;
+  stockStatus: 'ok' | 'low' | 'out';
+  supplierName: string | null;
+}
+
+export type StockMovementType = 'entrada' | 'salida' | 'ajuste';
+
+export interface CreateStockMovementRequest {
+  type: StockMovementType;
+  quantity: number;
+  unitCost?: number;
+  reason?: string;
+  businessUnitId: number;
+}
+
+export type BulkPriceAdjustmentType = 'increase_price_pct' | 'increase_cost_pct' | 'set_margin_pct';
+
+export interface BulkPriceUpdateRequest {
+  categoryId?: number | null;
+  adjustmentType: BulkPriceAdjustmentType;
+  value: number;
+  businessUnitId: number;
+}
+
+export interface BulkPricePreviewItem {
+  id: number;
+  name: string;
+  currentPrice: number;
+  newPrice: number;
+  currentCost: number;
+  newCost: number;
+}
+
+export interface BulkPriceUpdateResult {
+  updated: number;
+  preview: BulkPricePreviewItem[];
+}
+
+export interface PurchaseHistoryEntry {
+  date: string;
+  supplierName: string;
+  quantity: number;
+  unitCost: number;
+  invoiceRef: string | null;
+}
+
+export interface ProductStat {
+  period: string;
+  unitsSold: number;
+  revenue: number;
+  netProfit: number;
+  unitsSoldPrev: number;
+  revenuePrev: number;
+  netProfitPrev: number;
+}
+
+export interface ProductStatSale {
+  saleId: number;
+  date: string;
+  quantity: number;
+  lineTotal: number;
+}
+
+export interface ProductStats {
+  stats: ProductStat;
+  salesByMonth: { month: string; units: number }[];
+  costHistory: { date: string; unitCost: number }[];
+  recentSales: ProductStatSale[];
+  costGrowthPct: number | null;
 }
 
 export interface StockItem {
@@ -83,6 +162,7 @@ export interface StockMovement {
   type: 'entry' | 'sale' | 'adjustment';
   quantity: number;
   reason: string;
+  unitCost: number | null;
   userId: number | null;
   createdAt: string;
 }
@@ -199,7 +279,9 @@ export interface Customer {
 
 // ── Fase 5: Caja ──────────────────────────────────────────────────────────
 
-export type CashMovementType = 'sale' | 'refund' | 'deposit' | 'withdrawal' | 'other';
+export type CashMovementType = 'opening' | 'sale' | 'refund' | 'deposit' | 'withdrawal' | 'other';
+
+export type CashSessionStatus = 'open' | 'closed' | 'never_opened';
 
 export interface CashMovement {
   id: number;
@@ -276,6 +358,9 @@ export interface Supplier {
   email?: string | null;
   paymentTerms?: 'contado' | '15dias' | '30dias' | '60dias' | 'otro' | null;
   deliveryDays?: number | null;
+  minimumOrder?: number | null;
+  shippingCost?: number | null;
+  city?: string | null;
   notes?: string | null;
   isActive: boolean;
   createdAt: string;
@@ -298,6 +383,12 @@ export interface SupplierProduct {
   isActive: boolean;
   lastUpdated: string;
   createdAt: string;
+  /** Solo presente cuando se consulta con buId (catálogo del proveedor) */
+  isLinked?: boolean;
+  /** Nombre del producto en mi catálogo (solo cuando isLinked = true) */
+  linkedProductName?: string | null;
+  /** Precio de venta de mi producto vinculado (para calcular margen) */
+  linkedProductBasePrice?: number | null;
 }
 
 export interface RawImportRow {
@@ -320,4 +411,98 @@ export interface ImportResult {
 }
 
 export type UpsertSupplierProductDTO = Omit<SupplierProduct, 'id' | 'isActive' | 'lastUpdated' | 'createdAt'>;
+
+// ── Fase 10: productos del catálogo del proveedor sin vincular ────────────
+
+export interface UnlinkedSupplierProduct {
+  supplierProductId: number;
+  supplierId: number;
+  supplierName: string;
+  supplierCode: string | null;
+  name: string;
+  unitCost: number;
+  unit: string;
+}
+
+export interface CreateFromSupplierInput {
+  supplierProductId: number;
+  businessUnitId: number;
+  name: string;
+  salePrice: number;
+  costPrice?: number | null;
+  initialStock?: number | null;
+}
+
+// ── Fase 10 Pasos 4-5: Comparador de proveedores ──────────────────────────
+
+export interface ProductSupplierLink {
+  id: number;
+  productId: number;
+  supplierProductId: number;
+  businessUnitId: number;
+  isPreferred: boolean;
+  createdAt: string;
+}
+
+export interface ComparatorLink {
+  linkId: number;
+  supplier: Supplier;
+  supplierProduct: SupplierProduct;
+  isPreferred: boolean;
+  margin: number;
+  marginAmount: number;
+}
+
+export interface ComparatorRow {
+  product: Product & { currentStock: number };
+  links: ComparatorLink[];
+  bestPrice: number | null;
+  bestSupplier: string | null;
+  stockStatus: 'ok' | 'low' | 'out';
+}
+
+export interface SuggestedMatch {
+  supplierProduct: SupplierProduct & { supplierName: string };
+  suggestedProduct: Product;
+  score: number;
+}
+
+export interface MinimumOrderWarning {
+  supplierId: number;
+  supplierName: string;
+  minimumOrder: number;
+  currentOrder: number;
+  missing: number;
+}
+
+export interface PurchaseOrderItem {
+  product: Product;
+  supplierProduct: SupplierProduct;
+  supplier: Supplier;
+  quantity: number;
+  unitCost: number;
+  subtotal: number;
+  gananciaProyectada: number;
+}
+
+export interface SupplierOrderGroup {
+  supplier: Supplier;
+  items: PurchaseOrderItem[];
+  subtotalProductos: number;
+  costoEnvio: number;
+  total: number;
+}
+
+export interface PurchaseOrder {
+  items: PurchaseOrderItem[];
+  bySupplier: SupplierOrderGroup[];
+  warnings: MinimumOrderWarning[];
+  totals: {
+    totalInversion: number;
+    totalEnvios: number;
+    totalGananciaProyectada: number;
+    roi: number;
+    diasRecuperoEstimado: number | null;
+  };
+}
 

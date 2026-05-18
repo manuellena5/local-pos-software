@@ -14,6 +14,9 @@ function rowToSupplier(row: typeof suppliers.$inferSelect): Supplier {
     email:          row.email ?? null,
     paymentTerms:   (row.paymentTerms as Supplier['paymentTerms']) ?? null,
     deliveryDays:   row.deliveryDays ?? null,
+    minimumOrder:   row.minimumOrder ?? null,
+    shippingCost:   row.shippingCost ?? null,
+    city:           row.city ?? null,
     notes:          row.notes ?? null,
     isActive:       row.isActive,
     createdAt:      row.createdAt,
@@ -62,6 +65,9 @@ export class SupplierRepository {
         email:          data.email || null,
         paymentTerms:   data.paymentTerms ?? null,
         deliveryDays:   data.deliveryDays ?? null,
+        minimumOrder:   data.minimumOrder ?? null,
+        shippingCost:   data.shippingCost ?? null,
+        city:           data.city ?? null,
         notes:          data.notes ?? null,
       })
       .returning()
@@ -79,6 +85,9 @@ export class SupplierRepository {
         ...(data.email         !== undefined && { email:         data.email || null }),
         ...(data.paymentTerms  !== undefined && { paymentTerms:  data.paymentTerms ?? null }),
         ...(data.deliveryDays  !== undefined && { deliveryDays:  data.deliveryDays ?? null }),
+        ...(data.minimumOrder  !== undefined && { minimumOrder:  data.minimumOrder ?? null }),
+        ...(data.shippingCost  !== undefined && { shippingCost:  data.shippingCost ?? null }),
+        ...(data.city          !== undefined && { city:          data.city ?? null }),
         ...(data.notes         !== undefined && { notes:         data.notes ?? null }),
         updatedAt: new Date().toISOString(),
       })

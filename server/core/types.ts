@@ -22,6 +22,12 @@ export interface UpdateProductRequest {
   // identificadores adicionales
   barcode?: string | null;
   supplierCode?: string | null;
+  // campos extendidos Fase 10
+  minimumSalePrice?: number | null;
+  supplierId?: number | null;
+  supplierLeadTime?: number | null;
+  showCatalogPrice?: boolean;
+  showCatalogStock?: boolean;
 }
 
 export interface AdjustStockRequest {
@@ -136,7 +142,7 @@ export interface UpdateCustomerRequest {
 // ── Fase 5: Caja ─────────────────────────────────────────────────────────────
 
 export interface CreateCashMovementRequest {
-  type: 'sale' | 'refund' | 'deposit' | 'withdrawal' | 'other';
+  type: 'opening' | 'sale' | 'refund' | 'deposit' | 'withdrawal' | 'other';
   amount: number;
   description: string;
   saleId?: number;

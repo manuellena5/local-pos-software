@@ -5,6 +5,7 @@
  */
 import { registerScreen, registerMenuItem } from '@/core/api';
 import { SuppliersView } from './components/SuppliersView';
+import { ComparatorView } from './components/ComparatorView';
 
 export function initProveedoresModule(): void {
   registerScreen({
@@ -13,11 +14,25 @@ export function initProveedoresModule(): void {
     component: SuppliersView,
   });
 
+  registerScreen({
+    path:      '/proveedores/comparador',
+    name:      'Comparador',
+    component: ComparatorView,
+  });
+
   registerMenuItem({
     id:       'proveedores:suppliers',
     label:    'Proveedores',
     path:     '/proveedores',
     moduleId: 'proveedores',
     icon:     '🏭',
+  });
+
+  registerMenuItem({
+    id:       'proveedores:comparador',
+    label:    'Comparador',
+    path:     '/proveedores/comparador',
+    moduleId: 'proveedores',
+    icon:     '📊',
   });
 }

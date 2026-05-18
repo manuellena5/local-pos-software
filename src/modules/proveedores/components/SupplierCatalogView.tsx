@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { useAppStore } from '@/core/store/appStore';
 import { apiClient } from '@/lib/api/client';
 import { useSupplierProducts, useImportCatalog } from '../hooks/useSupplierProducts';
+import { AddToCatalogModal } from './AddToCatalogModal';
 import type { SupplierProduct, ImportResult } from '@shared/types';
 
 const UNIT_OPTIONS = ['unidad', 'par', 'docena', 'metro', 'kg', 'litro', 'otro'];
@@ -334,7 +335,7 @@ interface SupplierCatalogViewProps {
 
 export function SupplierCatalogView({ supplierId, supplierName, onBack }: SupplierCatalogViewProps) {
   const activeBU = useAppStore((s) => s.activeBU);
-  const { products, isLoading, error, refetch } = useSupplierProducts(supplierId);
+  const { products, isLoading, error, refetch } = useSupplierProducts(supplierId, activeBU?.id);
 
   const [search, setSearch]               = useState('');
   const [showImport, setShowImport]       = useState(false);
@@ -342,6 +343,7 @@ export function SupplierCatalogView({ supplierId, supplierName, onBack }: Suppli
   const [editingProduct, setEditingProduct] = useState<SupplierProduct | null>(null);
   const [deleteError, setDeleteError]     = useState<string | null>(null);
   const [deleting, setDeleting]           = useState<number | null>(null);
+  const [addToCatalog, setAddToCatalog]   = useState<SupplierProduct | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -469,6 +471,18 @@ export function SupplierCatalogView({ supplierId, supplierName, onBack }: Suppli
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-1.5">
+                      {product.isLinked === true ? (
+                        <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full border border-gray-200">
+                          En mi catálogo
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setAddToCatalog(product)}
+                          className="px-2.5 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          + Agregar
+                        </button>
+                      )}
                       <button
                         onClick={() => { setEditingProduct(product); setShowForm(true); }}
                         className="px-2.5 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 text-gray-600"
@@ -516,6 +530,15 @@ export function SupplierCatalogView({ supplierId, supplierName, onBack }: Suppli
           product={editingProduct ?? undefined}
           onClose={() => { setShowForm(false); setEditingProduct(null); }}
           onSuccess={() => void refetch()}
+        />
+      )}
+
+      {addToCatalog && (
+        <AddToCatalogModal
+          supplierProduct={addToCatalog}
+          businessUnitId={activeBU.id}
+          onClose={() => setAddToCatalog(null)}
+          onSuccess={() => { setAddToCatalog(null); void refetch(); }}
         />
       )}
     </div>

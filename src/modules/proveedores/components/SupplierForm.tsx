@@ -12,26 +12,29 @@ const PAYMENT_TERMS_LABELS: Record<string, string> = {
 };
 
 interface SupplierFormProps {
-  supplier?: Supplier;     // si se pasa → modo edición
+  supplier?: Supplier;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 const EMPTY_FORM = {
-  name: '',
-  contactName: '',
-  phone: '',
-  email: '',
+  name:         '',
+  contactName:  '',
+  phone:        '',
+  email:        '',
   paymentTerms: '' as Supplier['paymentTerms'] | '',
   deliveryDays: '',
-  notes: '',
+  minimumOrder: '',
+  shippingCost: '',
+  city:         '',
+  notes:        '',
 };
 
 export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps) {
   const activeBU = useAppStore((s) => s.activeBU);
   const isEdit   = Boolean(supplier);
 
-  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [form, setForm]           = useState({ ...EMPTY_FORM });
   const [error, setError]         = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,6 +47,9 @@ export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps
         email:        supplier.email ?? '',
         paymentTerms: supplier.paymentTerms ?? '',
         deliveryDays: supplier.deliveryDays != null ? String(supplier.deliveryDays) : '',
+        minimumOrder: supplier.minimumOrder != null ? String(supplier.minimumOrder) : '',
+        shippingCost: supplier.shippingCost != null ? String(supplier.shippingCost) : '',
+        city:         supplier.city ?? '',
         notes:        supplier.notes ?? '',
       });
     } else {
@@ -58,31 +64,28 @@ export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps
     setSubmitting(true);
     setError(null);
     try {
-      const deliveryDays = form.deliveryDays !== '' ? parseInt(form.deliveryDays, 10) : null;
+      const deliveryDays   = form.deliveryDays   !== '' ? parseInt(form.deliveryDays, 10)     : null;
+      const minimumOrder   = form.minimumOrder   !== '' ? parseFloat(form.minimumOrder)       : null;
+      const shippingCost   = form.shippingCost   !== '' ? parseFloat(form.shippingCost)       : null;
+
+      const shared = {
+        businessUnitId: activeBU.id,
+        name:           form.name.trim(),
+        contactName:    form.contactName.trim() || null,
+        phone:          form.phone.trim() || null,
+        email:          form.email.trim() || null,
+        paymentTerms:   (form.paymentTerms as Supplier['paymentTerms']) || null,
+        deliveryDays:   isNaN(deliveryDays as number) ? null : deliveryDays,
+        minimumOrder:   isNaN(minimumOrder as number) ? null : minimumOrder,
+        shippingCost:   isNaN(shippingCost as number) ? null : shippingCost,
+        city:           form.city.trim() || null,
+        notes:          form.notes.trim() || null,
+      };
+
       if (isEdit && supplier) {
-        const body: UpdateSupplierDTO = {
-          businessUnitId: activeBU.id,
-          name:           form.name.trim(),
-          contactName:    form.contactName.trim() || null,
-          phone:          form.phone.trim() || null,
-          email:          form.email.trim() || null,
-          paymentTerms:   (form.paymentTerms as Supplier['paymentTerms']) || null,
-          deliveryDays:   isNaN(deliveryDays as number) ? null : deliveryDays,
-          notes:          form.notes.trim() || null,
-        };
-        await apiClient.put(`/api/modules/proveedores/suppliers/${supplier.id}`, body);
+        await apiClient.put<Supplier>(`/api/modules/proveedores/suppliers/${supplier.id}`, shared as UpdateSupplierDTO);
       } else {
-        const body: CreateSupplierDTO = {
-          businessUnitId: activeBU.id,
-          name:           form.name.trim(),
-          contactName:    form.contactName.trim() || null,
-          phone:          form.phone.trim() || null,
-          email:          form.email.trim() || null,
-          paymentTerms:   (form.paymentTerms as Supplier['paymentTerms']) || null,
-          deliveryDays:   isNaN(deliveryDays as number) ? null : deliveryDays,
-          notes:          form.notes.trim() || null,
-        };
-        await apiClient.post('/api/modules/proveedores/suppliers', body);
+        await apiClient.post<Supplier>('/api/modules/proveedores/suppliers', shared as CreateSupplierDTO);
       }
       onSuccess();
       onClose();
@@ -177,6 +180,46 @@ export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps
                   value={form.deliveryDays}
                   onChange={(e) => set('deliveryDays', e.target.value)}
                   placeholder="Ej: 5"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+            </div>
+
+            {/* Ciudad */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Ciudad</label>
+              <input
+                type="text"
+                value={form.city}
+                onChange={(e) => set('city', e.target.value)}
+                placeholder="Ej: Rosario"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+
+            {/* Compra mínima + Costo de envío */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Compra mínima $</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.minimumOrder}
+                  onChange={(e) => set('minimumOrder', e.target.value)}
+                  placeholder="Sin mínimo"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Costo de envío $</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.shippingCost}
+                  onChange={(e) => set('shippingCost', e.target.value)}
+                  placeholder="0 = envío gratis"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
               </div>

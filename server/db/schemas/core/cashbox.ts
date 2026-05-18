@@ -12,7 +12,7 @@ export const cashMovements = sqliteTable('cash_movements', {
 
   /** Positivo = ingresa a caja, Negativo = sale de caja */
   type: text('type', {
-    enum: ['sale', 'refund', 'deposit', 'withdrawal', 'other'],
+    enum: ['opening', 'sale', 'refund', 'deposit', 'withdrawal', 'other'],
   }).notNull(),
 
   /** Siempre positivo — el tipo determina el signo contable */

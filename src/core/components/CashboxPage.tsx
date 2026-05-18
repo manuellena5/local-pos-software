@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCashbox } from '@/core/hooks/useCashbox';
+import { cashboxApi } from '@/lib/api/cashbox';
 import { CashMovementLog } from './CashMovementLog';
 import { CashAuditForm } from './CashAuditForm';
 import type { CashAudit } from '@shared/types';
@@ -22,9 +23,91 @@ const STATUS_COLORS: Record<CashAudit['status'], string> = {
   discrepancy_resolved: 'text-blue-600',
 };
 
+function OpenSessionPanel({ businessUnitId, onOpened }: { businessUnitId: number; onOpened: () => void }) {
+  const [amount, setAmount] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function handleOpen() {
+    const parsed = parseFloat(amount);
+    if (isNaN(parsed) || parsed < 0) {
+      setErr('Ingresá un monto inicial válido (puede ser 0).');
+      return;
+    }
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await cashboxApi.openSession(businessUnitId, parsed);
+      onOpened();
+    } catch {
+      setErr('Error al abrir la caja. Intentá de nuevo.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-6">
+      <div className="text-5xl">🔒</div>
+      <div className="text-center">
+        <p className="text-lg font-semibold text-gray-800">No hay caja abierta</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Abrí una nueva sesión para registrar movimientos y ventas.
+        </p>
+      </div>
+      <div className="w-full max-w-xs space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Monto inicial en caja ($)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        {err && <p className="text-xs text-red-500">{err}</p>}
+        <button
+          onClick={handleOpen}
+          disabled={submitting}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+        >
+          {submitting ? 'Abriendo...' : 'Abrir nueva caja'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ClosedSessionPanel({ lastAudit, onReopen }: { lastAudit: CashAudit | null; onReopen: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-6">
+      <div className="text-5xl">✅</div>
+      <div className="text-center">
+        <p className="text-lg font-semibold text-gray-800">Caja cerrada</p>
+        {lastAudit && (
+          <p className="text-sm text-gray-500 mt-1">
+            Último arqueo: {lastAudit.auditDate} · Diferencia: ${lastAudit.difference.toFixed(2)}
+          </p>
+        )}
+        <p className="text-sm text-gray-400 mt-1">Para operar, abrí una nueva sesión.</p>
+      </div>
+      <button
+        onClick={onReopen}
+        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg text-sm transition-colors"
+      >
+        Abrir nueva caja
+      </button>
+    </div>
+  );
+}
+
 export function CashboxPage({ businessUnitId }: Props) {
   const [tab, setTab] = useState<CashTab>('movements');
-  const { balance, audits, loading, refetch } = useCashbox(businessUnitId);
+  const [showOpenPanel, setShowOpenPanel] = useState(false);
+  const { balance, audits, sessionStatus, loading, refetch } = useCashbox(businessUnitId);
 
   const today = new Date().toISOString().slice(0, 10);
   const lastAudit = audits[0] ?? null;
@@ -34,6 +117,34 @@ export function CashboxPage({ businessUnitId }: Props) {
     setTab('history');
   }
 
+  function handleOpened() {
+    refetch();
+    setShowOpenPanel(false);
+  }
+
+  if (loading) {
+    return <p className="text-center text-gray-400 py-8">Cargando caja...</p>;
+  }
+
+  // Sesión cerrada o nunca abierta
+  if (sessionStatus !== 'open' && !showOpenPanel) {
+    if (sessionStatus === 'never_opened') {
+      return <OpenSessionPanel businessUnitId={businessUnitId} onOpened={handleOpened} />;
+    }
+    return (
+      <ClosedSessionPanel
+        lastAudit={lastAudit}
+        onReopen={() => setShowOpenPanel(true)}
+      />
+    );
+  }
+
+  // Panel de apertura solicitado desde estado cerrado
+  if (showOpenPanel) {
+    return <OpenSessionPanel businessUnitId={businessUnitId} onOpened={handleOpened} />;
+  }
+
+  // Sesión abierta — flujo normal
   return (
     <div className="space-y-4">
       {/* Balance del día */}
@@ -41,7 +152,7 @@ export function CashboxPage({ businessUnitId }: Props) {
         <div className="bg-emerald-50 rounded-xl p-4">
           <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide mb-1">Balance teórico</p>
           <p className="text-3xl font-bold text-emerald-700">
-            {loading ? '...' : `$${balance?.theoretical.toFixed(2) ?? '0.00'}`}
+            ${balance?.theoretical.toFixed(2) ?? '0.00'}
           </p>
           <p className="text-xs text-emerald-500 mt-1">Suma de todos los movimientos</p>
         </div>

@@ -98,6 +98,7 @@ export function SuppliersView() {
                 <th className="text-left px-3 py-2 font-medium text-gray-600">Nombre</th>
                 <th className="text-left px-3 py-2 font-medium text-gray-600">Contacto</th>
                 <th className="text-left px-3 py-2 font-medium text-gray-600">Teléfono</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-600">Ciudad</th>
                 <th className="text-left px-3 py-2 font-medium text-gray-600">Condición pago</th>
                 <th className="text-center px-3 py-2 font-medium text-gray-600">Entrega (días)</th>
                 <th className="text-center px-3 py-2 font-medium text-gray-600">Productos</th>
@@ -118,6 +119,9 @@ export function SuppliersView() {
                   </td>
                   <td className="px-3 py-2.5 text-gray-600">
                     {supplier.phone ?? <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 text-gray-600">
+                    {supplier.city ?? <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-3 py-2.5">
                     {supplier.paymentTerms ? (

@@ -16,7 +16,9 @@ export class SupplierProductController {
         res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'id de proveedor inválido' } });
         return;
       }
-      const data = this.service.listBySupplierId(supplierId);
+      const buIdRaw = parseInt(req.query['buId'] as string, 10);
+      const businessUnitId = isNaN(buIdRaw) ? undefined : buIdRaw;
+      const data = this.service.listBySupplierId(supplierId, businessUnitId);
       res.json({ data, error: null });
     } catch (err) {
       next(err);

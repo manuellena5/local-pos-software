@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup - Gestión de Productos</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; font-size: 14px; }
+
+nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 24px; display: flex; align-items: center; gap: 4px; height: 52px; position: sticky; top: 0; z-index: 50; }
+.nav-item { padding: 8px 14px; border-radius: 6px; cursor: pointer; color: #64748b; font-size: 13px; transition: background .15s; white-space: nowrap; }
+.nav-item:hover { background: #f8fafc; color: #1e293b; }
+.nav-item.active { color: #2563eb; font-weight: 600; border-bottom: 2px solid #2563eb; border-radius: 0; }
+
+.page { padding: 24px; max-width: 1400px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.page-title { font-size: 20px; font-weight: 700; }
+.page-subtitle { color: #64748b; font-size: 13px; margin-top: 2px; }
+
+.toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.search-box { flex: 1; min-width: 220px; position: relative; }
+.search-box input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; outline: none; }
+.search-box input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+select.filter { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; color: #374151; cursor: pointer; }
+
+.btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-secondary { background: #fff; color: #374151; border: 1px solid #e2e8f0; }
+.btn-secondary:hover { background: #f8fafc; }
+.btn-danger { background: #fff; color: #dc2626; border: 1px solid #fca5a5; }
+.btn-danger:hover { background: #fef2f2; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-ghost { background: none; border: none; cursor: pointer; color: #64748b; font-size: 12px; padding: 4px 6px; border-radius: 5px; }
+.btn-ghost:hover { background: #f1f5f9; color: #1e293b; }
+
+.summary-chips { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent; }
+.chip.all   { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.chip.low   { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.chip.nc    { background: #fefce8; color: #854d0e; border-color: #fde68a; }
+.chip.ok    { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+.table-wrap { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+thead tr { background: #f8fafc; }
+th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+th .th-hint { font-size: 10px; color: #94a3b8; font-weight: 400; text-transform: none; letter-spacing: 0; display: block; margin-top: 1px; }
+td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafbfc; }
+
+.stock-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.sok  { background: #f0fdf4; color: #15803d; }
+.slow { background: #fff7ed; color: #c2410c; }
+.szero{ background: #fef2f2; color: #dc2626; }
+
+.margen { font-weight: 700; font-size: 13px; }
+.mh { color: #15803d; }
+.mm2 { color: #d97706; }
+.ml { color: #dc2626; }
+
+/* INLINE EDIT */
+.cell-editable { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; min-width: 76px; cursor: default; transition: background .12s; user-select: none; }
+.cell-editable:hover { background: #f1f5f9; cursor: text; }
+.edit-hint { font-size: 10px; color: #94a3b8; opacity: 0; transition: opacity .12s; pointer-events: none; white-space: nowrap; }
+.cell-editable:hover .edit-hint { opacity: 1; }
+.cell-editable.editing { background: #fff; box-shadow: 0 0 0 2px #2563eb; cursor: default; gap: 4px; }
+.cell-editable.editing .edit-hint { display: none; }
+.cell-editable.editing .cell-value { display: none; }
+.cell-editable.editing .price-sub { display: none; }
+.cell-input { display: none; width: 82px; padding: 2px 6px; border: none; outline: none; font-size: 13px; font-weight: 600; background: transparent; color: #1e293b; }
+.cell-editable.editing .cell-input { display: block; }
+.cell-confirm-btns { display: none; align-items: center; gap: 2px; }
+.cell-editable.editing .cell-confirm-btns { display: flex; }
+.cc-btn { width: 20px; height: 20px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; transition: background .1s; }
+.cc-ok { background: #dcfce7; color: #15803d; } .cc-ok:hover { background: #bbf7d0; }
+.cc-no { background: #fee2e2; color: #dc2626; } .cc-no:hover { background: #fca5a5; }
+.price-sub { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+
+/* ACTIONS */
+.actions-cell { white-space: nowrap; }
+.act-btn { display: inline-flex; align-items: center; gap: 3px; padding: 4px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent; background: none; transition: background .12s, border-color .12s; color: #374151; }
+.act-btn:hover       { background: #f1f5f9; border-color: #e2e8f0; }
+.act-edit            { color: #2563eb; }
+.act-edit:hover      { background: #eff6ff !important; border-color: #bfdbfe !important; }
+.act-stock           { color: #0891b2; }
+.act-stock:hover     { background: #ecfeff !important; border-color: #a5f3fc !important; }
+.act-hist            { color: #7c3aed; }
+.act-hist:hover      { background: #f5f3ff !important; border-color: #ddd6fe !important; }
+.act-sep { display: inline-block; width: 1px; height: 14px; background: #e2e8f0; margin: 0 2px; vertical-align: middle; }
+
+.prov-chip { display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border-radius: 6px; padding: 3px 8px; font-size: 12px; color: #475569; cursor: pointer; max-width: 138px; }
+.prov-chip:hover { background: #e2e8f0; }
+.prov-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.tag-gray { background: #f1f5f9; color: #475569; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 9999; transition: transform .3s, opacity .3s; opacity: 0; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* OVERLAY / MODAL */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 100; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; }
+.overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 16px; width: 100%; max-width: 700px; margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+.modal-sm { max-width: 440px; }
+.modal-header { padding: 18px 24px 14px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: flex-start; position: sticky; top: 0; background: #fff; border-radius: 16px 16px 0 0; z-index: 2; }
+.modal-title { font-size: 17px; font-weight: 700; }
+.modal-subtitle { font-size: 13px; color: #64748b; margin-top: 2px; }
+.modal-close { font-size: 18px; cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 6px; background: none; border: none; }
+.modal-close:hover { background: #f1f5f9; color: #1e293b; }
+.modal-body { padding: 18px 24px; }
+.modal-footer { padding: 14px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0; background: #fff; border-radius: 0 0 16px 16px; }
+
+/* TABS DEL MODAL */
+.modal-tabs { display: flex; gap: 2px; background: #f1f5f9; border-radius: 10px; padding: 3px; margin-bottom: 18px; }
+.modal-tab { flex: 1; padding: 7px 4px; text-align: center; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; color: #64748b; transition: all .15s; white-space: nowrap; }
+.modal-tab.active { background: #fff; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+/* SECTION dentro del modal */
+.sec { margin-bottom: 16px; border: 1px solid #f1f5f9; border-radius: 10px; overflow: hidden; }
+.sec-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; background: #fafbfc; transition: background .15s; }
+.sec-header:hover { background: #f1f5f9; }
+.sec-title { font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 8px; }
+.sec-icon { width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.si-blue   { background: #eff6ff; }
+.si-green  { background: #f0fdf4; }
+.si-purple { background: #faf5ff; }
+.si-amber  { background: #fffbeb; }
+.si-cyan   { background: #ecfeff; }
+.si-rose   { background: #fff1f2; }
+.si-sky    { background: #f0f9ff; }
+.sec-toggle { color: #94a3b8; font-size: 12px; transition: transform .2s; }
+.sec-toggle.open { transform: rotate(90deg); }
+.sec-body { padding: 14px; border-top: 1px solid #f1f5f9; }
+.sec-body.hidden { display: none; }
+
+/* FORM */
+.form-row { display: grid; gap: 12px; margin-bottom: 12px; }
+.form-row.c2 { grid-template-columns: 1fr 1fr; }
+.form-row.c3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-row.c14 { grid-template-columns: 1fr 4fr; }
+.fg { display: flex; flex-direction: column; gap: 4px; }
+label { font-size: 12px; font-weight: 600; color: #374151; }
+label span { color: #94a3b8; font-weight: 400; }
+.fi { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; outline: none; width: 100%; }
+.fi:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+.iw { position: relative; }
+.ip { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; pointer-events: none; }
+.is { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; pointer-events: none; }
+.fpl { padding-left: 22px; }
+.fpr { padding-right: 28px; }
+
+/* PRICE CALC BOX */
+.price-calc { background: #f8fafc; border-radius: 10px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
+.pc-title { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.pc-grid { display: grid; grid-template-columns: 1fr auto 1fr 1fr auto 1fr; gap: 6px; align-items: center; }
+.pc-item { text-align: center; }
+.pc-label { font-size: 11px; color: #94a3b8; margin-bottom: 3px; }
+.pc-val { font-size: 15px; font-weight: 700; }
+.pc-val.green  { color: #15803d; }
+.pc-val.orange { color: #d97706; }
+.pc-arrow { color: #94a3b8; font-size: 12px; text-align: center; }
+.iva-note { font-size: 11px; color: #475569; margin-top: 10px; background: #eff6ff; padding: 7px 10px; border-radius: 6px; line-height: 1.5; }
+
+/* IMAGE UPLOADER */
+.img-upload-area { border: 2px dashed #e2e8f0; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; margin-bottom: 12px; }
+.img-upload-area:hover { border-color: #2563eb; background: #f8fbff; }
+.img-upload-icon { font-size: 28px; margin-bottom: 6px; }
+.img-upload-text { font-size: 13px; color: #64748b; }
+.img-upload-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+.img-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.img-thumb { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+.img-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.img-del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,.55); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.img-del:hover { background: #dc2626; }
+.img-main-badge { position: absolute; bottom: 3px; left: 3px; background: #2563eb; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
+
+/* ATTRIBUTES */
+.attr-fixed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.attr-fixed-item { background: #f8fafc; border-radius: 8px; padding: 10px 12px; border: 1px solid #f1f5f9; }
+.attr-fixed-name { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.attr-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.attr-tag { display: inline-flex; align-items: center; gap: 3px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 20px; padding: 2px 9px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.attr-tag:hover { background: #dbeafe; }
+.attr-tag .at-del { font-size: 11px; color: #93c5fd; margin-left: 1px; }
+.attr-add-input { display: flex; gap: 5px; margin-top: 7px; }
+.attr-add-input input { flex: 1; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; outline: none; }
+.attr-add-input input:focus { border-color: #2563eb; }
+.attr-add-input button { padding: 4px 8px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 700; }
+
+.attr-custom { margin-top: 12px; }
+.attr-custom-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 8px; align-items: center; margin-bottom: 7px; }
+.attr-custom-row input { padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 7px; font-size: 12px; outline: none; width: 100%; }
+.attr-custom-row input:focus { border-color: #2563eb; }
+.attr-del-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #fca5a5; background: #fff; color: #dc2626; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.attr-del-btn:hover { background: #fef2f2; }
+.add-attr-btn { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border: 1.5px dashed #cbd5e1; border-radius: 8px; background: none; color: #64748b; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.add-attr-btn:hover { border-color: #2563eb; color: #2563eb; background: #f8fbff; }
+
+/* CATALOG TOGGLE */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { font-size: 13px; font-weight: 600; }
+.toggle-desc { font-size: 11px; color: #64748b; margin-top: 2px; }
+.toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: #e2e8f0; border-radius: 22px; cursor: pointer; transition: background .2s; }
+.toggle-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.toggle input:checked + .toggle-slider { background: #2563eb; }
+.toggle input:checked + .toggle-slider:before { transform: translateX(18px); }
+
+/* HISTORY */
+.history-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; font-size: 13px; gap: 8px; }
+.history-row:nth-child(odd) { background: #f8fafc; }
+.hr-prov  { font-weight: 600; flex: 1; }
+.hr-date  { color: #64748b; font-size: 11px; white-space: nowrap; }
+.hr-price { font-weight: 700; color: #2563eb; white-space: nowrap; }
+.hr-qty   { color: #64748b; font-size: 12px; white-space: nowrap; }
+
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.stat-card { background: #f8fafc; border-radius: 10px; padding: 12px 14px; border: 1px solid #f1f5f9; text-align: center; }
+.stat-val { font-size: 22px; font-weight: 800; color: #1e293b; }
+.stat-lbl { font-size: 11px; color: #64748b; margin-top: 3px; }
+.stat-trend { font-size: 11px; font-weight: 700; margin-top: 4px; }
+.stat-trend.up { color: #15803d; }
+.stat-trend.dn { color: #dc2626; }
+
+.chart-bar-wrap { margin-bottom: 16px; }
+.chart-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 80px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.bar-fill { width: 100%; border-radius: 4px 4px 0 0; transition: height .3s; }
+.bar-lbl { font-size: 10px; color: #94a3b8; white-space: nowrap; }
+.bar-val { font-size: 10px; font-weight: 700; color: #475569; }
+
+/* ARCHIVE */
+.archive-section { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 12px 14px; margin-top: 4px; }
+.archive-title { font-size: 13px; font-weight: 700; color: #dc2626; margin-bottom: 4px; }
+.archive-desc  { font-size: 12px; color: #7f1d1d; line-height: 1.6; }
+
+/* DRAWER */
+.drawer { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 380px; background: #fff; border-left: 1px solid #e2e8f0; z-index: 200; flex-direction: column; box-shadow: -8px 0 30px rgba(0,0,0,.12); }
+.drawer.open { display: flex; }
+.drawer-header { padding: 18px 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: flex-start; }
+.drawer-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+
+.tabs { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 3px; margin-bottom: 14px; }
+.tab { flex: 1; padding: 6px; text-align: center; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; color: #64748b; transition: all .15s; }
+.tab.active { background: #fff; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+/* STOCK MODAL */
+.stock-info-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 16px; }
+.stock-number { font-size: 32px; font-weight: 800; color: #15803d; }
+.mov-type { display: flex; gap: 8px; margin-bottom: 14px; }
+.mov-btn { flex: 1; padding: 8px; border-radius: 8px; border: 2px solid #e2e8f0; background: #fff; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: #64748b; transition: all .15s; }
+.mov-btn.ae { border-color: #15803d; background: #f0fdf4; color: #15803d; }
+.mov-btn.as { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
+.mov-btn.aj { border-color: #7c3aed; background: #f5f3ff; color: #7c3aed; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-item">🏠 Dashboard</div>
+  <div class="nav-item active">📦 Productos</div>
+  <div class="nav-item">🛒 POS</div>
+  <div class="nav-item">👥 Clientes</div>
+  <div class="nav-item">💰 Caja</div>
+  <div class="nav-item">🏭 Proveedores</div>
+  <div class="nav-item">📊 Reportes</div>
+  <div class="nav-item">⚙️ Config.</div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Productos</div>
+      <div class="page-subtitle">BU: Front — Blanquería, Decoración y Aromas &nbsp;·&nbsp; <strong>14 productos</strong></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" onclick="open_o('mass-modal')">📈 Precios masivo</button>
+      <button class="btn btn-primary" onclick="open_o('edit-modal')">+ Nuevo producto</button>
+    </div>
+  </div>
+
+  <div class="summary-chips">
+    <div class="chip all">Todos: 14</div>
+    <div class="chip low">⚠️ Stock bajo: 3</div>
+    <div class="chip nc">Sin costo: 1</div>
+    <div class="chip ok">✅ Con stock: 10</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-box"><span class="search-icon">🔍</span><input type="text" placeholder="Buscar por nombre, SKU o categoría..."></div>
+    <select class="filter"><option>Todas las categorías</option><option>Blanquería</option><option>Aromas</option><option>Deco</option></select>
+    <select class="filter"><option>Todo el stock</option><option>Sin stock</option><option>Stock bajo</option></select>
+    <select class="filter"><option>Activos</option><option>Archivados</option></select>
+  </div>
+
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">
+    ✏️ <strong>Doble click</strong> sobre costo, precio o margen para editar directo. <kbd style="background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:10px;">Enter</kbd> confirma · <kbd style="background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:10px;">Esc</kbd> cancela.
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Categoría</th>
+          <th>Costo <span class="th-hint">doble click edita</span></th>
+          <th>Precio c/IVA <span class="th-hint">Cons. Final · doble click</span></th>
+          <th>Margen % <span class="th-hint">sobre costo · doble click</span></th>
+          <th>Stock</th>
+          <th>Último proveedor</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:#64748b;font-size:12px;">
+    <span>Mostrando 5 de 14 productos</span>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-secondary btn-sm">‹ Anterior</button>
+      <button class="btn btn-primary btn-sm">Siguiente ›</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL EDITAR PRODUCTO — con tabs internas
+══════════════════════════════════════════════════ -->
+<div class="overlay" id="edit-modal" onclick="close_o('edit-modal',event)">
+<div class="modal" onclick="event.stopPropagation()" style="max-width:720px;">
+
+  <div class="modal-header">
+    <div>
+      <div class="modal-title">✏️ Editar producto</div>
+      <div class="modal-subtitle" id="em-sub">SAB-144 · Blanquería · <span style="color:#15803d;font-weight:700">Activo</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <!-- enlace rápido a estadísticas -->
+      <button class="btn btn-secondary btn-sm" onclick="switchModalTab('tab-stats')" style="display:flex;align-items:center;gap:4px;">
+        📊 Ver estadísticas
+      </button>
+      <button class="modal-close" onclick="close_o('edit-modal')">✕</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div style="padding:0 24px;border-bottom:1px solid #f1f5f9;background:#fff;">
+    <div style="display:flex;gap:0;">
+      <div class="modal-tab-item active" id="tab-base" onclick="switchModalTab('tab-base')">📋 Datos base</div>
+      <div class="modal-tab-item" id="tab-precios" onclick="switchModalTab('tab-precios')">💰 Precios</div>
+      <div class="modal-tab-item" id="tab-attrs" onclick="switchModalTab('tab-attrs')">🏷️ Atributos</div>
+      <div class="modal-tab-item" id="tab-catalogo" onclick="switchModalTab('tab-catalogo')">🌐 Catálogo web</div>
+      <div class="modal-tab-item" id="tab-stats" onclick="switchModalTab('tab-stats')">📊 Estadísticas</div>
+    </div>
+  </div>
+
+  <div class="modal-body">
+
+    <!-- ── TAB: DATOS BASE ── -->
+    <div id="panel-base">
+
+      <div class="sec">
+        <div class="sec-header" onclick="toggleSec('sb1','st1')">
+          <div class="sec-title"><div class="sec-icon si-blue">🏷️</div>Identificación y descripción</div>
+          <span class="sec-toggle open" id="st1">▶</span>
+        </div>
+        <div class="sec-body" id="sb1">
+          <div class="form-row c2">
+            <div class="fg"><label>Nombre del producto</label><input class="fi" value="Sábana 144 hilos" style="grid-column:span 2"></div>
+            <div class="fg"><label>Categoría</label><select class="fi"><option>Blanquería</option><option>Aromas</option><option>Deco</option><option>Textil</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="fg"><label>Descripción interna <span>(para vos, no se muestra al público)</span></label><textarea class="fi" rows="2" placeholder="Ej: sábana de algodón 100%, viene en caja individual..."></textarea></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-header" onclick="toggleSec('sb2','st2')">
+          <div class="sec-title"><div class="sec-icon si-cyan">🔢</div>Códigos e identificadores</div>
+          <span class="sec-toggle open" id="st2">▶</span>
+        </div>
+        <div class="sec-body" id="sb2">
+          <div class="form-row c3">
+            <div class="fg">
+              <label>SKU interno</label>
+              <input class="fi" value="SAB-144" placeholder="Ej: SAB-144">
+              <span style="font-size:11px;color:#94a3b8;margin-top:3px;">Código que usás vos</span>
+            </div>
+            <div class="fg">
+              <label>Código de barras <span>(EAN/UPC)</span></label>
+              <div class="iw" style="display:flex;gap:6px;">
+                <input class="fi" value="7798041722443" placeholder="Escanear o escribir" style="flex:1">
+                <button class="btn btn-secondary btn-sm" style="white-space:nowrap">📷 Escanear</button>
+              </div>
+            </div>
+            <div class="fg">
+              <label>Código proveedor</label>
+              <input class="fi" value="sab144" placeholder="Código del proveedor">
+              <span style="font-size:11px;color:#94a3b8;margin-top:3px;">Para órdenes de compra</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-header" onclick="toggleSec('sb3','st3')">
+          <div class="sec-title"><div class="sec-icon si-purple">🏭</div>Proveedor habitual</div>
+          <span class="sec-toggle open" id="st3">▶</span>
+        </div>
+        <div class="sec-body" id="sb3">
+          <div class="form-row c2">
+            <div class="fg"><label>Proveedor habitual</label><select class="fi"><option>Proveedor A — Textil SRL</option><option>Distribuidora Norte</option><option>Aromas SRL</option></select></div>
+            <div class="fg"><label>Plazo de reposición estimado</label>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <input class="fi" value="7" style="width:70px" type="number">
+                <span style="color:#64748b;font-size:13px">días hábiles</span>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Últimas compras</div>
+          <div class="history-row"><span class="hr-prov">Proveedor A — Textil SRL</span><span class="hr-date">12/04/2026</span><span class="hr-qty">22 u.</span><span class="hr-price">$ 10,00</span></div>
+          <div class="history-row"><span class="hr-prov">Proveedor A — Textil SRL</span><span class="hr-date">15/02/2026</span><span class="hr-qty">30 u.</span><span class="hr-price">$ 8,50</span></div>
+          <div class="history-row"><span class="hr-prov">Distribuidora Norte</span><span class="hr-date">01/11/2025</span><span class="hr-qty">15 u.</span><span class="hr-price">$ 7,00</span></div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="close_o('edit-modal');openDrawer('SAB-144','Sábana 144 hilos')">📋 Ver historial completo →</button>
+        </div>
+      </div>
+
+      <div class="archive-section">
+        <div class="archive-title">🗄️ Archivar producto</div>
+        <div class="archive-desc">Oculta del catálogo y del POS, <strong>conserva todo el historial</strong>. Este producto tiene <strong>38 transacciones</strong>. Restaurable en cualquier momento.</div>
+        <button class="btn btn-danger btn-sm" style="margin-top:10px;" onclick="close_o('edit-modal');openArchiveModal('Sábana 144 hilos',38)">Archivar este producto</button>
+      </div>
+    </div>
+
+    <!-- ── TAB: PRECIOS ── -->
+    <div id="panel-precios" style="display:none">
+      <div class="form-row c2" style="margin-bottom:12px;">
+        <div class="fg"><label>Costo de compra <span>(sin IVA)</span></label><div class="iw"><span class="ip">$</span><input class="fi fpl" id="mc" value="10.00" oninput="calcM()"></div></div>
+        <div class="fg"><label>Alícuota IVA</label><select class="fi" id="miva" onchange="calcM()"><option value="21">21% (general)</option><option value="10.5">10.5% (diferencial)</option><option value="0">Exento / 0%</option></select></div>
+      </div>
+      <div class="form-row c3" style="margin-bottom:12px;">
+        <div class="fg"><label>Margen %</label><div class="iw"><input class="fi fpr" id="mm" value="100" oninput="calcM_fromM()"><span class="is">%</span></div></div>
+        <div class="fg"><label>Precio s/IVA <span>(a RI)</span></label><div class="iw"><span class="ip">$</span><input class="fi fpl" id="mn" value="20.00" oninput="calcM_fromN()"></div></div>
+        <div class="fg"><label>Precio c/IVA <span>(a CF)</span></label><div class="iw"><span class="ip">$</span><input class="fi fpl" id="mg" value="24.20" oninput="calcM_fromG()"></div></div>
+      </div>
+      <div class="price-calc">
+        <div class="pc-title">📊 Resumen en tiempo real</div>
+        <div class="pc-grid">
+          <div class="pc-item"><div class="pc-label">Costo</div><div class="pc-val" id="sc">$ 10,00</div></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-item"><div class="pc-label">Precio s/IVA</div><div class="pc-val" id="sn">$ 20,00</div></div>
+          <div class="pc-item"><div class="pc-label">Ganancia neta</div><div class="pc-val green" id="sg">$ 10,00</div></div>
+          <div class="pc-arrow" id="iva-ar">+21%</div>
+          <div class="pc-item"><div class="pc-label">Precio c/IVA</div><div class="pc-val orange" id="sgr">$ 24,20</div></div>
+        </div>
+        <div class="iva-note">ℹ️ Consumidor final paga <strong id="ncf">$ 24,20</strong>. Responsable inscripto paga <strong id="nri">$ 20,00</strong> + IVA en su factura.</div>
+      </div>
+      <div class="form-row c2">
+        <div class="fg"><label>Precio mínimo de venta <span>(alerta si se vende por debajo)</span></label><div class="iw"><span class="ip">$</span><input class="fi fpl" value="20.00"></div></div>
+        <div class="fg"><label>Stock mínimo <span>(alerta)</span></label><input class="fi" value="5" type="number" min="0"></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: ATRIBUTOS ── -->
+    <div id="panel-attrs" style="display:none">
+      <div style="font-size:13px;color:#475569;margin-bottom:14px;line-height:1.5;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;">
+        💡 Los atributos fijos son los comunes de tu categoría. Podés agregar valores y también crear atributos propios abajo.
+      </div>
+
+      <!-- Atributos fijos de la categoría Blanquería -->
+      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">Atributos de Blanquería</div>
+      <div class="attr-fixed-grid">
+
+        <div class="attr-fixed-item">
+          <div class="attr-fixed-name">Tamaño / Medidas</div>
+          <div class="attr-tags">
+            <span class="attr-tag">1 plaza <span class="at-del" onclick="this.parentElement.remove()">×</span></span>
+            <span class="attr-tag">1½ plaza <span class="at-del" onclick="this.parentElement.remove()">×</span></span>
+            <span class="attr-tag">2 plazas <span class="at-del" onclick="this.parentElement.remove()">×</span></span>
+          </div>
+          <div class="attr-add-input">
+            <input placeholder="+ Agregar valor..." onkeydown="addAttrTag(event,this)">
+            <button onclick="addAttrTagBtn(this)">+</button>
+          </div>
+        </div>
+
+        <div class="attr-fixed-item">
+          <div class="attr-fixed-name">Material / Composición</div>
+          <div class="attr-tags">
+            <span class="attr-tag">100% algodón <span class="at-del" onclick="this.parentElement.remove()">×</span></span>
+            <span class="attr-tag">Percal <span class="at-del" onclick="this.parentElement.remove()">×</span></span>
+          </div>
+          <div class="attr-add-input">
+            <input placeholder="+ Agregar valor..." onkeydown="addAttrTag(event,this)">
+            <button onclick="addAttrTagBtn(this)">+</button>
+          </div>
+        </div>
+
+        <div class="attr-fixed-item">
+          <div class="attr-fixed-name">Color</div>
+          <div class="attr-tags">
+            <span class="attr-tag">Blanco <span class="at-del" onclick="this.parentElement.remove()">×</span></span>
+            <span class="attr-tag">Crema <span class="at-del" onclick="this.parentElement.remove()">×</span></span>
+          </div>
+          <div class="attr-add-input">
+            <input placeholder="+ Agregar valor..." onkeydown="addAttrTag(event,this)">
+            <button onclick="addAttrTagBtn(this)">+</button>
+          </div>
+        </div>
+
+        <div class="attr-fixed-item">
+          <div class="attr-fixed-name">Hilos / Calidad</div>
+          <div class="attr-tags">
+            <span class="attr-tag">144 hilos <span class="at-del" onclick="this.parentElement.remove()">×</span></span>
+          </div>
+          <div class="attr-add-input">
+            <input placeholder="+ Agregar valor..." onkeydown="addAttrTag(event,this)">
+            <button onclick="addAttrTagBtn(this)">+</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Atributos personalizados -->
+      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;margin-top:18px;border-top:1px solid #f1f5f9;padding-top:14px;">
+        Atributos adicionales de este producto
+      </div>
+      <div id="custom-attrs">
+        <div class="attr-custom-row">
+          <input value="Origen" placeholder="Nombre del atributo">
+          <input value="Argentina" placeholder="Valores (separados por coma)">
+          <button class="attr-del-btn" onclick="this.parentElement.remove()">×</button>
+        </div>
+      </div>
+      <button class="add-attr-btn" onclick="addCustomAttr()">+ Agregar atributo propio</button>
+    </div>
+
+    <!-- ── TAB: CATÁLOGO WEB ── -->
+    <div id="panel-catalogo" style="display:none">
+
+      <div class="sec">
+        <div class="sec-header" onclick="toggleSec('sc1','sct1')">
+          <div class="sec-title"><div class="sec-icon si-sky">🖼️</div>Imágenes del producto</div>
+          <span class="sec-toggle open" id="sct1">▶</span>
+        </div>
+        <div class="sec-body" id="sc1">
+          <div class="img-upload-area" onclick="toast('En la app real abre el selector de archivos')">
+            <div class="img-upload-icon">📷</div>
+            <div class="img-upload-text">Hacé click o arrastrá imágenes acá</div>
+            <div class="img-upload-hint">JPG, PNG, WEBP · Máx. 5 MB por imagen · Hasta 20 fotos</div>
+          </div>
+          <div class="img-grid">
+            <!-- imagen principal (mock con color) -->
+            <div class="img-thumb">
+              <div style="width:100%;height:100%;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);display:flex;align-items:center;justify-content:center;font-size:22px;">🛏️</div>
+              <div class="img-main-badge">Principal</div>
+              <button class="img-del" onclick="this.parentElement.remove()">×</button>
+            </div>
+            <div class="img-thumb">
+              <div style="width:100%;height:100%;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center;font-size:22px;">🛏️</div>
+              <button class="img-del" onclick="this.parentElement.remove()">×</button>
+            </div>
+            <!-- placeholder "agregar" -->
+            <div class="img-thumb" style="border:2px dashed #e2e8f0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:24px;color:#cbd5e1;background:#fafbfc;" onclick="toast('En la app real abre el selector de archivos')">+</div>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:8px;">La primera imagen es la principal (la que se muestra en la lista). Arrastrá para reordenar.</div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-header" onclick="toggleSec('sc2','sct2')">
+          <div class="sec-title"><div class="sec-icon si-green">🌐</div>Visibilidad en catálogo web</div>
+          <span class="sec-toggle open" id="sct2">▶</span>
+        </div>
+        <div class="sec-body" id="sc2">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Mostrar en el catálogo web</div>
+              <div class="toggle-desc">Aparece en el catálogo público de Espacio BIP (accesible desde la web y WhatsApp)</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Mostrar precio</div>
+              <div class="toggle-desc">Si está apagado, el catálogo muestra "Consultar precio"</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Mostrar stock disponible</div>
+              <div class="toggle-desc">Muestra si hay o no stock (no la cantidad exacta)</div>
+            </div>
+            <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-row" style="margin-top:12px;margin-bottom:0;">
+            <div class="fg">
+              <label>Descripción para el catálogo web <span>(la que ve el cliente)</span></label>
+              <textarea class="fi" rows="3" placeholder="Ej: Sábana de algodón 100%, suave y resistente. Disponible en varios tamaños y colores..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── TAB: ESTADÍSTICAS ── -->
+    <div id="panel-stats" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:#374151;">Sábana 144 hilos — últimos 90 días</div>
+        <select class="filter" style="font-size:12px;padding:5px 10px;">
+          <option>Últimos 90 días</option>
+          <option>Últimos 30 días</option>
+          <option>Este año</option>
+          <option>Todo el historial</option>
+        </select>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-val">47</div>
+          <div class="stat-lbl">Unidades vendidas</div>
+          <div class="stat-trend up">↑ +12% vs período anterior</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">$ 1.137</div>
+          <div class="stat-lbl">Ingresos totales</div>
+          <div class="stat-trend up">↑ +8% vs período anterior</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">$ 490</div>
+          <div class="stat-lbl">Ganancia neta</div>
+          <div class="stat-trend dn">↓ −3% (costo subió)</div>
+        </div>
+      </div>
+
+      <div class="chart-bar-wrap">
+        <div class="chart-title">Unidades vendidas por mes</div>
+        <div class="chart-bars">
+          <div class="bar-col"><div class="bar-val">8</div><div class="bar-fill" style="height:37px;background:#bfdbfe;"></div><div class="bar-lbl">Feb</div></div>
+          <div class="bar-col"><div class="bar-val">12</div><div class="bar-fill" style="height:55px;background:#93c5fd;"></div><div class="bar-lbl">Mar</div></div>
+          <div class="bar-col"><div class="bar-val">15</div><div class="bar-fill" style="height:69px;background:#60a5fa;"></div><div class="bar-lbl">Abr</div></div>
+          <div class="bar-col"><div class="bar-val">12</div><div class="bar-fill" style="height:55px;background:#3b82f6;"></div><div class="bar-lbl">May</div></div>
+        </div>
+      </div>
+
+      <div class="chart-bar-wrap">
+        <div class="chart-title">Evolución del costo de compra</div>
+        <div class="chart-bars">
+          <div class="bar-col"><div class="bar-val">$5,50</div><div class="bar-fill" style="height:33px;background:#fde68a;"></div><div class="bar-lbl">May 25</div></div>
+          <div class="bar-col"><div class="bar-val">$6,20</div><div class="bar-fill" style="height:38px;background:#fbbf24;"></div><div class="bar-lbl">Ago 25</div></div>
+          <div class="bar-col"><div class="bar-val">$7,00</div><div class="bar-fill" style="height:43px;background:#f59e0b;"></div><div class="bar-lbl">Nov 25</div></div>
+          <div class="bar-col"><div class="bar-val">$8,50</div><div class="bar-fill" style="height:52px;background:#d97706;"></div><div class="bar-lbl">Feb 26</div></div>
+          <div class="bar-col"><div class="bar-val">$10,00</div><div class="bar-fill" style="height:60px;background:#b45309;"></div><div class="bar-lbl">Abr 26</div></div>
+        </div>
+        <div style="font-size:11px;color:#dc2626;text-align:center;margin-top:6px;font-weight:600;">⚠️ El costo creció +81% en el último año. Revisá si el precio sigue siendo rentable.</div>
+      </div>
+
+      <div style="background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;">Últimas ventas</div>
+        <div class="history-row"><span class="hr-prov">Venta #00234</span><span class="hr-date">10/05/2026</span><span class="hr-qty">2 u.</span><span class="hr-price">$ 48,40</span></div>
+        <div class="history-row"><span class="hr-prov">Venta #00229</span><span class="hr-date">08/05/2026</span><span class="hr-qty">1 u.</span><span class="hr-price">$ 24,20</span></div>
+        <div class="history-row"><span class="hr-prov">Venta #00218</span><span class="hr-date">03/05/2026</span><span class="hr-qty">3 u.</span><span class="hr-price">$ 72,60</span></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:10px;">Ver todas las ventas →</button>
+      </div>
+    </div>
+
+  </div><!-- /modal-body -->
+
+  <div class="modal-footer">
+    <span style="font-size:11px;color:#94a3b8">Última mod.: 10/05/2026 14:32</span>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" onclick="close_o('edit-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="close_o('edit-modal');toast('✅ Producto guardado')">💾 Guardar cambios</button>
+    </div>
+  </div>
+
+</div><!-- /modal -->
+</div>
+
+<!-- MODAL STOCK -->
+<div class="overlay" id="stock-modal" onclick="close_o('stock-modal',event)">
+  <div class="modal modal-sm" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div><div class="modal-title" id="sm-title">📦 Movimiento de stock</div><div class="modal-subtitle" id="sm-sub"></div></div>
+      <button class="modal-close" onclick="close_o('stock-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="stock-info-box">
+        <div><div class="stock-number" id="sm-num">22</div><div style="font-size:12px;color:#166534">unidades en stock</div></div>
+        <div style="flex:1;font-size:12px;color:#166534;line-height:1.7;">Stock mínimo: <strong>5 u.</strong><br>Última entrada: <strong>12/04/2026</strong></div>
+      </div>
+      <div class="mov-type">
+        <div class="mov-btn ae" id="mb-e" onclick="selMov('e')">📥 Entrada</div>
+        <div class="mov-btn" id="mb-s" onclick="selMov('s')">📤 Salida</div>
+        <div class="mov-btn" id="mb-a" onclick="selMov('a')">🔧 Ajuste</div>
+      </div>
+      <div class="form-row c2">
+        <div class="fg"><label>Cantidad</label><input class="fi" type="number" value="10" min="1"></div>
+        <div class="fg"><label>Costo unitario <span>(opcional)</span></label><div class="iw"><span class="ip">$</span><input class="fi fpl" value="10.00"></div></div>
+      </div>
+      <div class="form-row"><div class="fg"><label>Motivo</label><input class="fi" placeholder="Ej: reposición de proveedor..."></div></div>
+      <div style="background:#f8fafc;border-radius:8px;padding:10px;font-size:13px;color:#64748b;">Stock resultante: <strong style="color:#15803d;font-size:15px">32 unidades</strong></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="close_o('stock-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="close_o('stock-modal');toast('✅ Stock actualizado')">Confirmar movimiento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MASIVO -->
+<div class="overlay" id="mass-modal" onclick="close_o('mass-modal',event)">
+  <div class="modal modal-sm" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">📈 Actualización masiva de precios</div>
+      <button class="modal-close" onclick="close_o('mass-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row c2">
+        <div class="fg"><label>Categoría</label><select class="fi"><option>Todas</option><option>Blanquería</option><option>Aromas</option><option>Deco</option></select></div>
+        <div class="fg"><label>Tipo de ajuste</label><select class="fi"><option>Aumentar precio %</option><option>Aumentar costo %</option><option>Fijar margen fijo</option></select></div>
+      </div>
+      <div class="form-row"><div class="fg"><label>Porcentaje</label><div class="iw"><input class="fi fpr" value="15"><span class="is">%</span></div></div></div>
+      <div class="price-calc">
+        <div class="pc-title">👀 Vista previa — Blanquería</div>
+        <div style="font-size:13px;color:#475569;line-height:2.1;">
+          <div>Sábana 144: <strong>$ 24,20</strong> → <strong style="color:#15803d">$ 27,83</strong></div>
+          <div>Sábana 200: <strong>$ 193,60</strong> → <strong style="color:#15803d">$ 222,64</strong></div>
+          <div style="color:#94a3b8;font-size:11px">+4 productos más</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="close_o('mass-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="close_o('mass-modal');toast('✅ Precios actualizados en 6 productos')">Aplicar a 6 productos</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ARCHIVAR -->
+<div class="overlay" id="arch-modal" onclick="close_o('arch-modal',event)">
+  <div class="modal modal-sm" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">🗄️ Archivar producto</div>
+      <button class="modal-close" onclick="close_o('arch-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#374151;margin-bottom:12px;">¿Querés archivar <strong id="an"></strong>?</p>
+      <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:13px;color:#78350f;line-height:1.8;">
+        ⚠️ <strong id="at"></strong> transacciones registradas.<br>
+        ✅ Se conserva historial · ✅ Reportes históricos OK<br>
+        ❌ No aparece en catálogo ni en POS<br>
+        ✅ Restaurable en cualquier momento
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="close_o('arch-modal')">Cancelar</button>
+      <button class="btn btn-danger" onclick="close_o('arch-modal');toast('🗄️ Producto archivado')">Sí, archivar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER HISTORIAL -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div><div style="font-size:16px;font-weight:700" id="dr-t"></div><div style="font-size:12px;color:#64748b;margin-top:2px" id="dr-s"></div></div>
+    <button class="modal-close" onclick="document.getElementById('drawer').classList.remove('open')">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="tabs">
+      <div class="tab active" onclick="swTab(this)">Compras</div>
+      <div class="tab" onclick="swTab(this)">Movimientos stock</div>
+    </div>
+    <div class="history-row"><span class="hr-prov">Proveedor A</span><span class="hr-date">12/04/2026</span><span class="hr-qty">22 u.</span><span class="hr-price">$10,00/u</span></div>
+    <div class="history-row"><span class="hr-prov">Proveedor A</span><span class="hr-date">15/02/2026</span><span class="hr-qty">30 u.</span><span class="hr-price">$8,50/u</span></div>
+    <div class="history-row"><span class="hr-prov">Distribuidora Norte</span><span class="hr-date">01/11/2025</span><span class="hr-qty">15 u.</span><span class="hr-price">$7,00/u</span></div>
+    <div class="history-row"><span class="hr-prov">Proveedor A</span><span class="hr-date">10/08/2025</span><span class="hr-qty">40 u.</span><span class="hr-price">$6,20/u</span></div>
+  </div>
+</div>
+
+<div class="toast" id="toast-el"></div>
+
+<style>
+  /* tabs del modal — estilo pestaña, no pill */
+  .modal-tab-item {
+    padding: 10px 16px; font-size: 13px; font-weight: 600;
+    color: #64748b; cursor: pointer; border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s; white-space: nowrap;
+  }
+  .modal-tab-item:hover { color: #374151; }
+  .modal-tab-item.active { color: #2563eb; border-bottom-color: #2563eb; }
+</style>
+
+<script>
+/* ── DATA ── */
+const prods = [
+  { id:'sab144',   name:'Sábana 144 hilos',        sku:'SAB-144',   cat:'Blanquería', cost:10,    gross:24.20,  iva:21, stock:22, ss:'ok',   prov:'Proveedor A',    txns:38 },
+  { id:'sab200',   name:'Sábana 200 hilos',         sku:'SAB-200',   cat:'Blanquería', cost:60,    gross:193.60, iva:21, stock:8,  ss:'low',  prov:'Proveedor A',    txns:12 },
+  { id:'almvisco', name:'Almohada viscoelástica',   sku:'ALM-VISCO', cat:'Blanquería', cost:35,    gross:114.95, iva:21, stock:0,  ss:'zero', prov:'Proveedor B',    txns:5  },
+  { id:'velafram', name:'Vela aromática frambuesa', sku:'VELA-FRAM', cat:'Aromas',     cost:8,     gross:30.25,  iva:21, stock:39, ss:'ok',   prov:'Aromas SRL',     txns:0  },
+  { id:'vata',     name:'Bata de baño adulto 100%', sku:'VATA',      cat:'Blanquería', cost:27999, gross:42350,  iva:21, stock:8,  ss:'low',  prov:'Franco Valente', txns:8  },
+];
+const fmt  = n => '$ '+n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP = n => (n>=0?'+':'')+n.toFixed(0)+'%';
+const netOf= p => p.gross/(1+p.iva/100);
+const mgOf = p => (netOf(p)-p.cost)/p.cost*100;
+const scls = m => m>=80?'mh':m>=30?'mm2':'ml';
+const stcls= s => s==='ok'?'sok':s==='low'?'slow':'szero';
+const stlbl= p => p.stock===0?'Sin stock':p.stock+' u.';
+
+/* ── TABLE ── */
+function renderTable(){
+  document.getElementById('tbody').innerHTML=prods.map(p=>{
+    const m=mgOf(p),n=netOf(p);
+    return `<tr>
+      <td><div style="font-weight:600">${p.name}</div><div style="font-size:11px;color:#94a3b8">${p.sku}</div></td>
+      <td><span class="tag tag-gray">${p.cat}</span></td>
+      <td>
+        <div class="cell-editable" id="ce-c-${p.id}" ondblclick="activate('c','${p.id}')">
+          <span class="cell-value" id="cv-c-${p.id}">${fmt(p.cost)}</span>
+          <span class="edit-hint">✏️ doble click</span>
+          <input class="cell-input" id="ci-c-${p.id}" type="number" step="0.01" value="${p.cost}" onkeydown="ekey(event,'c','${p.id}')" onblur="cancelE('c','${p.id}')">
+          <div class="cell-confirm-btns"><button class="cc-btn cc-ok" onmousedown="confirmE('c','${p.id}')">✓</button><button class="cc-btn cc-no" onmousedown="cancelE('c','${p.id}')">✕</button></div>
+        </div>
+      </td>
+      <td>
+        <div class="cell-editable" id="ce-g-${p.id}" ondblclick="activate('g','${p.id}')">
+          <div><span class="cell-value" id="cv-g-${p.id}" style="font-weight:600">${fmt(p.gross)}</span><div class="price-sub" id="cv-n-${p.id}">s/IVA: ${fmt(n)}</div></div>
+          <span class="edit-hint">✏️ doble click</span>
+          <input class="cell-input" id="ci-g-${p.id}" type="number" step="0.01" value="${p.gross}" onkeydown="ekey(event,'g','${p.id}')" onblur="cancelE('g','${p.id}')">
+          <div class="cell-confirm-btns"><button class="cc-btn cc-ok" onmousedown="confirmE('g','${p.id}')">✓</button><button class="cc-btn cc-no" onmousedown="cancelE('g','${p.id}')">✕</button></div>
+        </div>
+      </td>
+      <td>
+        <div class="cell-editable" id="ce-m-${p.id}" ondblclick="activate('m','${p.id}')">
+          <span class="cell-value margen ${scls(m)}" id="cv-m-${p.id}">${fmtP(m)}</span>
+          <span class="edit-hint">✏️ doble click</span>
+          <input class="cell-input" id="ci-m-${p.id}" type="number" step="0.5" value="${m.toFixed(1)}" onkeydown="ekey(event,'m','${p.id}')" onblur="cancelE('m','${p.id}')">
+          <div class="cell-confirm-btns"><button class="cc-btn cc-ok" onmousedown="confirmE('m','${p.id}')">✓</button><button class="cc-btn cc-no" onmousedown="cancelE('m','${p.id}')">✕</button></div>
+        </div>
+      </td>
+      <td><span class="stock-badge ${stcls(p.ss)}">● ${stlbl(p)}</span></td>
+      <td><span class="prov-chip" onclick="openDrawer('${p.sku}','${p.name}')"><span>📦</span><span class="prov-name">${p.prov}</span><span style="color:#94a3b8">›</span></span></td>
+      <td class="actions-cell">
+        <button class="act-btn act-edit"  onclick="open_o('edit-modal')">✏️ Editar</button><span class="act-sep"></span><button class="act-btn act-stock" onclick="openStock('${p.id}')">📦 Stock</button><span class="act-sep"></span><button class="act-btn act-hist"  onclick="openDrawer('${p.sku}','${p.name}')">📋 Historial</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── INLINE EDIT ── */
+function activate(f,id){
+  const cell=document.getElementById(`ce-${f}-${id}`);
+  cell.classList.add('editing');
+  setTimeout(()=>{const i=document.getElementById(`ci-${f}-${id}`);i.focus();i.select();},10);
+}
+function cancelE(f,id){
+  const cell=document.getElementById(`ce-${f}-${id}`);
+  if(!cell.classList.contains('editing'))return;
+  const p=prods.find(x=>x.id===id);
+  const i=document.getElementById(`ci-${f}-${id}`);
+  i.value=f==='c'?p.cost:f==='g'?p.gross:mgOf(p).toFixed(1);
+  cell.classList.remove('editing');
+}
+function confirmE(f,id){
+  const cell=document.getElementById(`ce-${f}-${id}`);
+  const val=parseFloat(document.getElementById(`ci-${f}-${id}`).value);
+  if(isNaN(val)||val<0){cancelE(f,id);return;}
+  const p=prods.find(x=>x.id===id);
+  if(f==='c')p.cost=val;
+  else if(f==='g')p.gross=val;
+  else{const nn=p.cost*(1+val/100);p.gross=nn*(1+p.iva/100);}
+  refreshRow(p);cell.classList.remove('editing');
+  toast('✅ Guardado — '+p.name);
+}
+function ekey(e,f,id){if(e.key==='Enter'){e.preventDefault();confirmE(f,id);}if(e.key==='Escape')cancelE(f,id);}
+function refreshRow(p){
+  const m=mgOf(p),n=netOf(p);
+  document.getElementById(`cv-c-${p.id}`).textContent=fmt(p.cost);
+  document.getElementById(`ci-c-${p.id}`).value=p.cost;
+  document.getElementById(`cv-g-${p.id}`).textContent=fmt(p.gross);
+  document.getElementById(`ci-g-${p.id}`).value=p.gross;
+  const nel=document.getElementById(`cv-n-${p.id}`);if(nel)nel.textContent='s/IVA: '+fmt(n);
+  const mel=document.getElementById(`cv-m-${p.id}`);
+  mel.textContent=fmtP(m);mel.className='cell-value margen '+scls(m);
+  document.getElementById(`ci-m-${p.id}`).value=m.toFixed(1);
+}
+
+/* ── MODALS ── */
+function open_o(id){ document.getElementById(id).classList.add('open'); }
+function close_o(id,e){ if(!e||e.target===document.getElementById(id)) document.getElementById(id).classList.remove('open'); }
+function openStock(id){
+  const p=prods.find(x=>x.id===id);
+  if(p){document.getElementById('sm-sub').textContent=p.sku+' · '+p.name;document.getElementById('sm-num').textContent=p.stock;}
+  open_o('stock-modal');
+}
+function openArchiveModal(name,txns){
+  document.getElementById('an').textContent=name;
+  document.getElementById('at').textContent=txns;
+  open_o('arch-modal');
+}
+function openDrawer(sku,name){
+  document.getElementById('dr-t').textContent=name;
+  document.getElementById('dr-s').textContent=sku+' · Compras y movimientos';
+  document.getElementById('drawer').classList.add('open');
+}
+function selMov(t){['e','s','a'].forEach(x=>{const el=document.getElementById('mb-'+x);el.className='mov-btn'+(x===t?' a'+t:'');});}
+function swTab(el){el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
+
+/* ── MODAL TABS ── */
+const panels = ['base','precios','attrs','catalogo','stats'];
+function switchModalTab(tabId){
+  const name = tabId.replace('tab-','');
+  panels.forEach(p=>{
+    document.getElementById('panel-'+p).style.display = p===name ? 'block' : 'none';
+    document.getElementById('tab-'+p).classList.toggle('active', p===name);
+  });
+}
+
+/* ── TOGGLE SECTION ── */
+function toggleSec(bid,tid){
+  document.getElementById(bid).classList.toggle('hidden');
+  document.getElementById(tid).classList.toggle('open');
+}
+
+/* ── MODAL PRECIOS ── */
+const v=id=>parseFloat(document.getElementById(id).value)||0;
+const fs=n=>'$ '+n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+function updSum(c,n,g,iva){
+  document.getElementById('sc').textContent=fs(c);
+  document.getElementById('sn').textContent=fs(n);
+  document.getElementById('sg').textContent=fs(n-c);
+  document.getElementById('sgr').textContent=fs(g);
+  document.getElementById('iva-ar').textContent='+'+iva+'%';
+  document.getElementById('ncf').textContent=fs(g);
+  document.getElementById('nri').textContent=fs(n);
+}
+function calcM(){const c=v('mc'),iva=v('miva'),m=v('mm'),n=c*(1+m/100),g=n*(1+iva/100);document.getElementById('mn').value=n.toFixed(2);document.getElementById('mg').value=g.toFixed(2);updSum(c,n,g,iva);}
+function calcM_fromM(){calcM();}
+function calcM_fromN(){const c=v('mc'),iva=v('miva'),n=v('mn'),m=c>0?(n-c)/c*100:0,g=n*(1+iva/100);document.getElementById('mm').value=m.toFixed(1);document.getElementById('mg').value=g.toFixed(2);updSum(c,n,g,iva);}
+function calcM_fromG(){const c=v('mc'),iva=v('miva'),g=v('mg'),n=iva>0?g/(1+iva/100):g,m=c>0?(n-c)/c*100:0;document.getElementById('mm').value=m.toFixed(1);document.getElementById('mn').value=n.toFixed(2);updSum(c,n,g,iva);}
+
+/* ── ATTRS ── */
+function addAttrTag(e,input){if(e.key==='Enter'&&input.value.trim()){createTag(input);}}
+function addAttrTagBtn(btn){const input=btn.previousElementSibling;if(input.value.trim())createTag(input);}
+function createTag(input){
+  const val=input.value.trim();if(!val)return;
+  const wrap=input.closest('.attr-fixed-item').querySelector('.attr-tags');
+  const t=document.createElement('span');
+  t.className='attr-tag';t.innerHTML=val+' <span class="at-del" onclick="this.parentElement.remove()">×</span>';
+  wrap.appendChild(t);input.value='';
+}
+function addCustomAttr(){
+  const row=document.createElement('div');row.className='attr-custom-row';
+  row.innerHTML='<input placeholder="Nombre del atributo"><input placeholder="Valores (separados por coma)"><button class="attr-del-btn" onclick="this.parentElement.remove()">×</button>';
+  document.getElementById('custom-attrs').appendChild(row);
+}
+
+/* ── TOAST ── */
+function toast(msg){const t=document.getElementById('toast-el');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+renderTable();
+</script>
+</body>
+</html>

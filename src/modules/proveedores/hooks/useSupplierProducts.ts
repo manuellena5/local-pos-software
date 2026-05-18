@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 import type { SupplierProduct, ImportResult } from '@shared/types';
 
-export function useSupplierProducts(supplierId: number) {
+export function useSupplierProducts(supplierId: number, businessUnitId?: number) {
   const [products, setProducts]   = useState<SupplierProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError]         = useState<string | null>(null);
@@ -11,8 +11,9 @@ export function useSupplierProducts(supplierId: number) {
     setIsLoading(true);
     setError(null);
     try {
+      const buQuery = businessUnitId ? `?buId=${businessUnitId}` : '';
       const data = await apiClient.get<SupplierProduct[]>(
-        `/api/modules/proveedores/suppliers/${supplierId}/products`,
+        `/api/modules/proveedores/suppliers/${supplierId}/products${buQuery}`,
       );
       setProducts(data);
     } catch (err) {
@@ -20,7 +21,7 @@ export function useSupplierProducts(supplierId: number) {
     } finally {
       setIsLoading(false);
     }
-  }, [supplierId]);
+  }, [supplierId, businessUnitId]);
 
   useEffect(() => {
     void fetchProducts();

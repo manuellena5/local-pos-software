@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { businessUnits } from '../../core/installation';
 
@@ -16,6 +16,9 @@ export const suppliers = sqliteTable(
     email:          text('email'),
     paymentTerms:   text('payment_terms', { enum: PAYMENT_TERMS }),
     deliveryDays:   integer('delivery_days'),
+    minimumOrder:   real('minimum_order'),
+    shippingCost:   real('shipping_cost'),
+    city:           text('city'),
     notes:          text('notes'),
     isActive:       integer('is_active', { mode: 'boolean' }).notNull().default(true),
     createdAt:      text('created_at').notNull().default(sql`(datetime('now'))`),
