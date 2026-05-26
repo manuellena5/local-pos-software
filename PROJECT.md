@@ -795,16 +795,16 @@ Las tablas de caja, logs internos, credenciales y pagos parciales **nunca** van 
 | ------------------------------------------- | --------- | ------------------------------------------------- |
 | ✅ Fase 7: Módulo `retail-textil`           | 2 semanas | Variantes, imágenes, operativo en BU "Front"      |
 | ✅ Fase 8: Módulo `taller-medida`           | 2 semanas | Pedidos, medidas, estados, operativo en BU "Back" |
-| Fase 9: Dashboard + Reportes                | 2 semanas | Métricas por BU, exportación Excel (sin Supabase) |
+| ✅ Fase 9: Dashboard + Reportes             | 2 semanas | Métricas por BU, exportación Excel (sin Supabase) |
 
 **Hito Etapa 2:** Espacio BIP operativo con sus dos unidades de negocio.
 
 #### Etapa 3 — Producto comercializable
 
-| Fase                                       | Duración  | Entregable                 |
-| ------------------------------------------ | --------- | -------------------------- |
-| Fase 10: Módulo de Proveedores y simulador | 2 semanas | Comparador y ROI           |
-| Fase 11: Pulido, testing, instaladores     | 2 semanas | Instaladores Win/Mac/Linux |
+| Fase                                            | Duración  | Entregable                                            |
+| ----------------------------------------------- | --------- | ----------------------------------------------------- |
+| 🔄 Fase 10: Módulo de Proveedores y simulador   | 2 semanas | Comparador y ROI — Pasos 1-3 completos, paso 4 en curso |
+| Fase 11: Pulido, testing, instaladores          | 2 semanas | Instaladores Win/Mac/Linux                            |
 
 **Total estimado:** ~20 semanas (5 meses a dedicación parcial con agente de IA).
 
@@ -864,6 +864,12 @@ El sistema se acepta cuando:
 | ID    | RF       | Descripción                                                                                             | Fase sugerida |
 | ----- | -------- | ------------------------------------------------------------------------------------------------------- | ------------- |
 | DT-01 | RF-TM-05 | Fotos de pruebas intermedias en taller-medida. Tabla `custom_order_photos` no creada ni implementada.  | Fase 11       |
+| DT-02 | RF-CA-04 | Reporte Z al cierre de caja (resumen imprimible de la sesión). La sesión de caja funciona pero no genera reporte Z. | Fase 11 |
+| DT-03 | RF-POS-02 | Escaneo por código de barras. Campo `barcode` en productos ya existe, pero el POS no escucha el lector de código. | Fase 11 |
+| DT-04 | RF-POS-08 | Anulación de ventas con motivo. No implementada. | Fase 11 |
+| DT-05 | RF-SY-01/02 | Sincronización con Supabase. Arquitectura preparada pero sync real no activa. | Fase 11 |
+| DT-06 | RF-RP-05 | Exportación de reportes a Excel. Dashboard implementado pero sin export. | Fase 11 |
+| DT-07 | RF-CO-01 | Wizard de setup inicial en primer arranque. Config manual por ahora. | Fase 11 |
 
 ---
 
@@ -901,6 +907,7 @@ El sistema se acepta cuando:
 | 1.0     | Abril 2026 | Versión inicial                                                                                                                                                           |
 | 2.0     | Abril 2026 | Reestructurado como producto LocalPosSoftware modular. Introducción de Business Units y módulos verticales. Separación core vs módulos. Primera instalación: Espacio BIP. |
 | 2.1     | Mayo 2026  | Actualización post-Fase 8: nomenclatura real de tablas taller-medida, deuda técnica DT-01, fases 0-8 marcadas como completas.                                             |
+| 2.2     | Mayo 2026  | Actualización post-Fase 10 paso 3: Fase 9 marcada completa, Fase 10 en curso (pasos 1-3 done). Sesión de caja (apertura/cierre) implementada. Deuda técnica DT-02 a DT-07 documentada. Tabla de productos con resize de columnas, StockBadge numérico, acciones con ícono-solo. |
 
 ---
 

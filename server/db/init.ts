@@ -25,6 +25,7 @@ export function initDatabase(): void {
     '0018_suppliers_new_fields.sql',
     '0019_product_supplier_links.sql',
     '0020_products_extended_fields.sql',
+    '0021_sales_cancellation.sql',
   ];
 
   for (const migration of migrations) {

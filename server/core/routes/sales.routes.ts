@@ -16,3 +16,5 @@ export const salesRouter = Router();
 salesRouter.get('/sales', (req, res, next) => controller.getAll(req, res, next));
 salesRouter.get('/sales/:id', (req, res, next) => controller.getById(req, res, next));
 salesRouter.post('/sales/confirm', (req, res, next) => controller.confirm(req, res, next));
+salesRouter.post('/sales/:id/cancel', (req, res, next) => controller.cancel(req, res, next));
+salesRouter.post('/sales/:id/reprint', (req, res, next) => controller.reprint(req, res, next));

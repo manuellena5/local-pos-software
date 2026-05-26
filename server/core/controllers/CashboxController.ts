@@ -83,4 +83,24 @@ export class CashboxController {
       next(err);
     }
   };
+
+  getSessionData = (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const businessUnitId = getBUId(req);
+      const data = this.service.getSessionData(businessUnitId);
+      res.json({ data, error: null });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getAuditHistoryWithTimes = (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const businessUnitId = getBUId(req);
+      const data = this.service.getAuditHistoryWithTimes(businessUnitId);
+      res.json({ data, error: null });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

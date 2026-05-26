@@ -6,6 +6,17 @@ export interface CashBalance {
   movements: CashMovement[];
 }
 
+export interface CashSessionData {
+  balance: number;
+  movements: CashMovement[];
+  openingMovement: CashMovement | null;
+}
+
+export interface AuditWithTimes extends CashAudit {
+  openingAt: string | null;
+  closingAt: string;
+}
+
 export const cashboxApi = {
   getBalance(businessUnitId: number, upToDate?: string): Promise<CashBalance> {
     const params = new URLSearchParams({ businessUnitId: String(businessUnitId) });
@@ -51,5 +62,13 @@ export const cashboxApi = {
   openSession(businessUnitId: number, initialAmount: number): Promise<CashMovement> {
     const params = new URLSearchParams({ businessUnitId: String(businessUnitId) });
     return apiClient.post(`/api/cashbox/open?${params}`, { initialAmount });
+  },
+
+  getSessionData(businessUnitId: number): Promise<CashSessionData> {
+    return apiClient.get(`/api/cashbox/session-data?businessUnitId=${businessUnitId}`);
+  },
+
+  getAuditHistoryWithTimes(businessUnitId: number): Promise<AuditWithTimes[]> {
+    return apiClient.get(`/api/cashbox/audit-history?businessUnitId=${businessUnitId}`);
   },
 };

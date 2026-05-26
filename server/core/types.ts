@@ -152,3 +152,10 @@ export interface CreateCashAuditRequest {
   realBalance: number;
   notes?: string;
 }
+
+// ── Ventas: gestión post-venta (RF-POS-08) ───────────────────────────────────
+
+export interface CancelSaleRequest {
+  reason: string;
+  userId?: number;
+}

@@ -18,3 +18,5 @@ cashboxRouter.get('/cashbox/audits', (req, res, next) => controller.getAudits(re
 cashboxRouter.post('/cashbox/audit', (req, res, next) => controller.performAudit(req, res, next));
 cashboxRouter.get('/cashbox/status', (req, res, next) => controller.getSessionStatus(req, res, next));
 cashboxRouter.post('/cashbox/open', (req, res, next) => controller.openSession(req, res, next));
+cashboxRouter.get('/cashbox/session-data', (req, res, next) => controller.getSessionData(req, res, next));
+cashboxRouter.get('/cashbox/audit-history', (req, res, next) => controller.getAuditHistoryWithTimes(req, res, next));

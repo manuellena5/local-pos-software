@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { cashboxApi, type CashBalance } from '@/lib/api/cashbox';
-import type { CashAudit, CashSessionStatus } from '@shared/types';
+import { cashboxApi, type CashSessionData, type AuditWithTimes } from '@/lib/api/cashbox';
+import type { CashSessionStatus } from '@shared/types';
 
 export function useCashbox(businessUnitId: number | undefined) {
-  const [balance, setBalance] = useState<CashBalance | null>(null);
-  const [audits, setAudits] = useState<CashAudit[]>([]);
+  const [sessionData, setSessionData] = useState<CashSessionData | null>(null);
+  const [auditHistory, setAuditHistory] = useState<AuditWithTimes[]>([]);
   const [sessionStatus, setSessionStatus] = useState<CashSessionStatus>('never_opened');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,13 +14,13 @@ export function useCashbox(businessUnitId: number | undefined) {
     setLoading(true);
     setError(null);
     try {
-      const [bal, aud, statusRes] = await Promise.all([
-        cashboxApi.getBalance(businessUnitId),
-        cashboxApi.getAudits(businessUnitId),
+      const [session, history, statusRes] = await Promise.all([
+        cashboxApi.getSessionData(businessUnitId),
+        cashboxApi.getAuditHistoryWithTimes(businessUnitId),
         cashboxApi.getStatus(businessUnitId),
       ]);
-      setBalance(bal);
-      setAudits(aud);
+      setSessionData(session);
+      setAuditHistory(history);
       setSessionStatus(statusRes.status);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -33,5 +33,5 @@ export function useCashbox(businessUnitId: number | undefined) {
     fetch();
   }, [fetch]);
 
-  return { balance, audits, sessionStatus, loading, error, refetch: fetch };
+  return { sessionData, auditHistory, sessionStatus, loading, error, refetch: fetch };
 }

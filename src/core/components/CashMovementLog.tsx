@@ -3,6 +3,7 @@ import { cashboxApi } from '@/lib/api/cashbox';
 import type { CashMovement, CashMovementType } from '@shared/types';
 
 const TYPE_LABELS: Record<CashMovementType, string> = {
+  opening: 'Apertura',
   sale: 'Venta',
   refund: 'Devolución',
   deposit: 'Depósito',
@@ -11,6 +12,7 @@ const TYPE_LABELS: Record<CashMovementType, string> = {
 };
 
 const TYPE_COLORS: Record<CashMovementType, string> = {
+  opening: 'bg-purple-100 text-purple-700',
   sale: 'bg-green-100 text-green-700',
   refund: 'bg-orange-100 text-orange-700',
   deposit: 'bg-blue-100 text-blue-700',

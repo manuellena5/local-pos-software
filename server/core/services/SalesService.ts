@@ -1,5 +1,5 @@
-import type { SaleWithItems } from '../../../shared/types';
-import type { ConfirmSaleRequest, SaleItemInput } from '../types';
+import type { SaleWithItems, SaleFilters } from '../../../shared/types';
+import type { ConfirmSaleRequest, SaleItemInput, CancelSaleRequest } from '../types';
 import type { SaleRepository } from '../repositories/SaleRepository';
 import type { ProductRepository } from '../repositories/ProductRepository';
 import type { InvoiceQueueService } from './InvoiceQueueService';
@@ -197,11 +197,71 @@ export class SalesService {
     return this.saleRepo.getAll(businessUnitId);
   }
 
+  /**
+   * Devuelve ventas filtradas con soporte de fechas, estado, medio de pago y búsqueda.
+   */
+  getSalesFiltered(businessUnitId: number, filters: SaleFilters) {
+    return this.saleRepo.getFiltered(businessUnitId, filters);
+  }
+
   getSaleWithItems(id: number, businessUnitId: number): SaleWithItems {
     const result = this.saleRepo.getById(id, businessUnitId);
     if (!result) {
       throw new NotFoundError(`Venta ${id} no encontrada`);
     }
     return result;
+  }
+
+  /**
+   * Anula una venta:
+   * - Valida que exista, pertenezca a la BU y esté completada
+   * - Revierte stock
+   * - Registra movimiento de caja negativo si hay sesión abierta
+   * - Si tiene CAE emitido, solo informa al operador (la NC es manual)
+   *
+   * @throws {BusinessRuleError} Si la venta ya fue anulada
+   * @throws {NotFoundError}     Si no existe o no pertenece a la BU
+   * @throws {ValidationError}   Si el motivo es muy corto
+   */
+  cancelSale(
+    saleId: number,
+    businessUnitId: number,
+    data: CancelSaleRequest,
+  ): { result: SaleWithItems; cashMovementCreated: boolean; hasInvoice: boolean } {
+    if (!data.reason || data.reason.trim().length < 10) {
+      throw new ValidationError('El motivo de anulación debe tener al menos 10 caracteres');
+    }
+
+    // Anular en repo (transacción: actualiza status + revierte stock)
+    const result = this.saleRepo.cancel(saleId, businessUnitId, data.reason.trim(), data.userId);
+
+    // Registrar movimiento de caja negativo si hay sesión abierta
+    let cashMovementCreated = false;
+    if (this.cashboxService) {
+      const sessionStatus = this.cashboxService.getSessionStatus(businessUnitId);
+      if (sessionStatus === 'open') {
+        try {
+          this.cashboxService.recordMovement(
+            businessUnitId,
+            {
+              type: 'refund',
+              amount: result.sale.totalAmount,
+              description: `Anulación venta #${result.sale.saleNumber}`,
+              saleId,
+            },
+            data.userId,
+          );
+          cashMovementCreated = true;
+        } catch (err: unknown) {
+          logger.warn(CTX, 'Could not record refund cash movement', {
+            saleId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    }
+
+    const hasInvoice = result.sale.invoiceStatus === 'issued' && result.sale.cae !== null;
+    return { result, cashMovementCreated, hasInvoice };
   }
 }

@@ -6,7 +6,7 @@ interface Props {
 }
 
 export function CashboxStatus({ businessUnitId, onGoToCashbox }: Props) {
-  const { balance, audits, sessionStatus, loading } = useCashbox(businessUnitId);
+  const { sessionData, auditHistory, sessionStatus, loading } = useCashbox(businessUnitId);
 
   if (loading) return null;
 
@@ -23,7 +23,7 @@ export function CashboxStatus({ businessUnitId, onGoToCashbox }: Props) {
     );
   }
 
-  const lastAudit = audits[0] ?? null;
+  const lastAudit = auditHistory[0] ?? null;
   const hasDiscrepancy = lastAudit?.status === 'discrepancy';
 
   return (
@@ -37,7 +37,7 @@ export function CashboxStatus({ businessUnitId, onGoToCashbox }: Props) {
       title="Ver caja"
     >
       <span>{hasDiscrepancy ? '⚠️' : '🏦'}</span>
-      <span>Caja: ${balance?.theoretical.toFixed(2) ?? '0.00'}</span>
+      <span>Caja: ${sessionData?.balance.toFixed(2) ?? '0.00'}</span>
       {hasDiscrepancy && <span className="text-orange-500">· Discrepancia</span>}
     </button>
   );

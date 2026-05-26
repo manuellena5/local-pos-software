@@ -1,10 +1,26 @@
 import { apiClient } from './client';
-import type { Sale, SaleWithItems } from '@shared/types';
+import type { Sale, SaleWithItems, SaleFilters } from '@shared/types';
 import type { ConfirmSaleInput } from '@/lib/validations/core/sales';
+
+export interface CancelSaleResponse {
+  sale: SaleWithItems;
+  cashMovementCreated: boolean;
+  hasInvoice: boolean;
+}
 
 export const salesApi = {
   list(businessUnitId: number): Promise<Sale[]> {
     return apiClient.get(`/api/sales?businessUnitId=${businessUnitId}`);
+  },
+
+  listFiltered(businessUnitId: number, filters: SaleFilters): Promise<Sale[]> {
+    const params = new URLSearchParams({ businessUnitId: String(businessUnitId) });
+    if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+    if (filters.dateTo) params.set('dateTo', filters.dateTo);
+    if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+    if (filters.paymentMethod) params.set('paymentMethod', filters.paymentMethod);
+    if (filters.search) params.set('search', filters.search);
+    return apiClient.get(`/api/sales?${params}`);
   },
 
   get(id: number, businessUnitId: number): Promise<SaleWithItems> {
@@ -13,5 +29,13 @@ export const salesApi = {
 
   confirm(data: ConfirmSaleInput): Promise<SaleWithItems> {
     return apiClient.post(`/api/sales/confirm?businessUnitId=${data.businessUnitId}`, data);
+  },
+
+  cancel(id: number, businessUnitId: number, reason: string): Promise<CancelSaleResponse> {
+    return apiClient.post(`/api/sales/${id}/cancel?businessUnitId=${businessUnitId}`, { reason });
+  },
+
+  reprint(id: number, businessUnitId: number): Promise<{ success: boolean }> {
+    return apiClient.post(`/api/sales/${id}/reprint?businessUnitId=${businessUnitId}`, {});
   },
 };

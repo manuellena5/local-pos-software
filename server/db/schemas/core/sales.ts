@@ -60,6 +60,16 @@ export const sales = sqliteTable('sales', {
   createdAt: text('created_at')
     .notNull()
     .default(sql`(datetime('now'))`),
+
+  // ── Cancelación (RF-POS-08) ──────────────────────────────────────────────
+  /** Timestamp de cancelación — null si no está cancelada */
+  cancelledAt: text('cancelled_at'),
+
+  /** Motivo de cancelación ingresado por el operador */
+  cancellationReason: text('cancellation_reason'),
+
+  /** Usuario que realizó la cancelación */
+  cancelledBy: integer('cancelled_by').references(() => users.id),
 });
 
 export const saleItems = sqliteTable('sale_items', {

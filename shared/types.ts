@@ -205,6 +205,18 @@ export interface Sale {
   invoiceAttempts: number;
   lastInvoiceAttemptAt: string | null;
   createdAt: string;
+  // Cancelación (RF-POS-08)
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+  cancelledBy: number | null;
+}
+
+export interface SaleFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  status?: 'all' | 'completed' | 'cancelled';
+  paymentMethod?: string;
+  search?: string;
 }
 
 export interface PendingInvoice {

@@ -59,7 +59,7 @@ export class CashboxService {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const { theoretical } = this.getBalance(businessUnitId, today);
+    const { balance: theoretical } = this.getSessionData(businessUnitId);
     const difference = Math.round((parsed.data.realBalance - theoretical) * 100) / 100;
     const status: CashAudit['status'] =
       Math.abs(difference) <= BALANCE_TOLERANCE ? 'balanced' : 'discrepancy';
@@ -95,6 +95,56 @@ export class CashboxService {
       { type: 'opening', amount: parsed.data.initialAmount, description: 'Apertura de caja' },
       userId,
     );
+  }
+
+  /**
+   * Devuelve el balance y los movimientos de la sesión activa (desde el último opening).
+   */
+  getSessionData(businessUnitId: number): {
+    balance: number;
+    movements: CashMovement[];
+    openingMovement: CashMovement | null;
+  } {
+    const lastOpening = this.movementRepo.getLatestOfType(businessUnitId, 'opening');
+    if (!lastOpening) {
+      return { balance: 0, movements: [], openingMovement: null };
+    }
+
+    const movements = this.movementRepo.getAll(businessUnitId, { fromDate: lastOpening.createdAt });
+    const balance = movements.reduce((total, m) => {
+      if (m.type === 'refund' || m.type === 'withdrawal') return total - m.amount;
+      return total + m.amount;
+    }, 0);
+
+    return {
+      balance: Math.round(balance * 100) / 100,
+      movements,
+      openingMovement: lastOpening,
+    };
+  }
+
+  /**
+   * Devuelve el historial de arqueos enriquecido con hora de apertura y cierre de cada sesión.
+   * La hora de apertura se correlaciona buscando el último opening anterior a cada arqueo.
+   * La hora de cierre es el createdAt del arqueo (momento en que se registró).
+   */
+  getAuditHistoryWithTimes(
+    businessUnitId: number,
+  ): Array<CashAudit & { openingAt: string | null; closingAt: string }> {
+    const audits = this.auditRepo.getAll(businessUnitId);
+    const allMovements = this.movementRepo.getAll(businessUnitId);
+    const openings = allMovements
+      .filter((m) => m.type === 'opening')
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    return audits.map((audit) => {
+      const openingForSession = openings.find((o) => o.createdAt <= audit.createdAt) ?? null;
+      return {
+        ...audit,
+        openingAt: openingForSession?.createdAt ?? null,
+        closingAt: audit.createdAt,
+      };
+    });
   }
 
   /**

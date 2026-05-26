@@ -12,6 +12,7 @@ import { ReportsPage } from '@/core/components/ReportsPage';
 import { SettingsPage } from '@/core/components/SettingsPage';
 import { NetworkStatusBar } from '@/core/components/NetworkStatusBar';
 import { DashboardPage } from '@/core/dashboard/DashboardPage';
+import { SalesPage } from '@/core/sales/SalesPage';
 import { initRetailTextilModule } from '@/modules/retail-textil';
 import { initTallerMedidaModule } from '@/modules/taller-medida';
 import { TallerMedidaPage } from '@/modules/taller-medida/components/TallerMedidaPage';
@@ -23,12 +24,13 @@ initRetailTextilModule();
 initTallerMedidaModule();
 initProveedoresModule();
 
-type AppTab = 'dashboard' | 'productos' | 'pos' | 'clientes' | 'caja' | 'pedidos' | 'proveedores' | 'reportes' | 'configuracion';
+type AppTab = 'dashboard' | 'productos' | 'pos' | 'ventas' | 'clientes' | 'caja' | 'pedidos' | 'proveedores' | 'reportes' | 'configuracion';
 
 const CORE_TABS: { key: AppTab; label: string; icon: string }[] = [
   { key: 'dashboard',     label: 'Dashboard',       icon: '🏠' },
   { key: 'productos',     label: 'Productos',        icon: '📦' },
   { key: 'pos',           label: 'Punto de venta',   icon: '💰' },
+  { key: 'ventas',        label: 'Ventas',           icon: '🧾' },
   { key: 'clientes',      label: 'Clientes',         icon: '👥' },
   { key: 'caja',          label: 'Caja',             icon: '🏦' },
   { key: 'proveedores',   label: 'Proveedores',      icon: '🏭' },
@@ -141,6 +143,7 @@ export function App() {
                 />
               )}
               {tab === 'productos'     && <ProductsPage businessUnitId={activeBU.id} />}
+              {tab === 'ventas'        && <SalesPage businessUnitId={activeBU.id} />}
               {tab === 'clientes'      && <CustomerList />}
               {tab === 'caja'          && <CashboxPage businessUnitId={activeBU.id} />}
               {tab === 'pedidos'       && <TallerMedidaPage />}
