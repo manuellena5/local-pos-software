@@ -13,6 +13,7 @@ import { SettingsPage } from '@/core/components/SettingsPage';
 import { NetworkStatusBar } from '@/core/components/NetworkStatusBar';
 import { DashboardPage } from '@/core/dashboard/DashboardPage';
 import { SalesPage } from '@/core/sales/SalesPage';
+import { BusinessUnitsPage } from '@/core/business-units/BusinessUnitsPage';
 import { initRetailTextilModule } from '@/modules/retail-textil';
 import { initTallerMedidaModule } from '@/modules/taller-medida';
 import { TallerMedidaPage } from '@/modules/taller-medida/components/TallerMedidaPage';
@@ -24,10 +25,11 @@ initRetailTextilModule();
 initTallerMedidaModule();
 initProveedoresModule();
 
-type AppTab = 'dashboard' | 'productos' | 'pos' | 'ventas' | 'clientes' | 'caja' | 'pedidos' | 'proveedores' | 'reportes' | 'configuracion';
+type AppTab = 'dashboard' | 'unidades' | 'productos' | 'pos' | 'ventas' | 'clientes' | 'caja' | 'pedidos' | 'proveedores' | 'reportes' | 'configuracion';
 
 const CORE_TABS: { key: AppTab; label: string; icon: string }[] = [
   { key: 'dashboard',     label: 'Dashboard',       icon: '🏠' },
+  { key: 'unidades',      label: 'Unidades',        icon: '🏪' },
   { key: 'productos',     label: 'Productos',        icon: '📦' },
   { key: 'pos',           label: 'Punto de venta',   icon: '💰' },
   { key: 'ventas',        label: 'Ventas',           icon: '🧾' },
@@ -77,12 +79,12 @@ export function App() {
 
   const isTallerBU = activeBU.moduleId === 'taller-medida';
 
-  // Insertar tab Pedidos entre Caja y Reportes solo para BU taller-medida
+  // Insertar tab Pedidos entre Caja y Proveedores solo para BU taller-medida
   const TABS = isTallerBU
     ? [
-        ...CORE_TABS.slice(0, 5),   // dashboard → caja
+        ...CORE_TABS.slice(0, 7),   // dashboard → caja
         TALLER_TAB,
-        ...CORE_TABS.slice(5),      // reportes → configuracion
+        ...CORE_TABS.slice(7),      // proveedores → configuracion
       ]
     : CORE_TABS;
 
@@ -142,6 +144,7 @@ export function App() {
                   onNavigate={(t) => setTab(t as AppTab)}
                 />
               )}
+              {tab === 'unidades'      && <BusinessUnitsPage />}
               {tab === 'productos'     && <ProductsPage businessUnitId={activeBU.id} />}
               {tab === 'ventas'        && <SalesPage businessUnitId={activeBU.id} />}
               {tab === 'clientes'      && <CustomerList />}

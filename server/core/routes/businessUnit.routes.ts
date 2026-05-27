@@ -16,3 +16,6 @@ businessUnitRouter.post('/business-units', (req, res, next) => controller.create
 businessUnitRouter.patch('/business-units/:id', (req, res, next) =>
   controller.update(req, res, next)
 );
+businessUnitRouter.post('/business-units/:id/toggle-active', (req, res, next) =>
+  controller.toggleActive(req, res, next)
+);

@@ -14,6 +14,7 @@ export interface BusinessUnit {
   id: number;
   installationId: number;
   name: string;
+  description: string | null;
   moduleId: string;
   isActive: boolean;
   invoicePrefix: string;

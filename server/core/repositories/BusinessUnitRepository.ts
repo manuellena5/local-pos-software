@@ -7,12 +7,14 @@ import { NotFoundError } from '../../lib/errors';
 interface CreateBusinessUnitData {
   installationId: number;
   name: string;
+  description?: string | null;
   moduleId: string;
   invoicePrefix: string;
 }
 
 interface UpdateBusinessUnitData {
   name?: string;
+  description?: string | null;
   isActive?: boolean;
   invoicePrefix?: string;
 }
@@ -32,9 +34,12 @@ export class BusinessUnitRepository {
     return rows[0] ?? null;
   }
 
+  /**
+   * Crea una nueva unidad de negocio.
+   */
   create(data: CreateBusinessUnitData): BusinessUnit {
     const rows = db.insert(businessUnits).values(data).returning().all();
-    return rows[0];
+    return rows[0]!;
   }
 
   /**

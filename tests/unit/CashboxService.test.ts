@@ -30,6 +30,8 @@ describe('CashboxService', () => {
       getByDate: vi.fn().mockReturnValue([]),
       getBySaleId: vi.fn().mockReturnValue(null),
       getBalance: vi.fn().mockReturnValue(0),
+      // getLatestOfType added in caja redesign (Fase CA)
+      getLatestOfType: vi.fn().mockReturnValue(null),
     } as unknown as CashMovementRepository;
 
     auditRepo = {

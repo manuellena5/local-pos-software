@@ -13,6 +13,9 @@ export class BusinessUnitService {
     private readonly installationRepo: InstallationRepository
   ) {}
 
+  /**
+   * Devuelve todas las unidades de negocio de la instalación.
+   */
   getAll(): BusinessUnit[] {
     return this.buRepo.getAll();
   }
@@ -38,17 +41,33 @@ export class BusinessUnitService {
     return this.buRepo.create({
       installationId: config.id,
       name: data.name,
+      description: data.description ?? null,
       moduleId: data.moduleId,
       invoicePrefix: data.invoicePrefix,
     });
   }
 
   /**
-   * Actualiza nombre, estado o prefijo de factura de una BU.
+   * Actualiza nombre, descripción, estado o prefijo de factura de una BU.
+   * El módulo asignado NO se puede cambiar una vez creada la BU.
    * @throws {NotFoundError} Si la BU no existe.
    */
   update(id: number, data: UpdateBusinessUnitDto): BusinessUnit {
-    this.getById(id);
-    return this.buRepo.update(id, data);
+    this.getById(id); // valida existencia
+    return this.buRepo.update(id, {
+      name: data.name,
+      description: data.description,
+      isActive: data.isActive,
+      invoicePrefix: data.invoicePrefix,
+    });
+  }
+
+  /**
+   * Activa o desactiva una BU (soft toggle).
+   * @throws {NotFoundError} Si la BU no existe.
+   */
+  toggleActive(id: number): BusinessUnit {
+    const bu = this.getById(id);
+    return this.buRepo.update(id, { isActive: !bu.isActive });
   }
 }

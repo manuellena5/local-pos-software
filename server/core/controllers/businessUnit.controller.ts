@@ -47,4 +47,21 @@ export class BusinessUnitController {
       next(err);
     }
   }
+
+  /**
+   * Alterna el estado activo/inactivo de una BU.
+   * POST /business-units/:id/toggle-active
+   */
+  toggleActive(req: Request, res: Response, next: NextFunction): void {
+    try {
+      const id = Number(req.params['id']);
+      if (!Number.isInteger(id) || id <= 0) {
+        throw new ValidationError('ID de unidad de negocio inválido');
+      }
+      const unit = this.service.toggleActive(id);
+      res.json({ data: unit, error: null });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

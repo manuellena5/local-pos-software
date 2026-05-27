@@ -21,6 +21,7 @@ export const businessUnits = sqliteTable('business_units', {
     .notNull()
     .references(() => installationConfig.id),
   name: text('name').notNull(),
+  description: text('description'),
   moduleId: text('module_id').notNull(),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   invoicePrefix: text('invoice_prefix').notNull().default('A'),
