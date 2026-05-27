@@ -3,7 +3,9 @@ import { useAppStore } from '@/core/store/appStore';
 import { apiClient } from '@/lib/api/client';
 import { useCategories } from '@/core/categories/hooks/useCategories';
 import { categoriesApi } from '@/lib/api/categories';
+import { BusinessUnitsPage } from '@/core/business-units/BusinessUnitsPage';
 import type { InstallationConfig, BusinessUnit, Category } from '@shared/types';
+import { getErrorLog, clearErrorLog, type ErrorLogEntry } from '@/lib/errorLog';
 
 export function SettingsPage() {
   const config = useAppStore((s) => s.config);
@@ -11,6 +13,7 @@ export function SettingsPage() {
   const activeBU = useAppStore((s) => s.activeBU);
   const setConfig = useAppStore((s) => s.setConfig);
 
+  const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +34,8 @@ export function SettingsPage() {
   // Catalog settings
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [catalogBuId, setCatalogBuId] = useState<string>('');
+
+  useEffect(() => { setErrorLog(getErrorLog()); }, []);
 
   useEffect(() => {
     if (!config) return;
@@ -310,6 +315,64 @@ export function SettingsPage() {
 
         {categoryError && (
           <p className="text-red-500 text-xs mt-2">{categoryError}</p>
+        )}
+      </div>
+
+      {/* ── UNIDADES DE NEGOCIO ─────────────────────────────────────────── */}
+      <div className="border-t pt-6">
+        <BusinessUnitsPage />
+      </div>
+
+      {/* ── HISTORIAL DE ERRORES ─────────────────────────────────────────── */}
+      <div className="border-t pt-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-bold text-gray-900">🪲 Historial de errores</h2>
+          {errorLog.length > 0 && (
+            <button
+              onClick={() => { clearErrorLog(); setErrorLog([]); }}
+              className="text-xs px-2 py-1 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50"
+            >
+              Limpiar todo
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mb-4">
+          Últimos {errorLog.length} errores de la aplicación (máx. 100). Útil para diagnóstico.
+        </p>
+
+        {errorLog.length === 0 ? (
+          <p className="text-sm text-gray-400 py-3 text-center">No hay errores registrados ✅</p>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+            {errorLog.map((e) => (
+              <div key={e.id} className="border border-gray-100 rounded-lg p-3 bg-gray-50">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <span className="text-[10px] font-mono font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                    {e.code}
+                  </span>
+                  <span className="text-[10px] text-gray-400 shrink-0">
+                    {new Date(e.timestamp).toLocaleString('es-AR', {
+                      day: '2-digit', month: '2-digit', year: '2-digit',
+                      hour: '2-digit', minute: '2-digit', second: '2-digit',
+                    })}
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-gray-800">{e.message}</p>
+                {e.context && (
+                  <p className="text-[10px] text-gray-400 mt-0.5">Contexto: {e.context}</p>
+                )}
+                {e.details && e.details.length > 0 && (
+                  <ul className="mt-1 space-y-0.5">
+                    {e.details.map((d, i) => (
+                      <li key={i} className="text-[10px] text-red-700 bg-red-50 px-2 py-0.5 rounded">
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
