@@ -12,7 +12,7 @@ export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) 
   const setPrinterStatus = useAppStore((s) => s.setPrinterStatus);
 
   const [connectionType, setConnectionType] = useState<'usb' | 'network'>('usb');
-  const [portPath, setPortPath] = useState('USB001');
+  const [portPath, setPortPath] = useState('');
   const [host, setHost] = useState('');
   const [port, setPort] = useState(9100);
   const [detectedPorts, setDetectedPorts] = useState<string[]>([]);
@@ -139,7 +139,9 @@ export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) 
         <div className="space-y-3">
           <div className="flex items-end gap-2">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Puerto USB</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Impresora
+              </label>
               <select
                 value={portPath}
                 onChange={(e) => setPortPath(e.target.value)}
@@ -147,9 +149,12 @@ export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) 
               >
                 {detectedPorts.length > 0
                   ? detectedPorts.map((p) => <option key={p} value={p}>{p}</option>)
-                  : <option value={portPath}>{portPath}</option>
+                  : <option value={portPath}>{portPath || '(seleccioná o detectá)'}</option>
                 }
               </select>
+              <p className="text-[11px] text-gray-400 mt-1">
+                Windows: nombre del dispositivo (ej: POS-80-Series) · Linux: ruta (ej: /dev/usb/lp0)
+              </p>
             </div>
             <button
               type="button"
@@ -157,13 +162,13 @@ export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) 
               disabled={detecting}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
             >
-              {detecting ? 'Detectando...' : 'Detectar impresoras USB'}
+              {detecting ? 'Detectando...' : 'Detectar'}
             </button>
           </div>
           {detectError && <p className="text-xs text-red-500">{detectError}</p>}
           {detectedPorts.length === 0 && !detecting && (
             <p className="text-xs text-gray-400">
-              No se encontraron impresoras USB. Verificá que esté enchufada, o ingresá el puerto manualmente.
+              Hacé clic en &quot;Detectar&quot; o escribí el nombre manualmente.
             </p>
           )}
         </div>
