@@ -2,7 +2,7 @@ export interface CreateProductRequest {
   name: string;
   description?: string;
   category?: string;
-  sku: string;
+  // sku ya no viene del cliente — se genera en el backend automáticamente
   costPrice: number;
   basePrice: number;
   taxRate?: number;
