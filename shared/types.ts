@@ -285,6 +285,33 @@ export interface SaleWithItems {
   items: SaleItem[];
 }
 
+export interface SaleTicketData {
+  saleNumber: string;
+  date: string;
+  time: string;
+  businessName: string;
+  businessAddress: string;
+  cuit: string;
+  businessUnitName: string;
+  fiscalCondition: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }>;
+  subtotalSinIva?: number;
+  ivaAmount?: number;
+  total: number;
+  payments: Array<{
+    method: string;
+    amount: number;
+  }>;
+  change?: number;
+  cae?: string;
+  caeVto?: string;
+}
+
 // ── Fase 5: Clientes ──────────────────────────────────────────────────────
 
 export interface Customer {

@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { PrinterConfig, PrinterStatus } from '@shared/types';
+import type { PrinterConfig, PrinterStatus, SaleTicketData } from '@shared/types';
 
 export const printerApi = {
   getStatus(): Promise<{ status: PrinterStatus; config: PrinterConfig | null }> {
@@ -19,5 +19,8 @@ export const printerApi = {
   },
   saveConfig(config: PrinterConfig): Promise<{ success: boolean }> {
     return apiClient.put('/api/printer/config', config);
+  },
+  printTicket(data: SaleTicketData): Promise<{ success: boolean; error?: string }> {
+    return apiClient.post('/api/printer/print-ticket', data);
   },
 };

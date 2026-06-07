@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useAppStore } from '@/core/store/appStore';
 import { formatCurrency } from '@/lib/utils/pricing';
-import type { SaleWithItems } from '@shared/types';
+import { printerApi } from '@/lib/api/printer';
+import type { SaleWithItems, SaleTicketData } from '@shared/types';
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'Efectivo',
@@ -15,10 +17,64 @@ interface POSReceiptModalProps {
   onClose: () => void;
 }
 
+function buildTicketData(
+  sale: SaleWithItems,
+  config: ReturnType<typeof useAppStore.getState>['config'],
+  activeBU: ReturnType<typeof useAppStore.getState>['activeBU'],
+): SaleTicketData {
+  const { sale: s, items } = sale;
+  const dateObj = new Date(s.createdAt);
+  const date = dateObj.toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const time = dateObj.toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  // Determinar vuelto: si hay pago en efectivo y el total pagado supera el total de venta
+  const cashPayment = s.paymentMethods.find((p) => p.method === 'cash');
+  const totalPaid = s.paymentMethods.reduce((acc, p) => acc + p.amount, 0);
+  const change = totalPaid > s.totalAmount ? Math.round((totalPaid - s.totalAmount) * 100) / 100 : undefined;
+
+  return {
+    saleNumber: String(s.saleNumber).padStart(4, '0'),
+    date,
+    time,
+    businessName: config?.businessName ?? 'LocalPos',
+    businessAddress: config?.address ?? '',
+    cuit: config?.cuit ?? '',
+    businessUnitName: activeBU?.name ?? '',
+    fiscalCondition: 'Consumidor Final',
+    items: items.map((item) => ({
+      name: item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      subtotal: item.lineTotal,
+    })),
+    subtotalSinIva: s.taxableAmount > 0 ? s.taxableAmount : undefined,
+    ivaAmount: s.taxAmount > 0 ? s.taxAmount : undefined,
+    total: s.totalAmount,
+    payments: s.paymentMethods.map((p) => ({
+      method: METHOD_LABELS[p.method] ?? p.method,
+      amount: p.amount,
+    })),
+    change: cashPayment !== undefined ? change : undefined,
+    cae: s.cae ?? undefined,
+    caeVto: s.caeExpiration ?? undefined,
+  };
+}
+
 export function POSReceiptModal({ sale, onClose }: POSReceiptModalProps) {
   const config = useAppStore((s) => s.config);
   const activeBU = useAppStore((s) => s.activeBU);
+  const printerStatus = useAppStore((s) => s.printerStatus);
   const { sale: s, items } = sale;
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printResult, setPrintResult] = useState<'success' | 'error' | null>(null);
+  const [printError, setPrintError] = useState<string | null>(null);
 
   const fecha = new Date(s.createdAt).toLocaleString('es-AR', {
     day: '2-digit',
@@ -28,15 +84,35 @@ export function POSReceiptModal({ sale, onClose }: POSReceiptModalProps) {
     minute: '2-digit',
   });
 
-  function handlePrint() {
-    window.print();
+  async function handlePrint() {
+    if (printerStatus !== 'connected') return;
+    setIsPrinting(true);
+    setPrintResult(null);
+    setPrintError(null);
+    try {
+      const ticketData = buildTicketData(sale, config, activeBU);
+      const result = await printerApi.printTicket(ticketData);
+      if (result.success) {
+        setPrintResult('success');
+      } else {
+        setPrintResult('error');
+        setPrintError(result.error ?? 'Error al imprimir.');
+      }
+    } catch {
+      setPrintResult('error');
+      setPrintError('No se pudo conectar con el servicio de impresión.');
+    } finally {
+      setIsPrinting(false);
+    }
   }
+
+  const printerDisconnected = printerStatus !== 'connected';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
-        {/* Contenido del ticket (imprimible) */}
-        <div id="receipt" className="p-6 font-mono text-sm">
+        {/* Contenido del ticket */}
+        <div className="p-6 font-mono text-sm">
           {/* Encabezado */}
           <div className="text-center mb-4">
             <p className="text-base font-bold">{config?.businessName ?? 'LocalPos'}</p>
@@ -138,24 +214,38 @@ export function POSReceiptModal({ sale, onClose }: POSReceiptModalProps) {
                 )}
               </>
             ) : s.invoiceStatus === 'failed' || s.invoiceStatus === 'error' ? (
-              <p className="text-red-500">⚠ Error de facturación AFIP</p>
+              <p className="text-red-500">Error de facturacion AFIP</p>
             ) : (
-              <p className="text-yellow-600">🕐 Factura pendiente de emisión</p>
+              <p className="text-yellow-600">Factura pendiente de emision</p>
             )}
           </div>
 
           <div className="text-center text-xs text-gray-400 mt-4">
-            ¡Gracias por su compra!
+            Gracias por su compra!
           </div>
         </div>
+
+        {/* Feedback de impresión */}
+        {printerDisconnected && (
+          <p className="text-xs text-red-500 text-center px-6 pb-2">
+            Impresora no conectada. Verificá la conexión en Configuración.
+          </p>
+        )}
+        {printResult === 'success' && (
+          <p className="text-xs text-green-600 text-center px-6 pb-2">Impreso correctamente.</p>
+        )}
+        {printResult === 'error' && printError && (
+          <p className="text-xs text-red-500 text-center px-6 pb-2">{printError}</p>
+        )}
 
         {/* Botones */}
         <div className="flex gap-2 px-6 pb-4">
           <button
             onClick={handlePrint}
-            className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+            disabled={printerDisconnected || isPrinting}
+            className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Imprimir
+            {isPrinting ? 'Imprimiendo...' : 'Imprimir'}
           </button>
           <button
             onClick={onClose}

@@ -4,6 +4,37 @@ import { ValidationError } from '../../lib/errors';
 import { printerService } from '../services/PrinterService';
 import type { PrinterRepository } from '../repositories/PrinterRepository';
 
+const saleTicketDataSchema = z.object({
+  saleNumber: z.string(),
+  date: z.string(),
+  time: z.string(),
+  businessName: z.string(),
+  businessAddress: z.string(),
+  cuit: z.string(),
+  businessUnitName: z.string(),
+  fiscalCondition: z.string(),
+  items: z.array(
+    z.object({
+      name: z.string(),
+      quantity: z.number(),
+      unitPrice: z.number(),
+      subtotal: z.number(),
+    }),
+  ),
+  subtotalSinIva: z.number().optional(),
+  ivaAmount: z.number().optional(),
+  total: z.number(),
+  payments: z.array(
+    z.object({
+      method: z.string(),
+      amount: z.number(),
+    }),
+  ),
+  change: z.number().optional(),
+  cae: z.string().optional(),
+  caeVto: z.string().optional(),
+});
+
 const printerConfigSchema = z.object({
   type: z.enum(['usb', 'network']),
   usbVendorId: z.number().optional(),
@@ -66,6 +97,19 @@ export class PrinterController {
     try {
       printerService.disconnect();
       res.json({ data: { success: true }, error: null });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  printTicket = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = saleTicketDataSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ValidationError(parsed.error.errors[0]?.message ?? 'Datos del ticket inválidos');
+      }
+      const result = await printerService.printSaleTicket(parsed.data);
+      res.json({ data: result, error: null });
     } catch (err) {
       next(err);
     }

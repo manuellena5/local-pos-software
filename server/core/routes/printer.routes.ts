@@ -12,4 +12,5 @@ printerRouter.post('/printer/detect', (req, res, next) => void controller.detect
 printerRouter.post('/printer/connect', (req, res, next) => void controller.connect(req, res, next));
 printerRouter.post('/printer/test', (req, res, next) => void controller.testPrint(req, res, next));
 printerRouter.post('/printer/disconnect', (req, res, next) => controller.disconnect(req, res, next));
+printerRouter.post('/printer/print-ticket', (req, res, next) => void controller.printTicket(req, res, next));
 printerRouter.put('/printer/config', (req, res, next) => controller.saveConfig(req, res, next));

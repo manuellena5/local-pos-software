@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import type { PrinterConfig, PrinterStatus } from '../../../shared/types';
+import type { PrinterConfig, PrinterStatus, SaleTicketData } from '../../../shared/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PowerShell script for raw Windows printing via Win32 WritePrinter API.
@@ -309,6 +309,43 @@ class PrinterService {
     }
   }
 
+  // ── printSaleTicket ───────────────────────────────────────────────────────
+
+  /**
+   * Imprime el ticket de una venta usando ESC/POS directo.
+   * No abre ningún diálogo de impresión del sistema operativo.
+   */
+  async printSaleTicket(data: SaleTicketData): Promise<{ success: boolean; error?: string }> {
+    if (this.currentStatus !== 'connected') {
+      return { success: false, error: 'La impresora no está conectada.' };
+    }
+
+    try {
+      if (process.platform === 'win32' && this.currentConfig?.type === 'usb') {
+        const printerName = this.currentConfig.portPath ?? '';
+        const buffer = await this.buildEscPosBuffer((p) => {
+          this.buildTicketContent(p, data);
+        });
+        await this.printWindowsRaw(printerName, buffer);
+        return { success: true };
+      }
+
+      // Network / Linux USB
+      if (!this.printer) return { success: false, error: 'La impresora no está conectada.' };
+      this.buildTicketContent(this.printer, data);
+      await this.printer.execute();
+      this.printer.clear();
+      return { success: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al imprimir el ticket.';
+      if (!(process.platform === 'win32' && this.currentConfig?.type === 'usb')) {
+        this.currentStatus = 'disconnected';
+        this.printer = null;
+      }
+      return { success: false, error: message };
+    }
+  }
+
   // ── disconnect ────────────────────────────────────────────────────────────
 
   disconnect(): void {
@@ -322,6 +359,93 @@ class PrinterService {
   }
 
   // ── helpers privados ──────────────────────────────────────────────────────
+
+  // ── buildTicketContent ────────────────────────────────────────────────────
+
+  private buildTicketContent(p: ThermalPrinter, data: SaleTicketData): void {
+    const W = 32; // ancho estándar para papel 58mm con fuente normal
+
+    // Feed inicial para que el papel salga del cabezal
+    p.newLine();
+    p.newLine();
+    p.newLine();
+
+    // Mayor densidad de tinta (raw ESC/POS)
+    p.raw(Buffer.from([0x1b, 0x7c, 0x08]));
+
+    // Nombre del negocio: centrado, bold, doble tamaño
+    p.alignCenter();
+    p.setTextSize(1, 1);
+    p.bold(true);
+    p.println(ticketTruncate(data.businessName, W / 2)); // W/2 porque fuente doble
+    p.setTextSize(0, 0);
+    p.bold(false);
+
+    p.println(ticketTruncate(data.businessAddress, W));
+    p.println(ticketTruncate(`CUIT: ${data.cuit}`, W));
+    p.println(ticketTruncate(`${data.businessUnitName} | ${data.fiscalCondition}`, W));
+
+    p.drawLine();
+
+    // Número de venta + fecha/hora
+    p.alignLeft();
+    p.println(`Venta N: ${data.saleNumber.padStart(4, '0')} ${data.date} ${data.time}`);
+
+    p.drawLine();
+
+    // Items (dos líneas por ítem)
+    for (const item of data.items) {
+      const nameLine = ticketTruncate(item.name, W);
+      p.println(nameLine);
+      const qtyLabel = `${item.quantity} x ${ticketMoney(item.unitPrice)}`;
+      const subtotalStr = ticketMoney(item.subtotal);
+      p.println(ticketRightAlign(qtyLabel, subtotalStr, W));
+    }
+
+    p.drawLine();
+
+    // Total (bold)
+    p.bold(true);
+    p.println(ticketRightAlign('TOTAL', ticketMoney(data.total), W));
+    p.bold(false);
+
+    // Desglose fiscal (solo si tiene IVA)
+    if (data.subtotalSinIva !== undefined && data.ivaAmount !== undefined) {
+      p.println(ticketRightAlign('Sin IVA', ticketMoney(data.subtotalSinIva), W));
+      p.println(ticketRightAlign('IVA 21%', ticketMoney(data.ivaAmount), W));
+    }
+
+    p.drawLine();
+
+    // Medios de pago
+    for (const payment of data.payments) {
+      p.println(ticketRightAlign(payment.method, ticketMoney(payment.amount), W));
+    }
+    if (data.change !== undefined && data.change > 0) {
+      p.println(ticketRightAlign('Vuelto', ticketMoney(data.change), W));
+    }
+
+    p.drawLine();
+
+    // CAE (si tiene factura electrónica)
+    if (data.cae) {
+      p.alignLeft();
+      p.println(`CAE: ${data.cae}`);
+      if (data.caeVto) p.println(`Vto: ${data.caeVto}`);
+      p.drawLine();
+    }
+
+    // Cierre
+    p.alignCenter();
+    p.println('Gracias por su compra!');
+
+    // Feed final + corte parcial (GS V 01)
+    p.newLine();
+    p.newLine();
+    p.newLine();
+    p.newLine();
+    p.raw(Buffer.from([0x1d, 0x56, 0x01]));
+  }
 
   /**
    * Construye un buffer ESC/POS usando node-thermal-printer escribiendo
@@ -370,6 +494,21 @@ class PrinterService {
       try { fs.unlinkSync(jobFile); } catch { /* ignorar */ }
     }
   }
+}
+
+// ── helpers de formato de ticket ─────────────────────────────────────────
+
+function ticketMoney(amount: number): string {
+  return `$ ${amount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+}
+
+function ticketRightAlign(label: string, value: string, width: number): string {
+  const gap = width - label.length - value.length;
+  return gap > 0 ? label + ' '.repeat(gap) + value : `${label} ${value}`;
+}
+
+function ticketTruncate(text: string, maxLen: number): string {
+  return text.length > maxLen ? text.slice(0, maxLen - 3) + '...' : text;
 }
 
 export const printerService = new PrinterService();
