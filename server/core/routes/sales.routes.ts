@@ -3,13 +3,21 @@ import { SaleRepository } from '../repositories/SaleRepository';
 import { SalesService } from '../services/SalesService';
 import { SalesController } from '../controllers/SalesController';
 import { ProductRepository } from '../repositories/ProductRepository';
+import { InstallationRepository } from '../repositories/InstallationRepository';
+import { BusinessUnitRepository } from '../repositories/BusinessUnitRepository';
+import { CustomerRepository } from '../repositories/CustomerRepository';
 import { invoiceQueueService } from './invoices.routes';
 import { cashboxService } from './cashbox.routes';
 
 const saleRepo = new SaleRepository();
 const productRepo = new ProductRepository();
 const service = new SalesService(saleRepo, productRepo, invoiceQueueService, cashboxService);
-const controller = new SalesController(service);
+const controller = new SalesController(
+  service,
+  new InstallationRepository(),
+  new BusinessUnitRepository(),
+  new CustomerRepository(),
+);
 
 export const salesRouter = Router();
 
@@ -17,4 +25,4 @@ salesRouter.get('/sales', (req, res, next) => controller.getAll(req, res, next))
 salesRouter.get('/sales/:id', (req, res, next) => controller.getById(req, res, next));
 salesRouter.post('/sales/confirm', (req, res, next) => controller.confirm(req, res, next));
 salesRouter.post('/sales/:id/cancel', (req, res, next) => controller.cancel(req, res, next));
-salesRouter.post('/sales/:id/reprint', (req, res, next) => controller.reprint(req, res, next));
+salesRouter.post('/sales/:id/reprint', (req, res, next) => void controller.reprint(req, res, next));

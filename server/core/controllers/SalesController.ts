@@ -1,9 +1,35 @@
 import type { Request, Response, NextFunction } from 'express';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import type { SalesService } from '../services/SalesService';
 import { ValidationError } from '../../lib/errors';
+import { printerService } from '../services/PrinterService';
+import type { InstallationRepository } from '../repositories/InstallationRepository';
+import type { BusinessUnitRepository } from '../repositories/BusinessUnitRepository';
+import type { CustomerRepository } from '../repositories/CustomerRepository';
+import type { SaleTicketData, Customer } from '../../../shared/types';
+
+const METHOD_LABELS: Record<string, string> = {
+  cash: 'Efectivo',
+  card: 'Tarjeta',
+  mercadopago: 'Mercado Pago',
+  transfer: 'Transferencia',
+  modo: 'Modo / Ualá',
+};
+
+function buildFiscalCondition(customer: Customer | null): string {
+  if (!customer) return 'Consumidor Final';
+  if (customer.documentType === 'CUIT') return `${customer.name} - CUIT ${customer.document ?? ''}`;
+  return customer.name;
+}
 
 export class SalesController {
-  constructor(private readonly service: SalesService) {}
+  constructor(
+    private readonly service: SalesService,
+    private readonly installationRepo: InstallationRepository,
+    private readonly buRepo: BusinessUnitRepository,
+    private readonly customerRepo: CustomerRepository,
+  ) {}
 
   getAll(req: Request, res: Response, next: NextFunction): void {
     try {
@@ -14,7 +40,6 @@ export class SalesController {
 
       const { dateFrom, dateTo, status, paymentMethod, search } = req.query;
 
-      // Si hay algún filtro activo usamos getFiltered; si no, getAll (retrocompat)
       const hasFilters = dateFrom || dateTo || status || paymentMethod || search;
 
       const sales = hasFilters
@@ -122,11 +147,9 @@ export class SalesController {
 
   /**
    * POST /sales/:id/reprint
-   * Registra la intención de reimprimir — la impresión real es responsabilidad
-   * del PrinterService (a conectar en Fase 11 cuando se implemente RF-CA-04).
-   * Por ahora devuelve success: true como stub funcional.
+   * Imprime el ticket de una venta usando ESC/POS directo via PrinterService.
    */
-  reprint(req: Request, res: Response, next: NextFunction): void {
+  reprint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = Number(req.params.id);
       const businessUnitId = Number(req.query.businessUnitId);
@@ -138,13 +161,51 @@ export class SalesController {
         throw new ValidationError('businessUnitId debe ser un número válido');
       }
 
-      // Verificar que la venta exista y pertenezca a la BU
-      this.service.getSaleWithItems(id, businessUnitId);
+      const { sale, items } = this.service.getSaleWithItems(id, businessUnitId);
+      const config = this.installationRepo.get();
+      const bu = this.buRepo.getById(businessUnitId);
+      const customer = sale.customerId ? this.customerRepo.getById(sale.customerId) : null;
 
-      // TODO (Fase 11): conectar con PrinterService.reprintTicket(saleId)
-      res.json({ data: { success: true }, error: null });
+      const dateObj = new Date(sale.createdAt);
+      const date = format(dateObj, 'dd/MM/yyyy', { locale: es });
+      const time = format(dateObj, 'HH:mm', { locale: es });
+
+      const totalPaid = sale.paymentMethods.reduce((acc, p) => acc + p.amount, 0);
+      const change = totalPaid > sale.totalAmount
+        ? Math.round((totalPaid - sale.totalAmount) * 100) / 100
+        : undefined;
+
+      const ticketData: SaleTicketData = {
+        saleNumber: String(sale.saleNumber).padStart(4, '0'),
+        date,
+        time,
+        businessName: config.businessName,
+        businessAddress: config.address,
+        cuit: config.cuit,
+        businessUnitName: bu?.name ?? '',
+        fiscalCondition: buildFiscalCondition(customer),
+        items: items.map((item) => ({
+          name: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.lineTotal,
+        })),
+        subtotalSinIva: sale.taxableAmount > 0 ? sale.taxableAmount : undefined,
+        ivaAmount: sale.taxAmount > 0 ? sale.taxAmount : undefined,
+        total: sale.totalAmount,
+        payments: sale.paymentMethods.map((p) => ({
+          method: METHOD_LABELS[p.method] ?? p.method,
+          amount: p.amount,
+        })),
+        change,
+        cae: sale.cae ?? undefined,
+        caeVto: sale.caeExpiration ?? undefined,
+      };
+
+      const result = await printerService.printSaleTicket(ticketData);
+      res.json({ data: result, error: null });
     } catch (err) {
       next(err);
     }
-  }
+  };
 }

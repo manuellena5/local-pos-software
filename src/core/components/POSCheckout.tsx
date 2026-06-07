@@ -24,6 +24,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
   const { confirmSale, isProcessing, error } = usePOS(businessUnitId, selectedCustomerId);
   const [completedSale, setCompletedSale] = useState<SaleWithItems | null>(null);
+  const [completedSaleCustomer, setCompletedSaleCustomer] = useState<Customer | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
   // ── Clientes ────────────────────────────────────────────────────────────────
@@ -69,14 +70,16 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
     disabledReason = `Falta cubrir ${formatCurrency(totals.totalAmount - totalPaid)}`;
 
   const handleConfirm = useCallback(async () => {
+    const customerAtConfirm = selectedCustomer;
     const result = await confirmSale();
     if (result) {
       setCompletedSale(result);
+      setCompletedSaleCustomer(customerAtConfirm);
       setSelectedCustomerId(undefined);
       setCustomerSearch('');
       onSaleComplete();
     }
-  }, [confirmSale, onSaleComplete]);
+  }, [confirmSale, selectedCustomer, onSaleComplete]);
 
   // Shortcuts globales: Enter → confirmar, Esc → vaciar carrito
   useEffect(() => {
@@ -328,7 +331,11 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
       {completedSale && (
         <POSReceiptModal
           sale={completedSale}
-          onClose={() => setCompletedSale(null)}
+          customer={completedSaleCustomer}
+          onClose={() => {
+            setCompletedSale(null);
+            setCompletedSaleCustomer(null);
+          }}
         />
       )}
     </>

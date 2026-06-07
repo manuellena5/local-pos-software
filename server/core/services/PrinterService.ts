@@ -363,7 +363,7 @@ class PrinterService {
   // ── buildTicketContent ────────────────────────────────────────────────────
 
   private buildTicketContent(p: ThermalPrinter, data: SaleTicketData): void {
-    const W = 32; // ancho estándar para papel 58mm con fuente normal
+    const W = this.currentConfig?.width ?? 48;
 
     // Feed inicial para que el papel salga del cabezal
     p.newLine();

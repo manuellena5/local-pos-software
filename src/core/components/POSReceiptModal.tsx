@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '@/core/store/appStore';
 import { formatCurrency } from '@/lib/utils/pricing';
 import { printerApi } from '@/lib/api/printer';
-import type { SaleWithItems, SaleTicketData } from '@shared/types';
+import type { SaleWithItems, SaleTicketData, Customer } from '@shared/types';
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'Efectivo',
@@ -14,13 +14,21 @@ const METHOD_LABELS: Record<string, string> = {
 
 interface POSReceiptModalProps {
   sale: SaleWithItems;
+  customer?: Customer | null;
   onClose: () => void;
+}
+
+function buildFiscalCondition(customer: Customer | null | undefined): string {
+  if (!customer) return 'Consumidor Final';
+  if (customer.documentType === 'CUIT') return `${customer.name} - CUIT ${customer.document ?? ''}`;
+  return customer.name;
 }
 
 function buildTicketData(
   sale: SaleWithItems,
   config: ReturnType<typeof useAppStore.getState>['config'],
   activeBU: ReturnType<typeof useAppStore.getState>['activeBU'],
+  customer: Customer | null | undefined,
 ): SaleTicketData {
   const { sale: s, items } = sale;
   const dateObj = new Date(s.createdAt);
@@ -47,7 +55,7 @@ function buildTicketData(
     businessAddress: config?.address ?? '',
     cuit: config?.cuit ?? '',
     businessUnitName: activeBU?.name ?? '',
-    fiscalCondition: 'Consumidor Final',
+    fiscalCondition: buildFiscalCondition(customer),
     items: items.map((item) => ({
       name: item.productName,
       quantity: item.quantity,
@@ -67,7 +75,7 @@ function buildTicketData(
   };
 }
 
-export function POSReceiptModal({ sale, onClose }: POSReceiptModalProps) {
+export function POSReceiptModal({ sale, customer, onClose }: POSReceiptModalProps) {
   const config = useAppStore((s) => s.config);
   const activeBU = useAppStore((s) => s.activeBU);
   const printerStatus = useAppStore((s) => s.printerStatus);
@@ -90,7 +98,7 @@ export function POSReceiptModal({ sale, onClose }: POSReceiptModalProps) {
     setPrintResult(null);
     setPrintError(null);
     try {
-      const ticketData = buildTicketData(sale, config, activeBU);
+      const ticketData = buildTicketData(sale, config, activeBU, customer);
       const result = await printerApi.printTicket(ticketData);
       if (result.success) {
         setPrintResult('success');
