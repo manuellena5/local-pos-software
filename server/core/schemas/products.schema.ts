@@ -13,6 +13,7 @@ const baseProductSchema = z.object({
   showInCatalog:      z.boolean().optional(),
   catalogDescription: z.string().max(2000).nullable().optional(),
   // identificadores adicionales
+  brand:        z.string().max(100).nullable().optional(),
   barcode:      z.string().max(100).nullable().optional(),
   supplierCode: z.string().max(100).nullable().optional(),
   // campos extendidos

@@ -90,15 +90,25 @@ export function DatosBaseTab({
             </select>
           </Field>
         </div>
-        <Field label="Descripción interna" hint="(para uso interno, no se muestra al público)">
-          <textarea
-            className={`${fi} resize-none`}
-            rows={2}
-            placeholder="Ej: sábana de algodón 100%, viene en caja individual..."
-            value={formData.description ?? ''}
-            onChange={(e) => onChange({ ...formData, description: e.target.value })}
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <Field label="Marca" hint="(opcional)">
+            <input
+              className={fi}
+              placeholder="Ej: Phillips, Samsung, Genérico..."
+              value={formData.brand ?? ''}
+              onChange={(e) => onChange({ ...formData, brand: e.target.value || null })}
+            />
+          </Field>
+          <Field label="Descripción interna" hint="(no se muestra al público)">
+            <textarea
+              className={`${fi} resize-none`}
+              rows={2}
+              placeholder="Fragancia, color, variante, material..."
+              value={formData.description ?? ''}
+              onChange={(e) => onChange({ ...formData, description: e.target.value })}
+            />
+          </Field>
+        </div>
       </CollapsibleSection>
 
       <CollapsibleSection icon="🔢" iconBg="bg-cyan-50" title="Códigos e identificadores">

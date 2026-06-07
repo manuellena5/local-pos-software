@@ -107,18 +107,8 @@ export function POSPage({ businessUnitId }: POSPageProps) {
 
       {/* ── Columna izquierda: búsqueda fija + carrito scrollable ── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 pr-3 overflow-hidden">
-        {/* Búsqueda con indicador de scanner activo */}
         <div className="shrink-0 pb-2">
-          <div className="relative">
-            <POSProductSearch businessUnitId={businessUnitId} stockData={stockData} />
-            {/* Indicador de scanner activo */}
-            <div
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-blue-400 pointer-events-none"
-              title="Lector de código de barras activo"
-            >
-              <ScanBarcode size={18} />
-            </div>
-          </div>
+          <POSProductSearch businessUnitId={businessUnitId} stockData={stockData} />
         </div>
         {/* Carrito: ocupa el resto, scrollea internamente */}
         <div className="flex-1 min-h-0 border border-gray-200 rounded-xl overflow-hidden flex flex-col">

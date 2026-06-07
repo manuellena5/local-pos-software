@@ -1,9 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { X, Search } from 'lucide-react';
 import { getDisplayPrice, formatCurrency } from '@/lib/utils/pricing';
+import { useBarcodeScanner } from '@/core/pos/hooks/useBarcodeScanner';
+import { productsApi } from '@/lib/api/products';
+import { usePOSStore } from '@/core/store/posStore';
 import type { Product, StockSummary } from '@shared/types';
 
 interface POSAdvancedSearchModalProps {
+  businessUnitId: number;
   products: Product[];
   stockData: Record<number, StockSummary>;
   onSelect: (product: Product) => void;
@@ -27,6 +31,7 @@ function StockBadge({ productId, stockData }: { productId: number; stockData: Re
 }
 
 export function POSAdvancedSearchModal({
+  businessUnitId,
   products,
   stockData,
   onSelect,
@@ -34,6 +39,42 @@ export function POSAdvancedSearchModal({
 }: POSAdvancedSearchModalProps) {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('__all__');
+  const [scanToast, setScanToast] = useState<string | null>(null);
+  const addToCart = usePOSStore((s) => s.addToCart);
+
+  // Scanner activo en el modal: usa captureInInputs porque el input de búsqueda
+  // siempre tiene foco y de otro modo el hook lo ignora
+  const handleScan = useCallback(async (barcode: string) => {
+    try {
+      const result = await productsApi.findByBarcode(barcode, businessUnitId);
+      if (!result.found) {
+        setScanToast(`Código no encontrado: ${barcode}`);
+        setTimeout(() => setScanToast(null), 2500);
+        return;
+      }
+      const { item } = result;
+      if (item.stock <= 0) {
+        setScanToast(`Sin stock: ${item.name}`);
+        setTimeout(() => setScanToast(null), 2500);
+        return;
+      }
+      addToCart({
+        productId: item.productId,
+        name: item.name,
+        sku: item.sku,
+        quantity: 1,
+        unitPrice: getDisplayPrice(item.basePrice, item.taxRate),
+        taxRate: item.taxRate,
+        discountPercent: 0,
+      });
+      onClose();
+    } catch {
+      setScanToast('Error al buscar el producto');
+      setTimeout(() => setScanToast(null), 2500);
+    }
+  }, [businessUnitId, addToCart, onClose]);
+
+  useBarcodeScanner({ onScan: handleScan, captureInInputs: true });
 
   // Categorías únicas derivadas de los productos
   const categories = useMemo(() => {
@@ -64,6 +105,13 @@ export function POSAdvancedSearchModal({
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-16 px-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[80vh]">
+
+        {/* Toast de scan dentro del modal */}
+        {scanToast && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-red-600 text-white text-xs font-medium px-4 py-2 rounded-lg shadow pointer-events-none">
+            {scanToast}
+          </div>
+        )}
 
         {/* Header */}
         <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-gray-100">

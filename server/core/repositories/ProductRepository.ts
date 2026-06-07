@@ -26,12 +26,13 @@ function enrich(raw: unknown): Product {
     const extra = sqlite
       .prepare(`SELECT code, show_in_catalog, catalog_description,
                        minimum_sale_price, supplier_id, supplier_lead_time,
-                       show_catalog_price, show_catalog_stock
+                       show_catalog_price, show_catalog_stock, brand
                 FROM products WHERE id = ?`)
-      .get(p.id) as ProductExtra | undefined;
+      .get(p.id) as (ProductExtra & { brand?: string | null }) | undefined;
     if (extra) {
       return {
         ...p,
+        brand:              extra.brand ?? null,
         code:               extra.code ?? null,
         showInCatalog:      Boolean(extra.show_in_catalog),
         catalogDescription: extra.catalog_description ?? null,
@@ -45,7 +46,7 @@ function enrich(raw: unknown): Product {
   } catch { /* columnas aún no migradas */ }
   return {
     ...p,
-    code: null, showInCatalog: false, catalogDescription: null,
+    brand: null, code: null, showInCatalog: false, catalogDescription: null,
     minimumSalePrice: null, supplierId: null, supplierLeadTime: null,
     showCatalogPrice: true, showCatalogStock: false,
   };
@@ -130,6 +131,14 @@ export class ProductRepository {
       })
       .returning()
       .all()[0]!;
+
+    // brand se guarda via raw SQL (columna aditiva fuera del schema Drizzle)
+    if (data.brand) {
+      sqlite
+        .prepare('UPDATE products SET brand = ? WHERE id = ?')
+        .run(data.brand, row.id);
+    }
+
     return enrich(row);
   }
 
@@ -156,6 +165,7 @@ export class ProductRepository {
     // Columnas aditivas (no están en el schema Drizzle tipado)
     const fields: string[] = [];
     const vals:   unknown[] = [];
+    if (data.brand              !== undefined) { fields.push('brand = ?');               vals.push(data.brand); }
     if (data.code               !== undefined) { fields.push('code = ?');                vals.push(data.code); }
     if (data.showInCatalog      !== undefined) { fields.push('show_in_catalog = ?');     vals.push(data.showInCatalog ? 1 : 0); }
     if (data.catalogDescription !== undefined) { fields.push('catalog_description = ?'); vals.push(data.catalogDescription); }

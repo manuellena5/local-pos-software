@@ -9,6 +9,13 @@ interface BarcodeScannerOptions {
   maxDelay?: number;
   /** Permite desactivar el hook sin desmontarlo (default: true) */
   enabled?: boolean;
+  /**
+   * Cuando es true, captura scans incluso si hay un input enfocado.
+   * Útil en modales donde el input de búsqueda está siempre enfocado
+   * pero igual se quiere detectar el lector HID.
+   * (default: false)
+   */
+  captureInInputs?: boolean;
 }
 
 /**
@@ -17,8 +24,8 @@ interface BarcodeScannerOptions {
  * Los lectores HID envían los dígitos en ráfaga (< 50ms entre teclas) seguido
  * de Enter. El tipeo humano es mucho más lento y por eso se descarta.
  *
- * El hook ignora el input cuando el foco está en un campo de texto para no
- * interferir con la búsqueda manual.
+ * Por defecto ignora el input cuando el foco está en un campo de texto.
+ * Usar `captureInInputs: true` para capturar también en inputs (ej. modales).
  *
  * Limitación conocida: barcodes con prefijo de balanza (empieza en "2") no se
  * filtran — no es el caso de uso de blanquería/deco.
@@ -28,10 +35,10 @@ export function useBarcodeScanner({
   minLength = 3,
   maxDelay = 50,
   enabled = true,
+  captureInInputs = false,
 }: BarcodeScannerOptions): void {
   const bufferRef = useRef<string>('');
   const lastKeyTimeRef = useRef<number>(0);
-  // Usamos ref para onScan para evitar re-registrar el listener en cada render
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
 
@@ -39,20 +46,19 @@ export function useBarcodeScanner({
     if (!enabled) return;
 
     function handleKeyDown(e: KeyboardEvent): void {
-      // Ignorar si el foco está en un campo editable — no interferir con tipeo
       const active = document.activeElement;
       const tag = active?.tagName.toLowerCase() ?? '';
       const isEditable =
         tag === 'input' ||
         tag === 'textarea' ||
         (active as HTMLElement | null)?.isContentEditable === true;
-      if (isEditable) return;
+
+      // Si hay un campo enfocado y no estamos en modo captureInInputs, ignorar
+      if (isEditable && !captureInInputs) return;
 
       const now = Date.now();
       const elapsed = now - lastKeyTimeRef.current;
 
-      // Si pasó más tiempo del permitido entre teclas, el buffer anterior
-      // era tipeo humano — descartar y empezar de cero
       if (lastKeyTimeRef.current !== 0 && elapsed > maxDelay) {
         bufferRef.current = '';
       }
@@ -62,17 +68,15 @@ export function useBarcodeScanner({
         bufferRef.current = '';
         lastKeyTimeRef.current = 0;
         if (scanned.length >= minLength) {
-          // Solo disparar si el último intervalo fue rápido (scanner)
-          // elapsed puede ser 0 si es el primer Enter o si ya reseteamos
           const isFromScanner = elapsed <= maxDelay || elapsed === now;
           if (isFromScanner) {
+            e.preventDefault(); // evitar que Enter confirme formularios en el modal
             onScanRef.current(scanned);
           }
         }
         return;
       }
 
-      // Ignorar teclas no imprimibles (Shift, Ctrl, Alt, F1-F12, etc.)
       if (e.key.length !== 1) return;
 
       bufferRef.current += e.key;
@@ -85,5 +89,5 @@ export function useBarcodeScanner({
       bufferRef.current = '';
       lastKeyTimeRef.current = 0;
     };
-  }, [enabled, minLength, maxDelay]);
+  }, [enabled, minLength, maxDelay, captureInInputs]);
 }

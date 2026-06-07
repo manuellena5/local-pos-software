@@ -182,7 +182,7 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
               )}
               {isVisible('cost') && (
                 <th className={thCls} style={{ width: getWidth('cost') }}>
-                  <span className="block truncate pr-2" title="Doble click para editar">Costo</span>
+                  <span className="block truncate pr-2" title="Costo con IVA incluido · Doble click para editar">Costo c/IVA</span>
                   <ResizeHandle col="cost" {...resizeProps} />
                 </th>
               )}
@@ -275,7 +275,12 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
                     <td className={tdCls}>
                       <InlineEditCell
                         value={String(p.costPrice)}
-                        displayValue={<span className="text-gray-700">{formatCurrency(p.costPrice)}</span>}
+                        displayValue={
+                          <span className="text-gray-700">
+                            {formatCurrency(p.costPrice * (1 + p.taxRate / 100))}
+                          </span>
+                        }
+                        subValue={`s/IVA: ${formatCurrency(p.costPrice)}`}
                         onConfirm={(raw) => handleInlineConfirm(p, 'cost', raw)}
                       />
                     </td>

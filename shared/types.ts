@@ -78,6 +78,7 @@ export interface Product {
   showInCatalog: boolean;
   catalogDescription: string | null;
   // identificadores adicionales
+  brand: string | null;
   barcode: string | null;
   supplierCode: string | null;
   // campos extendidos (Fase 10 Paso 4)

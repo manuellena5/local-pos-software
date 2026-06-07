@@ -176,6 +176,7 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
       {/* Modal de búsqueda avanzada */}
       {showAdvanced && (
         <POSAdvancedSearchModal
+          businessUnitId={businessUnitId}
           products={allProducts}
           stockData={stockData}
           onSelect={handleSelect}
