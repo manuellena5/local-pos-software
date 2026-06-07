@@ -274,6 +274,7 @@ export class ProductRepository {
       id: number; business_unit_id: number; name: string; description: string | null;
       category: string | null; sku: string; cost_price: number; base_price: number;
       tax_rate: number; is_active: number; barcode: string | null; supplier_code: string | null;
+      brand: string | null;
       created_at: string; updated_at: string;
       quantity: number | null; minimum_threshold: number | null;
       supplier_name: string | null;
@@ -308,6 +309,7 @@ export class ProductRepository {
         basePrice:        row.base_price,
         taxRate:          row.tax_rate,
         isActive:         Boolean(row.is_active),
+        brand:            row.brand ?? null,
         barcode:          row.barcode,
         supplierCode:     row.supplier_code,
         code:             row.code,

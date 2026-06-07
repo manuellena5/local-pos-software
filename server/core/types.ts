@@ -2,6 +2,7 @@ export interface CreateProductRequest {
   name: string;
   description?: string;
   category?: string;
+  brand?: string | null;
   // sku ya no viene del cliente — se genera en el backend automáticamente
   costPrice: number;
   basePrice: number;
@@ -12,6 +13,7 @@ export interface UpdateProductRequest {
   name?: string;
   description?: string;
   category?: string;
+  brand?: string | null;
   basePrice?: number;
   costPrice?: number;
   taxRate?: number;

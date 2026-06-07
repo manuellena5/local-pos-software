@@ -60,6 +60,7 @@ function mapProductRow(p: typeof products.$inferSelect): Product {
     basePrice:          p.basePrice,
     taxRate:            p.taxRate,
     isActive:           p.isActive,
+    brand:              null,
     code:               null,
     showInCatalog:      false,
     catalogDescription: null,
