@@ -4,6 +4,7 @@ import { products } from '../../db/schema';
 import type { Product, ProductWithStock, PurchaseHistoryEntry, ProductStats, ProductStat, ProductStatSale } from '../../../shared/types';
 import type { CreateProductRequest, UpdateProductRequest } from '../types';
 import { NotFoundError } from '../../lib/errors';
+import { toSkuPart } from '../lib/skuUtils';
 
 type ProductExtra = {
   code: string | null;
@@ -70,7 +71,50 @@ export class ProductRepository {
     return row ? enrich(row) : null;
   }
 
-  create(businessUnitId: number, data: CreateProductRequest): Product {
+  /**
+   * Genera el próximo SKU disponible para una combinación categoría+producto
+   * dentro de la BU. Garantiza unicidad consultando la DB y reintentando
+   * si hay colisión (ej. race condition en importación masiva).
+   *
+   * Patrón: {CAT}-{PROD}-{NNN}
+   * Ej: "Aromas" + "Home Spray" → "ARO-HOM-001"
+   */
+  generateSku(categoryName: string, productName: string, businessUnitId: number): string {
+    const catPart  = toSkuPart(categoryName || 'GEN', 3);
+    const prodPart = toSkuPart(productName  || 'PRD', 3);
+    const prefix   = `${catPart}-${prodPart}`;
+
+    // Buscar todos los SKUs existentes con ese prefijo en la BU
+    type Row = { sku: string };
+    const existing = sqlite
+      .prepare(`SELECT sku FROM products WHERE business_unit_id = ? AND sku LIKE ? || '-%'`)
+      .all(businessUnitId, prefix) as Row[];
+
+    // Extraer los números del sufijo y tomar el máximo
+    let maxNum = 0;
+    for (const { sku } of existing) {
+      const suffix = sku.slice(prefix.length + 1); // después del último '-'
+      const n = parseInt(suffix, 10);
+      if (!isNaN(n) && n > maxNum) maxNum = n;
+    }
+
+    // Generar el siguiente número y verificar que no colisione
+    let candidate: string;
+    let attempt = maxNum + 1;
+    do {
+      // Soporta > 999 sin truncar
+      candidate = `${prefix}-${String(attempt).padStart(3, '0')}`;
+      attempt++;
+    } while (
+      sqlite
+        .prepare(`SELECT 1 FROM products WHERE business_unit_id = ? AND sku = ?`)
+        .get(businessUnitId, candidate) !== undefined
+    );
+
+    return candidate;
+  }
+
+  create(businessUnitId: number, data: CreateProductRequest & { sku: string }): Product {
     const row = db
       .insert(products)
       .values({

@@ -35,6 +35,8 @@ function makeProductRepo(overrides: Record<string, unknown> = {}) {
     toggleActive: vi.fn().mockImplementation((id, _buId, isActive) => makeProduct({ id, isActive })),
     search: vi.fn().mockReturnValue([makeProduct()]),
     getBySkuInBU: vi.fn().mockReturnValue(null),
+    getProductByBarcode: vi.fn().mockReturnValue(null),
+    generateSku: vi.fn().mockReturnValue('GEN-ALM-001'),
     ...overrides,
   } as unknown as never;
 }
@@ -73,24 +75,24 @@ describe('ProductService', () => {
 
   // ── create ───────────────────────────────────────────────────────────────
   describe('create', () => {
+    // sku ya no viene del cliente — se genera en el backend via generateSku
     const validData = {
       name: 'Almohada',
-      sku: 'ALM-001',
       costPrice: 30,
       basePrice: 80,
       taxRate: 21,
     };
 
-    it('should create product with valid data', () => {
+    it('should create product with valid data and auto-generated SKU', () => {
       const product = service.create(1, validData);
       expect(product.name).toBe('Almohada');
-      expect(repo.create).toHaveBeenCalledWith(1, expect.objectContaining({ sku: 'ALM-001' }));
+      expect(repo.generateSku).toHaveBeenCalledWith('', 'Almohada', 1);
+      expect(repo.create).toHaveBeenCalledWith(1, expect.objectContaining({ sku: 'GEN-ALM-001' }));
     });
 
-    it('should throw BusinessRuleError when SKU already exists in BU', () => {
-      repo = makeProductRepo({ getBySkuInBU: vi.fn().mockReturnValue(makeProduct()) });
-      service = new ProductService(repo);
-      expect(() => service.create(1, validData)).toThrow('ya existe');
+    it('should use category in generateSku when provided', () => {
+      service.create(1, { ...validData, category: 'Blanquería' });
+      expect(repo.generateSku).toHaveBeenCalledWith('Blanquería', 'Almohada', 1);
     });
 
     it('should accept costPrice >= basePrice (basePrice is NET without IVA)', () => {
@@ -103,12 +105,6 @@ describe('ProductService', () => {
     it('should throw ValidationError when name is empty', () => {
       expect(() =>
         service.create(1, { ...validData, name: '' })
-      ).toThrow();
-    });
-
-    it('should throw ValidationError when SKU is empty', () => {
-      expect(() =>
-        service.create(1, { ...validData, sku: '' })
       ).toThrow();
     });
 

@@ -29,11 +29,12 @@ export class ProductService {
       throw new ValidationError('Datos inválidos', parsed.error.errors);
     }
 
-    // Validar SKU único en esta BU
-    const existing = this.productRepo.getBySkuInBU(parsed.data.sku, businessUnitId);
-    if (existing) {
-      throw new BusinessRuleError(`El SKU '${parsed.data.sku}' ya existe en esta unidad de negocio`);
-    }
+    // Generar SKU automáticamente (el cliente ya no lo envía)
+    const generatedSku = this.productRepo.generateSku(
+      parsed.data.category ?? '',
+      parsed.data.name,
+      businessUnitId,
+    );
 
     // Validar barcode único en esta BU (si se proporcionó)
     if (parsed.data.barcode) {
@@ -45,8 +46,8 @@ export class ProductService {
       }
     }
 
-    // Crear producto
-    const product = this.productRepo.create(businessUnitId, parsed.data);
+    // Crear producto con SKU generado
+    const product = this.productRepo.create(businessUnitId, { ...parsed.data, sku: generatedSku });
 
     // Crear stock_item con cantidad 0
     db.insert(stockItems)

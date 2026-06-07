@@ -4,7 +4,7 @@ const baseProductSchema = z.object({
   name:        z.string().min(1, 'El nombre es obligatorio').max(255),
   description: z.union([z.string().max(1000), z.literal('')]).optional(),
   category:    z.string().max(100).nullable().optional().transform((v) => v ?? undefined),
-  sku:         z.string().min(1, 'El SKU es obligatorio').max(100),
+  // sku ya NO viene del cliente — se genera en el backend automáticamente
   costPrice:   z.number().min(0, 'El costo debe ser positivo'),
   basePrice:   z.number().min(0, 'El precio debe ser positivo'),
   taxRate:     z.number().min(0).max(100).optional().default(21),

@@ -6,9 +6,9 @@ import {
 } from '../../server/core/schemas/products.schema';
 
 describe('createProductSchema', () => {
+  // sku ya no viene del cliente — se genera en el backend
   const valid = {
     name: 'Sábana 144 hilos',
-    sku: 'SAB-144',
     costPrice: 45,
     basePrice: 120,
     taxRate: 21,
@@ -20,10 +20,6 @@ describe('createProductSchema', () => {
 
   it('should reject empty name', () => {
     expect(createProductSchema.safeParse({ ...valid, name: '' }).success).toBe(false);
-  });
-
-  it('should reject empty SKU', () => {
-    expect(createProductSchema.safeParse({ ...valid, sku: '' }).success).toBe(false);
   });
 
   it('should accept costPrice >= basePrice (basePrice is NET price, gross can be higher)', () => {

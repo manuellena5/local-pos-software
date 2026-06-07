@@ -103,9 +103,27 @@ export function DatosBaseTab({
 
       <CollapsibleSection icon="🔢" iconBg="bg-cyan-50" title="Códigos e identificadores">
         <div className="grid grid-cols-3 gap-3">
-          <Field label="SKU interno">
-            <input className={fi} value={formData.sku ?? ''} onChange={(e) => onChange({ ...formData, sku: e.target.value })} />
-            <span className="text-xs text-gray-400 mt-0.5">Código que usás vos</span>
+          {/* SKU — solo lectura (se genera automáticamente al crear) */}
+          <Field label="SKU">
+            {formData.sku ? (
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex-1 select-all">
+                  {formData.sku}
+                </span>
+                <button
+                  type="button"
+                  title="Copiar SKU"
+                  onClick={() => navigator.clipboard.writeText(formData.sku ?? '')}
+                  className="px-2 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 text-sm"
+                >
+                  📋
+                </button>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400 italic px-3 py-2 block">
+                Se genera al guardar
+              </span>
+            )}
           </Field>
           <Field label="Código de barras" hint="(EAN/UPC)">
             <div className="flex gap-1.5">
