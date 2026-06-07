@@ -35,6 +35,16 @@ export class ProductService {
       throw new BusinessRuleError(`El SKU '${parsed.data.sku}' ya existe en esta unidad de negocio`);
     }
 
+    // Validar barcode único en esta BU (si se proporcionó)
+    if (parsed.data.barcode) {
+      const barcodeOwner = this.productRepo.getProductByBarcode(parsed.data.barcode, businessUnitId);
+      if (barcodeOwner) {
+        throw new BusinessRuleError(
+          `El código '${parsed.data.barcode}' ya está asignado al producto '${barcodeOwner.name}'`,
+        );
+      }
+    }
+
     // Crear producto
     const product = this.productRepo.create(businessUnitId, parsed.data);
 
@@ -59,6 +69,16 @@ export class ProductService {
     const parsed = updateProductSchema.safeParse(data);
     if (!parsed.success) {
       throw new ValidationError('Datos inválidos', parsed.error.errors);
+    }
+
+    // Validar barcode único en esta BU (excluyendo el producto que se edita)
+    if (parsed.data.barcode) {
+      const barcodeOwner = this.productRepo.getProductByBarcode(parsed.data.barcode, businessUnitId, id);
+      if (barcodeOwner) {
+        throw new BusinessRuleError(
+          `El código '${parsed.data.barcode}' ya está asignado al producto '${barcodeOwner.name}'`,
+        );
+      }
     }
 
     return this.productRepo.update(id, businessUnitId, parsed.data);

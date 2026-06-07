@@ -165,6 +165,27 @@ export class ProductRepository {
   }
 
   /**
+   * Busca si ya existe un producto con ese barcode en la BU.
+   * Acepta un excludeId para ignorar el producto actual en ediciones.
+   * Retorna { id, name } del producto que lo tiene, o null si está libre.
+   */
+  getProductByBarcode(
+    barcode: string,
+    businessUnitId: number,
+    excludeProductId?: number,
+  ): { id: number; name: string } | null {
+    type Row = { id: number; name: string };
+    const excludeClause = excludeProductId ? `AND p.id != ${excludeProductId}` : '';
+    const row = sqlite.prepare(`
+      SELECT p.id, p.name
+      FROM products p
+      WHERE p.business_unit_id = ? AND p.barcode = ? AND p.is_active = 1 ${excludeClause}
+      LIMIT 1
+    `).get(businessUnitId, barcode) as Row | undefined;
+    return row ?? null;
+  }
+
+  /**
    * Búsqueda exacta por código de barras en la BU activa.
    * Retorna el producto con su stock actual, o null si no existe.
    */
