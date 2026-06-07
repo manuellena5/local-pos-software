@@ -383,7 +383,7 @@ class PrinterService {
 
     p.println(ticketTruncate(data.businessAddress, W));
     p.println(ticketTruncate(`CUIT: ${data.cuit}`, W));
-    p.println(ticketTruncate(`${data.businessUnitName} | ${data.fiscalCondition}`, W));
+    p.println(ticketTruncate(data.fiscalCondition, W));
 
     p.drawLine();
 
@@ -444,7 +444,7 @@ class PrinterService {
     p.newLine();
     p.newLine();
     p.newLine();
-    p.raw(Buffer.from([0x1d, 0x56, 0x01]));
+    p.cut();
   }
 
   /**
