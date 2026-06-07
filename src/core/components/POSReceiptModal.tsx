@@ -34,7 +34,7 @@ function buildCustomerDocFields(
   return { customerDocType: 99, customerDoc: 0 };
 }
 
-function buildTicketData(
+export function buildTicketData(
   sale: SaleWithItems,
   config: ReturnType<typeof useAppStore.getState>['config'],
   activeBU: ReturnType<typeof useAppStore.getState>['activeBU'],

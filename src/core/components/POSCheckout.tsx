@@ -3,10 +3,14 @@ import { useCart } from '@/core/hooks/useCart';
 import { usePOS } from '@/core/hooks/usePOS';
 import { POSDiscountSection } from './POSDiscountSection';
 import { POSPaymentMethods } from './POSPaymentMethods';
-import { POSReceiptModal } from './POSReceiptModal';
+import { POSReceiptModal, buildTicketData } from './POSReceiptModal';
+import { POSSaleConfirmModal } from './POSSaleConfirmModal';
 import { formatCurrency } from '@/lib/utils/pricing';
+import { printerApi } from '@/lib/api/printer';
 import { customersApi } from '@/lib/api/customers';
+import { useAppStore } from '@/core/store/appStore';
 import type { SaleWithItems, StockSummary, Customer } from '@shared/types';
+import type { ConfirmResult } from './POSSaleConfirmModal';
 
 // Fuera del componente para evitar re-mount en cada render
 function SectionLabel({ children }: { children: ReactNode }) {
@@ -25,7 +29,11 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   const { confirmSale, isProcessing, error } = usePOS(businessUnitId, selectedCustomerId);
   const [completedSale, setCompletedSale] = useState<SaleWithItems | null>(null);
   const [completedSaleCustomer, setCompletedSaleCustomer] = useState<Customer | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const printerStatus = useAppStore((s) => s.printerStatus);
+  const config = useAppStore((s) => s.config);
+  const activeBU = useAppStore((s) => s.activeBU);
 
   // ── Clientes ────────────────────────────────────────────────────────────────
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -69,17 +77,41 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   else if (totalPaid < totals.totalAmount - 1)
     disabledReason = `Falta cubrir ${formatCurrency(totals.totalAmount - totalPaid)}`;
 
-  const handleConfirm = useCallback(async () => {
+  // Abre el modal de confirmación (no confirma todavía)
+  const openConfirmModal = useCallback(() => {
+    if (canConfirm) setShowConfirmModal(true);
+  }, [canConfirm]);
+
+  // Callback que recibe el modal: confirma la venta y opcionalmente imprime
+  const handleConfirmWithPrint = useCallback(async (shouldPrint: boolean): Promise<ConfirmResult> => {
     const customerAtConfirm = selectedCustomer;
     const result = await confirmSale();
-    if (result) {
-      setCompletedSale(result);
-      setCompletedSaleCustomer(customerAtConfirm);
-      setSelectedCustomerId(undefined);
-      setCustomerSearch('');
-      onSaleComplete();
+    if (!result) {
+      return { saleError: 'No se pudo registrar la venta. Intentá nuevamente.' };
     }
-  }, [confirmSale, selectedCustomer, onSaleComplete]);
+
+    // Venta registrada — limpiar estado y notificar
+    setCompletedSale(result);
+    setCompletedSaleCustomer(customerAtConfirm);
+    setSelectedCustomerId(undefined);
+    setCustomerSearch('');
+    setShowConfirmModal(false);
+    onSaleComplete();
+
+    if (!shouldPrint) return {};
+
+    // Intentar imprimir
+    try {
+      const ticketData = buildTicketData(result, config, activeBU, customerAtConfirm);
+      const printResult = await printerApi.printTicket(ticketData);
+      if (!printResult.success) {
+        return { printError: printResult.error ?? 'Error al imprimir.' };
+      }
+    } catch {
+      return { printError: 'No se pudo conectar con el servicio de impresión.' };
+    }
+    return {};
+  }, [confirmSale, selectedCustomer, config, activeBU, onSaleComplete]);
 
   // Shortcuts globales: Enter → confirmar, Esc → vaciar carrito
   useEffect(() => {
@@ -89,9 +121,9 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
       const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 
       if (e.key === 'Enter' && !isEditable) {
-        if (canConfirm) {
+        if (canConfirm && !showConfirmModal) {
           e.preventDefault();
-          void handleConfirm();
+          setShowConfirmModal(true);
         }
       }
 
@@ -104,7 +136,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [canConfirm, cart.length, handleConfirm, clearCart]);
+  }, [canConfirm, cart.length, showConfirmModal, clearCart]);
 
   // ── Label del descuento activo ───────────────────────────────────────────────
   const hasDiscount = discountPercent > 0 || discountAmount > 0;
@@ -268,7 +300,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
         {/* ── BOTÓN CONFIRMAR ──────────────────────────────────────────────── */}
         <div className="shrink-0 px-3 pt-1.5 pb-1">
           <button
-            onClick={handleConfirm}
+            onClick={openConfirmModal}
             disabled={!canConfirm}
             style={{ fontSize: 14, padding: '10px 0' }}
             className={`w-full rounded-lg font-bold transition-all shadow-sm ${
@@ -277,15 +309,9 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {isProcessing ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin">⏳</span>Procesando...
-              </span>
-            ) : canConfirm ? (
-              `✓ Confirmar — ${formatCurrency(totals.totalAmount)}`
-            ) : (
-              '✓ Confirmar venta'
-            )}
+            {canConfirm
+              ? `✓ Confirmar — ${formatCurrency(totals.totalAmount)}`
+              : '✓ Confirmar venta'}
           </button>
 
           {disabledReason && !isProcessing && (
@@ -326,6 +352,18 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
             </div>
           </div>
         </div>
+      )}
+
+      {showConfirmModal && (
+        <POSSaleConfirmModal
+          cart={cart}
+          customer={selectedCustomer}
+          paymentMethods={paymentMethods}
+          totals={totals}
+          printerStatus={printerStatus}
+          onConfirm={handleConfirmWithPrint}
+          onCancel={() => setShowConfirmModal(false)}
+        />
       )}
 
       {completedSale && (
