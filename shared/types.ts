@@ -1,3 +1,16 @@
+export interface PrinterConfig {
+  type: 'usb' | 'network';
+  usbVendorId?: number;
+  usbProductId?: number;
+  portPath?: string;
+  host?: string;
+  port?: number;
+  characterSet?: string;
+  width?: number;
+}
+
+export type PrinterStatus = 'connected' | 'disconnected' | 'error';
+
 export interface InstallationConfig {
   id: number;
   businessName: string;
@@ -6,6 +19,8 @@ export interface InstallationConfig {
   logoPath: string | null;
   whatsappNumber: string | null;
   catalogBusinessUnitId: number | null;
+  printerConfig: PrinterConfig | null;
+  printerEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }

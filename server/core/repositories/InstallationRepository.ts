@@ -18,6 +18,7 @@ export class InstallationRepository {
       id: number; business_name: string; cuit: string | null; address: string | null;
       logo_path: string | null; created_at: string; updated_at: string;
       whatsapp_number: string | null; catalog_business_unit_id: number | null;
+      printer_config: string | null; printer_enabled: number | null;
     };
     const row = sqlite
       .prepare('SELECT * FROM installation_config LIMIT 1')
@@ -33,6 +34,8 @@ export class InstallationRepository {
       updatedAt:             row.updated_at,
       whatsappNumber:        row.whatsapp_number ?? null,
       catalogBusinessUnitId: row.catalog_business_unit_id ?? null,
+      printerConfig:         row.printer_config ? JSON.parse(row.printer_config) : null,
+      printerEnabled:        Boolean(row.printer_enabled),
     };
   }
 

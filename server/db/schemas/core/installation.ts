@@ -7,6 +7,8 @@ export const installationConfig = sqliteTable('installation_config', {
   cuit: text('cuit').notNull().default(''),
   address: text('address').notNull().default(''),
   logoPath: text('logo_path'),
+  printerConfig: text('printer_config'),
+  printerEnabled: integer('printer_enabled', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at')
     .notNull()
     .default(sql`(datetime('now'))`),

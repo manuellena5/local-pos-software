@@ -27,6 +27,7 @@ export function initDatabase(): void {
     '0020_products_extended_fields.sql',
     '0021_sales_cancellation.sql',
     '0022_business_units_description.sql',
+    '0023_printer_config.sql',
   ];
 
   for (const migration of migrations) {

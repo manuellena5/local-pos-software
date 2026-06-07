@@ -13,6 +13,8 @@ import { SettingsPage } from '@/core/components/SettingsPage';
 import { NetworkStatusBar } from '@/core/components/NetworkStatusBar';
 import { DashboardPage } from '@/core/dashboard/DashboardPage';
 import { SalesPage } from '@/core/sales/SalesPage';
+import { PrinterStatus } from '@/core/printer/components/PrinterStatus';
+import { usePrinterStatus } from '@/core/printer/hooks/usePrinterStatus';
 import { initRetailTextilModule } from '@/modules/retail-textil';
 import { initTallerMedidaModule } from '@/modules/taller-medida';
 import { TallerMedidaPage } from '@/modules/taller-medida/components/TallerMedidaPage';
@@ -47,6 +49,10 @@ export function App() {
   const config    = useAppStore((s) => s.config);
   const activeBU  = useAppStore((s) => s.activeBU);
   const [tab, setTab] = useState<AppTab>('dashboard');
+  const [pendingSettingsTab, setPendingSettingsTab] = useState<string | undefined>(undefined);
+
+  // Inicia el polling global del estado de la impresora (30s)
+  usePrinterStatus();
 
   if (loading) {
     return (
@@ -86,6 +92,12 @@ export function App() {
       ]
     : CORE_TABS;
 
+  function handleMainTabClick(key: AppTab): void {
+    setTab(key);
+    // Al navegar a Configuración por el menú (no por el ícono), resetear sub-tab pendiente
+    if (key === 'configuracion') setPendingSettingsTab(undefined);
+  }
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
       <header className="shrink-0 bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-between">
@@ -99,6 +111,12 @@ export function App() {
           <CashboxStatus businessUnitId={activeBU?.id} onGoToCashbox={() => setTab('caja')} />
           <InvoiceQueueStatus businessUnitId={activeBU?.id} />
           <NetworkStatusBar />
+          <PrinterStatus
+            onNavigate={() => {
+              setTab('configuracion');
+              setPendingSettingsTab('impresora');
+            }}
+          />
           <BusinessUnitSelector />
         </div>
       </header>
@@ -108,7 +126,7 @@ export function App() {
           {TABS.map((t) => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => handleMainTabClick(t.key)}
               className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium border-b-2 transition-colors ${
                 tab === t.key
                   ? 'border-blue-600 text-blue-600'
@@ -149,7 +167,7 @@ export function App() {
               {tab === 'pedidos'       && <TallerMedidaPage />}
               {tab === 'proveedores'   && <ProveedoresPage />}
               {tab === 'reportes'      && <ReportsPage businessUnitId={activeBU.id} />}
-              {tab === 'configuracion' && <SettingsPage />}
+              {tab === 'configuracion' && <SettingsPage initialTab={pendingSettingsTab} />}
             </div>
           </div>
         </main>
