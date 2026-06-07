@@ -17,6 +17,7 @@ export const productsRouter = Router();
 
 // Existentes
 productsRouter.get('/products',     (req, res, next) => productController.getAll(req, res, next));
+productsRouter.get('/products/barcode/:barcode', (req, res, next) => productController.getByBarcode(req, res, next));
 productsRouter.get('/products/:id', (req, res, next) => productController.getById(req, res, next));
 productsRouter.post('/products',    (req, res, next) => productController.create(req, res, next));
 productsRouter.patch('/products/:id', (req, res, next) => productController.update(req, res, next));

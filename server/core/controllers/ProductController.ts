@@ -24,6 +24,27 @@ export class ProductController {
     }
   }
 
+  getByBarcode(req: Request, res: Response, next: NextFunction): void {
+    try {
+      const barcode = req.params.barcode ?? '';
+      const businessUnitId = Number(req.query.businessUnitId);
+
+      if (!barcode) throw new ValidationError('Código de barras requerido');
+      if (!Number.isInteger(businessUnitId) || businessUnitId <= 0) {
+        throw new ValidationError('businessUnitId debe ser un número válido');
+      }
+
+      const item = this.service.findByBarcode(barcode, businessUnitId);
+      if (!item) {
+        res.json({ data: { found: false }, error: null });
+        return;
+      }
+      res.json({ data: { found: true, item }, error: null });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   getById(req: Request, res: Response, next: NextFunction): void {
     try {
       const id = Number(req.params.id);

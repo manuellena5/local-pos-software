@@ -164,6 +164,35 @@ export class ProductRepository {
     return row ? enrich(row) : null;
   }
 
+  /**
+   * Búsqueda exacta por código de barras en la BU activa.
+   * Retorna el producto con su stock actual, o null si no existe.
+   */
+  findByBarcode(
+    barcode: string,
+    businessUnitId: number,
+  ): { productId: number; name: string; sku: string; basePrice: number; taxRate: number; stock: number } | null {
+    type Row = { id: number; name: string; sku: string; base_price: number; tax_rate: number; quantity: number | null };
+    const row = sqlite.prepare(`
+      SELECT p.id, p.name, p.sku, p.base_price, p.tax_rate,
+             si.quantity
+      FROM products p
+      LEFT JOIN stock_items si ON si.product_id = p.id AND si.business_unit_id = p.business_unit_id
+      WHERE p.business_unit_id = ? AND p.barcode = ? AND p.is_active = 1
+      LIMIT 1
+    `).get(businessUnitId, barcode) as Row | undefined;
+
+    if (!row) return null;
+    return {
+      productId: row.id,
+      name:      row.name,
+      sku:       row.sku,
+      basePrice: row.base_price,
+      taxRate:   row.tax_rate,
+      stock:     row.quantity ?? 0,
+    };
+  }
+
   /** Lista todos los productos (activos) con datos de stock y nombre de proveedor. */
   getAllWithStock(businessUnitId: number): ProductWithStock[] {
     type Row = {

@@ -78,6 +78,17 @@ export class ProductService {
     return this.productRepo.search(businessUnitId, query.trim());
   }
 
+  /**
+   * Búsqueda exacta por código de barras. Retorna el ítem listo para agregar
+   * al carrito (con stock actual) o null si no existe.
+   */
+  findByBarcode(
+    barcode: string,
+    businessUnitId: number,
+  ): ReturnType<typeof this.productRepo.findByBarcode> {
+    return this.productRepo.findByBarcode(barcode.trim(), businessUnitId);
+  }
+
   listAllWithStock(businessUnitId: number): ProductWithStock[] {
     return this.productRepo.getAllWithStock(businessUnitId);
   }

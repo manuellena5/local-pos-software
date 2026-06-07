@@ -77,4 +77,18 @@ export const productsApi = {
   ): Promise<{ movement: unknown; newQuantity: number }> {
     return apiClient.post(`/api/products/${id}/stock-movements`, data);
   },
+
+  findByBarcode(
+    barcode: string,
+    businessUnitId: number,
+  ): Promise<{
+    found: false;
+  } | {
+    found: true;
+    item: { productId: number; name: string; sku: string; basePrice: number; taxRate: number; stock: number };
+  }> {
+    return apiClient.get(
+      `/api/products/barcode/${encodeURIComponent(barcode)}?businessUnitId=${businessUnitId}`,
+    );
+  },
 };
