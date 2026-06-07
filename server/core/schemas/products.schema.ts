@@ -3,7 +3,7 @@ import { z } from 'zod';
 const baseProductSchema = z.object({
   name:        z.string().min(1, 'El nombre es obligatorio').max(255),
   description: z.union([z.string().max(1000), z.literal('')]).optional(),
-  category:    z.union([z.string().max(100), z.literal('')]).optional(),
+  category:    z.string().max(100).nullable().optional().transform((v) => v ?? undefined),
   sku:         z.string().min(1, 'El SKU es obligatorio').max(100),
   costPrice:   z.number().min(0, 'El costo debe ser positivo'),
   basePrice:   z.number().min(0, 'El precio debe ser positivo'),
@@ -23,20 +23,11 @@ const baseProductSchema = z.object({
   showCatalogStock: z.boolean().optional(),
 });
 
-export const createProductSchema = baseProductSchema.refine(
-  (data) => data.costPrice < data.basePrice,
-  {
-    message: 'El costo debe ser menor al precio de venta',
-    path: ['costPrice'],
-  }
-);
+// No validamos costPrice < basePrice porque basePrice es precio NETO (sin IVA).
+// Un producto con costo 100 y precio neto 95 (bruto 114.95) es perfectamente válido.
+export const createProductSchema = baseProductSchema;
 
-export const updateProductSchema = baseProductSchema
-  .partial()
-  .refine((data) => (data.costPrice && data.basePrice ? data.costPrice < data.basePrice : true), {
-    message: 'El costo debe ser menor al precio de venta',
-    path: ['costPrice'],
-  });
+export const updateProductSchema = baseProductSchema.partial();
 
 export const adjustStockSchema = z.object({
   quantity: z.number().refine((val) => val !== 0, 'La cantidad debe ser distinto a 0'),

@@ -3,13 +3,13 @@ import { useCart } from '@/core/hooks/useCart';
 import { usePOS } from '@/core/hooks/usePOS';
 import { POSDiscountSection } from './POSDiscountSection';
 import { POSPaymentMethods } from './POSPaymentMethods';
-import { POSReceiptModal, buildTicketData } from './POSReceiptModal';
+import { buildTicketData } from './POSReceiptModal';
 import { POSSaleConfirmModal } from './POSSaleConfirmModal';
 import { formatCurrency } from '@/lib/utils/pricing';
 import { printerApi } from '@/lib/api/printer';
 import { customersApi } from '@/lib/api/customers';
 import { useAppStore } from '@/core/store/appStore';
-import type { SaleWithItems, StockSummary, Customer } from '@shared/types';
+import type { StockSummary, Customer } from '@shared/types';
 import type { ConfirmResult } from './POSSaleConfirmModal';
 
 // Fuera del componente para evitar re-mount en cada render
@@ -27,8 +27,6 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   const { cart, totals, paymentMethods, discountPercent, discountAmount, setDiscountPercent, setDiscountAmount, clearCart } = useCart();
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
   const { confirmSale, isProcessing, error } = usePOS(businessUnitId, selectedCustomerId);
-  const [completedSale, setCompletedSale] = useState<SaleWithItems | null>(null);
-  const [completedSaleCustomer, setCompletedSaleCustomer] = useState<Customer | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const printerStatus = useAppStore((s) => s.printerStatus);
@@ -91,8 +89,6 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
     }
 
     // Venta registrada — limpiar estado y notificar
-    setCompletedSale(result);
-    setCompletedSaleCustomer(customerAtConfirm);
     setSelectedCustomerId(undefined);
     setCustomerSearch('');
     setShowConfirmModal(false);
@@ -366,16 +362,6 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
         />
       )}
 
-      {completedSale && (
-        <POSReceiptModal
-          sale={completedSale}
-          customer={completedSaleCustomer}
-          onClose={() => {
-            setCompletedSale(null);
-            setCompletedSaleCustomer(null);
-          }}
-        />
-      )}
     </>
   );
 }

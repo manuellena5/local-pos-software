@@ -93,10 +93,11 @@ describe('ProductService', () => {
       expect(() => service.create(1, validData)).toThrow('ya existe');
     });
 
-    it('should throw ValidationError when costPrice >= basePrice', () => {
+    it('should accept costPrice >= basePrice (basePrice is NET without IVA)', () => {
+      // costPrice=100, basePrice=80 net, gross=96.8 at 21% — valid scenario
       expect(() =>
         service.create(1, { ...validData, costPrice: 100, basePrice: 80 })
-      ).toThrow();
+      ).not.toThrow();
     });
 
     it('should throw ValidationError when name is empty', () => {

@@ -26,16 +26,18 @@ describe('createProductSchema', () => {
     expect(createProductSchema.safeParse({ ...valid, sku: '' }).success).toBe(false);
   });
 
-  it('should reject costPrice >= basePrice', () => {
+  it('should accept costPrice >= basePrice (basePrice is NET price, gross can be higher)', () => {
+    // costPrice=120, basePrice=120 (net), grossPrice=145.2 with 21% IVA → valid
     expect(
       createProductSchema.safeParse({ ...valid, costPrice: 120, basePrice: 120 }).success
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it('should reject costPrice > basePrice', () => {
+  it('should accept costPrice > basePrice when IVA makes gross price higher', () => {
+    // costPrice=200, basePrice=120 (net), grossPrice=145.2 → margin can be negative, that's ok
     expect(
       createProductSchema.safeParse({ ...valid, costPrice: 200, basePrice: 120 }).success
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('should reject negative costPrice', () => {
@@ -68,10 +70,11 @@ describe('updateProductSchema', () => {
     expect(updateProductSchema.safeParse({}).success).toBe(true);
   });
 
-  it('should reject costPrice >= basePrice when both provided', () => {
+  it('should accept costPrice >= basePrice when both provided (basePrice is NET price)', () => {
+    // costPrice > basePrice is valid — gross price with IVA can exceed costPrice
     expect(
       updateProductSchema.safeParse({ costPrice: 150, basePrice: 100 }).success
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 

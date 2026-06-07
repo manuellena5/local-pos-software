@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ProductWithStock, PurchaseHistoryEntry } from '@shared/types';
+import { ApiError } from '@/lib/api/client';
 import type { ProductModalTab } from '../types';
 import { useProductsStore } from '../store/productsStore';
 import { productsApi } from '@/lib/api/products';
@@ -81,7 +82,11 @@ export function ProductEditModal({ businessUnitId, onRefetch, onToast }: Product
       onRefetch();
       closeModal();
     } catch (err) {
-      onToast(err instanceof Error ? err.message : 'Error al guardar', 'error');
+      if (err instanceof ApiError && Array.isArray(err.details) && err.details.length) {
+        onToast(`❌ ${(err.details as string[]).join(' · ')}`, 'error');
+      } else {
+        onToast(err instanceof Error ? err.message : 'Error al guardar', 'error');
+      }
     } finally {
       setSaving(false);
     }
