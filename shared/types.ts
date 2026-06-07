@@ -15,8 +15,15 @@ export interface InstallationConfig {
   id: number;
   businessName: string;
   cuit: string;
+  /** Dirección completa legacy (campo original) */
   address: string;
+  /** Calle y número — nuevo campo separado */
+  addressStreet: string;
+  /** Localidad / ciudad — nuevo campo separado */
+  addressCity: string;
   ingBrutos: string;
+  /** Condición fiscal del negocio */
+  fiscalCondition: 'monotributo' | 'responsable_inscripto';
   logoPath: string | null;
   whatsappNumber: string | null;
   catalogBusinessUnitId: number | null;
@@ -295,7 +302,10 @@ export interface SaleTicketData {
   businessAddress: string;
   cuit: string;
   ingBrutos?: string;
+  /** Condición fiscal del NEGOCIO (Monotributista / Responsable Inscripto) — va en el header */
+  businessFiscalCondition?: string;
   businessUnitName: string;
+  /** Condición fiscal del CLIENTE (Consumidor Final / Nombre) — va en el cuerpo */
   fiscalCondition: string;
   /** Tipo de documento del receptor para el QR AFIP (80=CUIT, 96=DNI, 99=CF) */
   customerDocType?: number;

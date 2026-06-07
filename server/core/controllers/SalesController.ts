@@ -22,6 +22,11 @@ function buildFiscalCondition(customer: Customer | null): string {
   return `CONSUMIDOR FINAL - ${customer.name}`;
 }
 
+function buildBusinessAddress(config: { address: string; addressStreet: string; addressCity: string }): string {
+  const parts = [config.addressStreet, config.addressCity].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : config.address;
+}
+
 function buildCustomerDocFields(
   customer: Customer | null,
 ): { customerDocType?: number; customerDoc?: number } {
@@ -194,9 +199,12 @@ export class SalesController {
         date,
         time,
         businessName: config.businessName,
-        businessAddress: config.address,
+        businessAddress: buildBusinessAddress(config),
         cuit: config.cuit,
         ingBrutos: config.ingBrutos || undefined,
+        businessFiscalCondition: config.fiscalCondition === 'responsable_inscripto'
+          ? 'Responsable Inscripto'
+          : 'Monotributista',
         businessUnitName: bu?.name ?? '',
         fiscalCondition: buildFiscalCondition(customer),
         ...buildCustomerDocFields(customer),

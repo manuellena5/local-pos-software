@@ -9,14 +9,14 @@ import type { UpdateInstallationDto } from '../schemas/installation.schema';
 export class InstallationRepository {
   /**
    * Obtiene la configuración global de la instalación (singleton, id=1).
+   * Usa SELECT * para incluir todas las columnas aditivas.
    * @throws {NotFoundError} Si no hay configuración guardada aún.
    */
   get(): InstallationConfig {
-    // Use raw SQL so that additive columns (whatsapp_number, catalog_business_unit_id)
-    // that are not in the Drizzle schema are included in the result.
     type RawRow = {
       id: number; business_name: string; cuit: string | null; address: string | null;
-      ing_brutos: string | null;
+      address_street: string | null; address_city: string | null;
+      ing_brutos: string | null; fiscal_condition: string | null;
       logo_path: string | null; created_at: string; updated_at: string;
       whatsapp_number: string | null; catalog_business_unit_id: number | null;
       printer_config: string | null; printer_enabled: number | null;
@@ -25,12 +25,20 @@ export class InstallationRepository {
       .prepare('SELECT * FROM installation_config LIMIT 1')
       .get() as RawRow | undefined;
     if (!row) throw new NotFoundError('Configuración de instalación no encontrada');
+
+    const fiscalRaw = row.fiscal_condition ?? 'monotributo';
+    const fiscalCondition: 'monotributo' | 'responsable_inscripto' =
+      fiscalRaw === 'responsable_inscripto' ? 'responsable_inscripto' : 'monotributo';
+
     return {
       id:                    row.id,
       businessName:          row.business_name,
       cuit:                  row.cuit ?? '',
       address:               row.address ?? '',
+      addressStreet:         row.address_street ?? '',
+      addressCity:           row.address_city ?? '',
       ingBrutos:             row.ing_brutos ?? '',
+      fiscalCondition,
       logoPath:              row.logo_path ?? null,
       createdAt:             row.created_at,
       updatedAt:             row.updated_at,
@@ -46,14 +54,23 @@ export class InstallationRepository {
    * @throws {NotFoundError} Si no existe configuración previa.
    */
   update(data: UpdateInstallationDto): InstallationConfig {
-    // Update core Drizzle-known columns
-    const { whatsappNumber, catalogBusinessUnitId, ingBrutos, ...coreData } = data;
+    // Separar columnas aditivas (fuera del schema Drizzle) de las core
+    const {
+      whatsappNumber,
+      catalogBusinessUnitId,
+      ingBrutos,
+      fiscalCondition,
+      addressStreet,
+      addressCity,
+      ...coreData
+    } = data;
+
     db.update(installationConfig)
       .set({ ...coreData, updatedAt: new Date().toISOString() })
       .where(eq(installationConfig.id, 1))
       .run();
 
-    // Update additive columns via raw SQL
+    // Columnas aditivas via raw SQL
     if (whatsappNumber !== undefined) {
       sqlite.prepare('UPDATE installation_config SET whatsapp_number = ? WHERE id = 1').run(whatsappNumber);
     }
@@ -62,6 +79,15 @@ export class InstallationRepository {
     }
     if (ingBrutos !== undefined) {
       sqlite.prepare('UPDATE installation_config SET ing_brutos = ? WHERE id = 1').run(ingBrutos);
+    }
+    if (fiscalCondition !== undefined) {
+      sqlite.prepare('UPDATE installation_config SET fiscal_condition = ? WHERE id = 1').run(fiscalCondition);
+    }
+    if (addressStreet !== undefined) {
+      sqlite.prepare('UPDATE installation_config SET address_street = ? WHERE id = 1').run(addressStreet);
+    }
+    if (addressCity !== undefined) {
+      sqlite.prepare('UPDATE installation_config SET address_city = ? WHERE id = 1').run(addressCity);
     }
 
     return this.get();

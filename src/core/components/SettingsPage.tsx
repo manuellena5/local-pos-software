@@ -48,6 +48,10 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
   const [businessName, setBusinessName] = useState('');
   const [cuit, setCuit] = useState('');
   const [address, setAddress] = useState('');
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressCity, setAddressCity] = useState('');
+  const [ingBrutos, setIngBrutos] = useState('');
+  const [fiscalCondition, setFiscalCondition] = useState<'monotributo' | 'responsable_inscripto'>('monotributo');
 
   // Catalog settings
   const [whatsappNumber, setWhatsappNumber] = useState('');
@@ -60,6 +64,10 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
     setBusinessName(config.businessName ?? '');
     setCuit(config.cuit ?? '');
     setAddress(config.address ?? '');
+    setAddressStreet(config.addressStreet ?? '');
+    setAddressCity(config.addressCity ?? '');
+    setIngBrutos(config.ingBrutos ?? '');
+    setFiscalCondition(config.fiscalCondition ?? 'monotributo');
     setWhatsappNumber(config.whatsappNumber ?? '');
     setCatalogBuId(config.catalogBusinessUnitId != null ? String(config.catalogBusinessUnitId) : '');
   }, [config]);
@@ -72,6 +80,10 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
         businessName: businessName || undefined,
         cuit: cuit || undefined,
         address: address || undefined,
+        addressStreet: addressStreet || null,
+        addressCity: addressCity || null,
+        ingBrutos: ingBrutos || undefined,
+        fiscalCondition: fiscalCondition,
         whatsappNumber: whatsappNumber || null,
         catalogBusinessUnitId: catalogBuId ? Number(catalogBuId) : null,
       };
@@ -158,8 +170,10 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
       {/* Tab: Negocio */}
       {activeTab === 'negocio' && (
         <div className="space-y-6 max-w-lg">
+
+          {/* Identificación */}
           <div>
-            <h2 className="text-base font-bold text-gray-900 mb-4">Datos del negocio</h2>
+            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Identificación</h2>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del negocio</label>
@@ -170,21 +184,68 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">CUIT</label>
+                  <input
+                    type="text"
+                    value={cuit}
+                    onChange={(e) => setCuit(e.target.value)}
+                    placeholder="20-12345678-9"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Condición fiscal</label>
+                  <select
+                    value={fiscalCondition}
+                    onChange={(e) => setFiscalCondition(e.target.value as 'monotributo' | 'responsable_inscripto')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                  >
+                    <option value="monotributo">Monotributista</option>
+                    <option value="responsable_inscripto">Responsable Inscripto</option>
+                  </select>
+                </div>
+              </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">CUIT</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Ingresos Brutos <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
                 <input
                   type="text"
-                  value={cuit}
-                  onChange={(e) => setCuit(e.target.value)}
+                  value={ingBrutos}
+                  onChange={(e) => setIngBrutos(e.target.value)}
+                  placeholder="Ej: 061-013654-6"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Se muestra en el ticket de venta. Lo obtenés al inscribirte en ARCA/provincia.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Dirección */}
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Dirección</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Calle y número</label>
+                <input
+                  type="text"
+                  value={addressStreet}
+                  onChange={(e) => setAddressStreet(e.target.value)}
+                  placeholder="Ej: San Martín 450"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Dirección</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Localidad</label>
                 <input
                   type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  value={addressCity}
+                  onChange={(e) => setAddressCity(e.target.value)}
+                  placeholder="Ej: Landeta, Santa Fe, Argentina"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>

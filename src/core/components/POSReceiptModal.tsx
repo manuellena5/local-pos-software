@@ -66,9 +66,17 @@ export function buildTicketData(
     date,
     time,
     businessName: config?.businessName ?? 'LocalPos',
-    businessAddress: config?.address ?? '',
+    businessAddress: (() => {
+      const street = config?.addressStreet ?? '';
+      const city = config?.addressCity ?? '';
+      const parts = [street, city].filter(Boolean);
+      return parts.length > 0 ? parts.join(', ') : (config?.address ?? '');
+    })(),
     cuit: config?.cuit ?? '',
     ingBrutos: config?.ingBrutos || undefined,
+    businessFiscalCondition: config?.fiscalCondition === 'responsable_inscripto'
+      ? 'Responsable Inscripto'
+      : 'Monotributista',
     businessUnitName: activeBU?.name ?? '',
     fiscalCondition: buildFiscalCondition(customer),
     ...buildCustomerDocFields(customer),

@@ -12,6 +12,7 @@ const saleTicketDataSchema = z.object({
   businessAddress: z.string(),
   cuit: z.string(),
   ingBrutos: z.string().optional(),
+  businessFiscalCondition: z.string().optional(),
   businessUnitName: z.string(),
   fiscalCondition: z.string(),
   customerDocType: z.number().optional(),
