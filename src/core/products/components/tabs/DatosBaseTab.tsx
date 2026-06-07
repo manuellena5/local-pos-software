@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { ProductWithStock } from '@shared/types';
 import { useCategories } from '@/core/categories/hooks/useCategories';
 
@@ -65,6 +65,16 @@ export function DatosBaseTab({
   purchaseHistory,
 }: DatosBaseTabProps) {
   const { categories } = useCategories();
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const [scanReady, setScanReady] = useState(false);
+
+  function handleScanButtonClick() {
+    barcodeInputRef.current?.focus();
+    barcodeInputRef.current?.select();
+    setScanReady(true);
+    // Quitar el indicador después de 4 segundos (tiempo suficiente para escanear)
+    setTimeout(() => setScanReady(false), 4000);
+  }
 
   return (
     <div>
@@ -100,15 +110,29 @@ export function DatosBaseTab({
           <Field label="Código de barras" hint="(EAN/UPC)">
             <div className="flex gap-1.5">
               <input
-                className={fi}
+                ref={barcodeInputRef}
+                className={`${fi} ${scanReady ? 'border-blue-500 ring-2 ring-blue-100' : ''}`}
                 value={formData.barcode ?? ''}
-                onChange={(e) => onChange({ ...formData, barcode: e.target.value })}
-                placeholder="Escanear o escribir"
+                onChange={(e) => { onChange({ ...formData, barcode: e.target.value }); setScanReady(false); }}
+                onBlur={() => setScanReady(false)}
+                placeholder={scanReady ? 'Esperando scan…' : 'Escanear o escribir'}
               />
-              <button className="px-2 py-1 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap shrink-0">
+              <button
+                type="button"
+                onClick={handleScanButtonClick}
+                title="Enfocar campo y escanear"
+                className={`px-2 py-1 border rounded-lg text-sm shrink-0 transition-colors ${
+                  scanReady
+                    ? 'border-blue-400 bg-blue-50 text-blue-600'
+                    : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
                 📷
               </button>
             </div>
+            {scanReady && (
+              <p className="text-xs text-blue-500 mt-0.5">Apretá el gatillo del lector ahora</p>
+            )}
           </Field>
           <Field label="Código proveedor">
             <input className={fi} value={formData.supplierCode ?? ''} onChange={(e) => onChange({ ...formData, supplierCode: e.target.value })} />
