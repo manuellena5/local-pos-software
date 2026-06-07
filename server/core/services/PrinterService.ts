@@ -386,14 +386,13 @@ class PrinterService {
     if (data.businessAddress) p.println(ticketTruncate(data.businessAddress, W));
     p.println(ticketTruncate(`CUIT: ${data.cuit}`, W));
     if (data.ingBrutos) p.println(ticketTruncate(`I.B.: ${data.ingBrutos}`, W));
-    p.println('Monotributista');
 
     p.drawLine();
 
     // ── CLIENTE + COMPROBANTE + FECHA ─────────────────────────────────────────
     p.alignLeft();
 
-    // Cliente
+    // Cliente: siempre "CONSUMIDOR FINAL", con nombre si aplica
     p.println(ticketTruncate(data.fiscalCondition, W));
 
     // Número de comprobante o venta

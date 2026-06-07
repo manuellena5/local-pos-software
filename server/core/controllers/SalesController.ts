@@ -18,9 +18,8 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 function buildFiscalCondition(customer: Customer | null): string {
-  if (!customer) return 'Consumidor Final';
-  if (customer.documentType === 'CUIT') return `${customer.name} - CUIT ${customer.document ?? ''}`;
-  return customer.name;
+  if (!customer) return 'CONSUMIDOR FINAL';
+  return `CONSUMIDOR FINAL - ${customer.name}`;
 }
 
 function buildCustomerDocFields(
@@ -177,7 +176,11 @@ export class SalesController {
       const bu = this.buRepo.getById(businessUnitId);
       const customer = sale.customerId ? this.customerRepo.getById(sale.customerId) : null;
 
-      const dateObj = new Date(sale.createdAt);
+      // createdAt viene de SQLite datetime('now') en UTC sin 'Z'.
+      // Sin el sufijo, new Date() lo trata como hora local → 3h de más en Argentina.
+      const raw = sale.createdAt;
+      const utcStr = raw.includes('Z') || raw.includes('+') ? raw : raw.replace(' ', 'T') + 'Z';
+      const dateObj = new Date(utcStr);
       const date = format(dateObj, 'dd/MM/yyyy', { locale: es });
       const time = format(dateObj, 'HH:mm', { locale: es });
 

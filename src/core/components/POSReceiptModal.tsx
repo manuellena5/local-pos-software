@@ -19,9 +19,8 @@ interface POSReceiptModalProps {
 }
 
 function buildFiscalCondition(customer: Customer | null | undefined): string {
-  if (!customer) return 'Consumidor Final';
-  if (customer.documentType === 'CUIT') return `${customer.name} - CUIT ${customer.document ?? ''}`;
-  return customer.name;
+  if (!customer) return 'CONSUMIDOR FINAL';
+  return `CONSUMIDOR FINAL - ${customer.name}`;
 }
 
 function buildCustomerDocFields(
@@ -42,7 +41,11 @@ function buildTicketData(
   customer: Customer | null | undefined,
 ): SaleTicketData {
   const { sale: s, items } = sale;
-  const dateObj = new Date(s.createdAt);
+  // createdAt viene de SQLite datetime('now') que devuelve UTC sin 'Z'.
+  // Sin el sufijo, JS lo interpreta como hora local → 3h de más en Argentina.
+  const raw = s.createdAt;
+  const utcStr = raw.includes('Z') || raw.includes('+') ? raw : raw.replace(' ', 'T') + 'Z';
+  const dateObj = new Date(utcStr);
   const date = dateObj.toLocaleDateString('es-AR', {
     day: '2-digit',
     month: '2-digit',
