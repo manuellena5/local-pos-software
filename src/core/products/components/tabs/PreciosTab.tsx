@@ -37,15 +37,19 @@ export function PreciosTab({ formData, onChange }: PreciosTabProps) {
   const priceGross = calcPriceGross(basePrice, taxRate);
 
   const [localCost, setLocalCost] = useState(String(cost));
+  const [localCostGross, setLocalCostGross] = useState(
+    String(calcPriceGross(cost, taxRate).toFixed(2)),
+  );
   const [localMargin, setLocalMargin] = useState(String(margin.toFixed(2)));
   const [localPriceNet, setLocalPriceNet] = useState(String(basePrice.toFixed(2)));
   const [localPriceGross, setLocalPriceGross] = useState(String(priceGross.toFixed(2)));
 
   useEffect(() => {
-    setLocalCost(String(formData.costPrice ?? 0));
+    const cp = formData.costPrice ?? 0;
     const bp = formData.basePrice ?? 0;
     const tr = formData.taxRate ?? 21;
-    const cp = formData.costPrice ?? 0;
+    setLocalCost(String(cp));
+    setLocalCostGross(String(calcPriceGross(cp, tr).toFixed(2)));
     setLocalMargin(String(calcMargin(cp, bp).toFixed(2)));
     setLocalPriceNet(String(bp.toFixed(2)));
     setLocalPriceGross(String(calcPriceGross(bp, tr).toFixed(2)));
@@ -57,9 +61,19 @@ export function PreciosTab({ formData, onChange }: PreciosTabProps) {
     const m = parseFloat(localMargin);
     const newBase = isNaN(m) ? basePrice : calcPriceNet(c, m);
     const newGross = calcPriceGross(newBase, taxRate);
+    setLocalCostGross(calcPriceGross(c, taxRate).toFixed(2));
     setLocalPriceNet(newBase.toFixed(2));
     setLocalPriceGross(newGross.toFixed(2));
     onChange({ ...formData, costPrice: c, basePrice: newBase });
+  };
+
+  // Ingresó el costo con IVA → calcula costo sin IVA y propaga
+  const applyFromCostGross = (rawCostGross: string) => {
+    const gross = parseFloat(rawCostGross);
+    if (isNaN(gross) || gross < 0) return;
+    const net = calcPriceNetFromGross(gross, taxRate);
+    setLocalCost(net.toFixed(2));
+    applyFromCost(net.toFixed(2));
   };
 
   const applyFromMargin = (rawMargin: string) => {
@@ -139,7 +153,7 @@ export function PreciosTab({ formData, onChange }: PreciosTabProps) {
           <span className="text-sm font-bold text-gray-700">💰 Calculadora de precios</span>
         </div>
         <div className="px-3.5 py-3">
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-3 gap-3 mb-3">
             <Field label="Costo de compra" hint="(sin IVA)">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
@@ -153,6 +167,21 @@ export function PreciosTab({ formData, onChange }: PreciosTabProps) {
                   onBlur={(e) => applyFromCost(e.target.value)}
                 />
               </div>
+            </Field>
+            <Field label="Costo c/IVA" hint="(calculado)">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className={`${fi} pl-7 text-orange-700`}
+                  value={localCostGross}
+                  onChange={(e) => setLocalCostGross(e.target.value)}
+                  onBlur={(e) => applyFromCostGross(e.target.value)}
+                />
+              </div>
+              <span className="text-xs text-gray-400">Ingresá aquí si tenés el precio con IVA</span>
             </Field>
             <Field label="Alícuota IVA">
               <select
