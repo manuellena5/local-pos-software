@@ -16,6 +16,7 @@ export interface InstallationConfig {
   businessName: string;
   cuit: string;
   address: string;
+  ingBrutos: string;
   logoPath: string | null;
   whatsappNumber: string | null;
   catalogBusinessUnitId: number | null;
@@ -292,16 +293,27 @@ export interface SaleTicketData {
   businessName: string;
   businessAddress: string;
   cuit: string;
+  ingBrutos?: string;
   businessUnitName: string;
   fiscalCondition: string;
+  /** Tipo de documento del receptor para el QR AFIP (80=CUIT, 96=DNI, 99=CF) */
+  customerDocType?: number;
+  /** Número de documento sin guiones (0 para CF) */
+  customerDoc?: number;
   items: Array<{
     name: string;
     quantity: number;
     unitPrice: number;
     subtotal: number;
+    /** Porcentaje de descuento por ítem (0 si no hay) */
+    itemDiscount?: number;
   }>;
-  subtotalSinIva?: number;
-  ivaAmount?: number;
+  /** Subtotal antes de aplicar el descuento global */
+  subtotalBeforeDiscount?: number;
+  /** Porcentaje de descuento global (0 si no hay) */
+  globalDiscount?: number;
+  /** Monto descontado en $ */
+  globalDiscountAmount?: number;
   total: number;
   payments: Array<{
     method: string;
@@ -309,7 +321,10 @@ export interface SaleTicketData {
   }>;
   change?: number;
   cae?: string;
+  /** Vencimiento CAE en formato "AAAAMMDD" (se formatea al imprimir) */
   caeVto?: string;
+  /** Número de comprobante completo: "C-0001-00000014" */
+  invoiceNumber?: string;
 }
 
 // ── Fase 5: Clientes ──────────────────────────────────────────────────────

@@ -11,18 +11,23 @@ const saleTicketDataSchema = z.object({
   businessName: z.string(),
   businessAddress: z.string(),
   cuit: z.string(),
+  ingBrutos: z.string().optional(),
   businessUnitName: z.string(),
   fiscalCondition: z.string(),
+  customerDocType: z.number().optional(),
+  customerDoc: z.number().optional(),
   items: z.array(
     z.object({
       name: z.string(),
       quantity: z.number(),
       unitPrice: z.number(),
       subtotal: z.number(),
+      itemDiscount: z.number().optional(),
     }),
   ),
-  subtotalSinIva: z.number().optional(),
-  ivaAmount: z.number().optional(),
+  subtotalBeforeDiscount: z.number().optional(),
+  globalDiscount: z.number().optional(),
+  globalDiscountAmount: z.number().optional(),
   total: z.number(),
   payments: z.array(
     z.object({
@@ -33,6 +38,7 @@ const saleTicketDataSchema = z.object({
   change: z.number().optional(),
   cae: z.string().optional(),
   caeVto: z.string().optional(),
+  invoiceNumber: z.string().optional(),
 });
 
 const printerConfigSchema = z.object({

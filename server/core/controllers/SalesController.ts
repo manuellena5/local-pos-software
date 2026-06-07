@@ -23,6 +23,17 @@ function buildFiscalCondition(customer: Customer | null): string {
   return customer.name;
 }
 
+function buildCustomerDocFields(
+  customer: Customer | null,
+): { customerDocType?: number; customerDoc?: number } {
+  if (!customer || !customer.document) return { customerDocType: 99, customerDoc: 0 };
+  const docNum = parseInt(customer.document.replace(/[-.\s]/g, ''), 10);
+  if (isNaN(docNum)) return { customerDocType: 99, customerDoc: 0 };
+  if (customer.documentType === 'CUIT') return { customerDocType: 80, customerDoc: docNum };
+  if (customer.documentType === 'DNI') return { customerDocType: 96, customerDoc: docNum };
+  return { customerDocType: 99, customerDoc: 0 };
+}
+
 export class SalesController {
   constructor(
     private readonly service: SalesService,
@@ -182,16 +193,20 @@ export class SalesController {
         businessName: config.businessName,
         businessAddress: config.address,
         cuit: config.cuit,
+        ingBrutos: config.ingBrutos || undefined,
         businessUnitName: bu?.name ?? '',
         fiscalCondition: buildFiscalCondition(customer),
+        ...buildCustomerDocFields(customer),
         items: items.map((item) => ({
           name: item.productName,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           subtotal: item.lineTotal,
+          itemDiscount: item.discountPercent > 0 ? item.discountPercent : undefined,
         })),
-        subtotalSinIva: sale.taxableAmount > 0 ? sale.taxableAmount : undefined,
-        ivaAmount: sale.taxAmount > 0 ? sale.taxAmount : undefined,
+        subtotalBeforeDiscount: sale.discountAmount > 0 ? sale.subtotal : undefined,
+        globalDiscount: sale.discountPercent > 0 ? sale.discountPercent : undefined,
+        globalDiscountAmount: sale.discountAmount > 0 ? sale.discountAmount : undefined,
         total: sale.totalAmount,
         payments: sale.paymentMethods.map((p) => ({
           method: METHOD_LABELS[p.method] ?? p.method,
@@ -200,6 +215,7 @@ export class SalesController {
         change,
         cae: sale.cae ?? undefined,
         caeVto: sale.caeExpiration ?? undefined,
+        invoiceNumber: sale.invoiceNumber ?? undefined,
       };
 
       const result = await printerService.printSaleTicket(ticketData);

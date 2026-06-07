@@ -16,6 +16,7 @@ export class InstallationRepository {
     // that are not in the Drizzle schema are included in the result.
     type RawRow = {
       id: number; business_name: string; cuit: string | null; address: string | null;
+      ing_brutos: string | null;
       logo_path: string | null; created_at: string; updated_at: string;
       whatsapp_number: string | null; catalog_business_unit_id: number | null;
       printer_config: string | null; printer_enabled: number | null;
@@ -29,6 +30,7 @@ export class InstallationRepository {
       businessName:          row.business_name,
       cuit:                  row.cuit ?? '',
       address:               row.address ?? '',
+      ingBrutos:             row.ing_brutos ?? '',
       logoPath:              row.logo_path ?? null,
       createdAt:             row.created_at,
       updatedAt:             row.updated_at,
@@ -45,7 +47,7 @@ export class InstallationRepository {
    */
   update(data: UpdateInstallationDto): InstallationConfig {
     // Update core Drizzle-known columns
-    const { whatsappNumber, catalogBusinessUnitId, ...coreData } = data;
+    const { whatsappNumber, catalogBusinessUnitId, ingBrutos, ...coreData } = data;
     db.update(installationConfig)
       .set({ ...coreData, updatedAt: new Date().toISOString() })
       .where(eq(installationConfig.id, 1))
@@ -57,6 +59,9 @@ export class InstallationRepository {
     }
     if (catalogBusinessUnitId !== undefined) {
       sqlite.prepare('UPDATE installation_config SET catalog_business_unit_id = ? WHERE id = 1').run(catalogBusinessUnitId);
+    }
+    if (ingBrutos !== undefined) {
+      sqlite.prepare('UPDATE installation_config SET ing_brutos = ? WHERE id = 1').run(ingBrutos);
     }
 
     return this.get();

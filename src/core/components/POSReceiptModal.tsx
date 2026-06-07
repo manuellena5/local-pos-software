@@ -24,6 +24,17 @@ function buildFiscalCondition(customer: Customer | null | undefined): string {
   return customer.name;
 }
 
+function buildCustomerDocFields(
+  customer: Customer | null | undefined,
+): { customerDocType?: number; customerDoc?: number } {
+  if (!customer || !customer.document) return { customerDocType: 99, customerDoc: 0 };
+  const docNum = parseInt(customer.document.replace(/[-.\s]/g, ''), 10);
+  if (isNaN(docNum)) return { customerDocType: 99, customerDoc: 0 };
+  if (customer.documentType === 'CUIT') return { customerDocType: 80, customerDoc: docNum };
+  if (customer.documentType === 'DNI') return { customerDocType: 96, customerDoc: docNum };
+  return { customerDocType: 99, customerDoc: 0 };
+}
+
 function buildTicketData(
   sale: SaleWithItems,
   config: ReturnType<typeof useAppStore.getState>['config'],
@@ -42,10 +53,10 @@ function buildTicketData(
     minute: '2-digit',
   });
 
-  // Determinar vuelto: si hay pago en efectivo y el total pagado supera el total de venta
-  const cashPayment = s.paymentMethods.find((p) => p.method === 'cash');
   const totalPaid = s.paymentMethods.reduce((acc, p) => acc + p.amount, 0);
-  const change = totalPaid > s.totalAmount ? Math.round((totalPaid - s.totalAmount) * 100) / 100 : undefined;
+  const change = totalPaid > s.totalAmount
+    ? Math.round((totalPaid - s.totalAmount) * 100) / 100
+    : undefined;
 
   return {
     saleNumber: String(s.saleNumber).padStart(4, '0'),
@@ -54,24 +65,29 @@ function buildTicketData(
     businessName: config?.businessName ?? 'LocalPos',
     businessAddress: config?.address ?? '',
     cuit: config?.cuit ?? '',
+    ingBrutos: config?.ingBrutos || undefined,
     businessUnitName: activeBU?.name ?? '',
     fiscalCondition: buildFiscalCondition(customer),
+    ...buildCustomerDocFields(customer),
     items: items.map((item) => ({
       name: item.productName,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       subtotal: item.lineTotal,
+      itemDiscount: item.discountPercent > 0 ? item.discountPercent : undefined,
     })),
-    subtotalSinIva: s.taxableAmount > 0 ? s.taxableAmount : undefined,
-    ivaAmount: s.taxAmount > 0 ? s.taxAmount : undefined,
+    subtotalBeforeDiscount: s.discountAmount > 0 ? s.subtotal : undefined,
+    globalDiscount: s.discountPercent > 0 ? s.discountPercent : undefined,
+    globalDiscountAmount: s.discountAmount > 0 ? s.discountAmount : undefined,
     total: s.totalAmount,
     payments: s.paymentMethods.map((p) => ({
       method: METHOD_LABELS[p.method] ?? p.method,
       amount: p.amount,
     })),
-    change: cashPayment !== undefined ? change : undefined,
+    change,
     cae: s.cae ?? undefined,
     caeVto: s.caeExpiration ?? undefined,
+    invoiceNumber: s.invoiceNumber ?? undefined,
   };
 }
 

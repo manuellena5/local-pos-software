@@ -1,4 +1,5 @@
 import { ThermalPrinter, PrinterTypes, CharacterSet } from 'node-thermal-printer';
+import QRCode from 'qrcode';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import * as fs from 'fs';
@@ -323,8 +324,8 @@ class PrinterService {
     try {
       if (process.platform === 'win32' && this.currentConfig?.type === 'usb') {
         const printerName = this.currentConfig.portPath ?? '';
-        const buffer = await this.buildEscPosBuffer((p) => {
-          this.buildTicketContent(p, data);
+        const buffer = await this.buildEscPosBuffer(async (p) => {
+          await this.buildTicketContent(p, data);
         });
         await this.printWindowsRaw(printerName, buffer);
         return { success: true };
@@ -332,7 +333,7 @@ class PrinterService {
 
       // Network / Linux USB
       if (!this.printer) return { success: false, error: 'La impresora no está conectada.' };
-      this.buildTicketContent(this.printer, data);
+      await this.buildTicketContent(this.printer, data);
       await this.printer.execute();
       this.printer.clear();
       return { success: true };
@@ -362,7 +363,7 @@ class PrinterService {
 
   // ── buildTicketContent ────────────────────────────────────────────────────
 
-  private buildTicketContent(p: ThermalPrinter, data: SaleTicketData): void {
+  private async buildTicketContent(p: ThermalPrinter, data: SaleTicketData): Promise<void> {
     const W = this.currentConfig?.width ?? 48;
 
     // Feed inicial para que el papel salga del cabezal
@@ -373,51 +374,75 @@ class PrinterService {
     // Mayor densidad de tinta (raw ESC/POS)
     p.raw(Buffer.from([0x1b, 0x7c, 0x08]));
 
+    // ── HEADER ───────────────────────────────────────────────────────────────
     // Nombre del negocio: centrado, bold, doble tamaño
     p.alignCenter();
     p.setTextSize(1, 1);
     p.bold(true);
-    p.println(ticketTruncate(data.businessName, W / 2)); // W/2 porque fuente doble
+    p.println(ticketTruncate(data.businessName, Math.floor(W / 2)));
     p.setTextSize(0, 0);
     p.bold(false);
 
-    p.println(ticketTruncate(data.businessAddress, W));
+    if (data.businessAddress) p.println(ticketTruncate(data.businessAddress, W));
     p.println(ticketTruncate(`CUIT: ${data.cuit}`, W));
+    if (data.ingBrutos) p.println(ticketTruncate(`I.B.: ${data.ingBrutos}`, W));
+    p.println('Monotributista');
+
+    p.drawLine();
+
+    // ── CLIENTE + COMPROBANTE + FECHA ─────────────────────────────────────────
+    p.alignLeft();
+
+    // Cliente
     p.println(ticketTruncate(data.fiscalCondition, W));
 
+    // Número de comprobante o venta
+    if (data.invoiceNumber) {
+      p.println(ticketTruncate(`Comprobante: ${data.invoiceNumber}`, W));
+    } else {
+      p.println(`Venta N: ${data.saleNumber.padStart(4, '0')}`);
+    }
+
+    // Fecha y hora
+    p.println(`Fecha: ${data.date}  Hora: ${data.time}`);
+
     p.drawLine();
 
-    // Número de venta + fecha/hora
-    p.alignLeft();
-    p.println(`Venta N: ${data.saleNumber.padStart(4, '0')} ${data.date} ${data.time}`);
-
-    p.drawLine();
-
-    // Items (dos líneas por ítem)
+    // ── ÍTEMS ─────────────────────────────────────────────────────────────────
     for (const item of data.items) {
-      const nameLine = ticketTruncate(item.name, W);
-      p.println(nameLine);
-      const qtyLabel = `${item.quantity} x ${ticketMoney(item.unitPrice)}`;
-      const subtotalStr = ticketMoney(item.subtotal);
-      p.println(ticketRightAlign(qtyLabel, subtotalStr, W));
+      p.println(ticketTruncate(item.name, W));
+      const discountTag =
+        item.itemDiscount && item.itemDiscount > 0 ? ` (-${item.itemDiscount}%)` : '';
+      const qtyLabel = `${item.quantity} x ${ticketMoney(item.unitPrice)}${discountTag}`;
+      p.println(ticketRightAlign(qtyLabel, ticketMoney(item.subtotal), W));
     }
 
     p.drawLine();
 
-    // Total (bold)
+    // ── DESCUENTO GLOBAL + TOTAL ──────────────────────────────────────────────
+    if (
+      data.globalDiscount &&
+      data.globalDiscount > 0 &&
+      data.subtotalBeforeDiscount !== undefined &&
+      data.globalDiscountAmount !== undefined
+    ) {
+      p.println(ticketRightAlign('Subtotal', ticketMoney(data.subtotalBeforeDiscount), W));
+      p.println(
+        ticketRightAlign(
+          `Descuento (${data.globalDiscount}%)`,
+          `-${ticketMoney(data.globalDiscountAmount)}`,
+          W,
+        ),
+      );
+    }
+
     p.bold(true);
     p.println(ticketRightAlign('TOTAL', ticketMoney(data.total), W));
     p.bold(false);
 
-    // Desglose fiscal (solo si tiene IVA)
-    if (data.subtotalSinIva !== undefined && data.ivaAmount !== undefined) {
-      p.println(ticketRightAlign('Sin IVA', ticketMoney(data.subtotalSinIva), W));
-      p.println(ticketRightAlign('IVA 21%', ticketMoney(data.ivaAmount), W));
-    }
-
     p.drawLine();
 
-    // Medios de pago
+    // ── MEDIOS DE PAGO + VUELTO ───────────────────────────────────────────────
     for (const payment of data.payments) {
       p.println(ticketRightAlign(payment.method, ticketMoney(payment.amount), W));
     }
@@ -427,19 +452,47 @@ class PrinterService {
 
     p.drawLine();
 
-    // CAE (si tiene factura electrónica)
+    // ── CAE + QR AFIP ─────────────────────────────────────────────────────────
     if (data.cae) {
       p.alignLeft();
       p.println(`CAE: ${data.cae}`);
-      if (data.caeVto) p.println(`Vto: ${data.caeVto}`);
+      if (data.caeVto) {
+        const raw = data.caeVto;
+        const vtoFormatted =
+          raw.length === 8
+            ? `${raw.slice(6, 8)}/${raw.slice(4, 6)}/${raw.slice(0, 4)}`
+            : raw;
+        p.println(`Vto: ${vtoFormatted}`);
+      }
+
+      // QR AFIP (RG 4291/2018)
+      const qrUrl = buildAfipQrUrl(data);
+      if (qrUrl) {
+        p.alignCenter();
+        try {
+          p.printQR(qrUrl, { cellSize: 4, correction: 'M' });
+        } catch {
+          // Fallback: generar imagen PNG si la impresora no soporta QR nativo
+          const qrBuffer = await QRCode.toBuffer(qrUrl, { width: 160 });
+          const qrTempFile = path.join(os.tmpdir(), `localpos_qr_${Date.now()}.png`);
+          fs.writeFileSync(qrTempFile, qrBuffer);
+          try {
+            await p.printImage(qrTempFile);
+          } finally {
+            try { fs.unlinkSync(qrTempFile); } catch { /* ignorar */ }
+          }
+        }
+      }
+
+      p.alignLeft();
       p.drawLine();
     }
 
-    // Cierre
+    // ── CIERRE ────────────────────────────────────────────────────────────────
     p.alignCenter();
     p.println('Gracias por su compra!');
 
-    // Feed final + corte parcial (GS V 01)
+    // Feed final + corte
     p.newLine();
     p.newLine();
     p.newLine();
@@ -452,7 +505,7 @@ class PrinterService {
    * a un archivo temporal (evita necesitar @thiagoelg/node-printer).
    */
   private async buildEscPosBuffer(
-    buildFn: (printer: ThermalPrinter) => void,
+    buildFn: (printer: ThermalPrinter) => Promise<void> | void,
   ): Promise<Buffer> {
     const tempFile = path.join(os.tmpdir(), `localpos_buf_${Date.now()}.bin`);
     const p = new ThermalPrinter({
@@ -462,7 +515,7 @@ class PrinterService {
       characterSet:
         (this.currentConfig?.characterSet as CharacterSet | undefined) ?? CharacterSet.PC858_EURO,
     });
-    buildFn(p);
+    await buildFn(p);
     await p.execute();
     const buffer = fs.readFileSync(tempFile);
     try { fs.unlinkSync(tempFile); } catch { /* ignorar */ }
@@ -509,6 +562,61 @@ function ticketRightAlign(label: string, value: string, width: number): string {
 
 function ticketTruncate(text: string, maxLen: number): string {
   return text.length > maxLen ? text.slice(0, maxLen - 3) + '...' : text;
+}
+
+/**
+ * Construye la URL del QR de AFIP según RG 4291/2018.
+ * Retorna null si los datos no son suficientes para generarlo.
+ */
+function buildAfipQrUrl(data: SaleTicketData): string | null {
+  if (!data.cae || !data.invoiceNumber) return null;
+
+  // Parsear invoiceNumber: "C-0001-00000014" → ptoVta=1, nroCmp=14, tipoCmp=11 (Factura C)
+  const parts = data.invoiceNumber.split('-');
+  if (parts.length !== 3) return null;
+  const tipo = parts[0] ?? '';
+  const ptoVta = parseInt(parts[1] ?? '0', 10);
+  const nroCmp = parseInt(parts[2] ?? '0', 10);
+
+  // tipoCmp: C=11, B=6, A=1, Ticket=83
+  const tipoCmpMap: Record<string, number> = { A: 1, B: 6, C: 11 };
+  const tipoCmp = tipoCmpMap[tipo.toUpperCase()] ?? 83;
+
+  // Datos del receptor
+  const tipoDocRec = data.customerDocType ?? 99;
+  const nroDocRec = data.customerDoc ?? 0;
+
+  // CUIT del emisor como número (sacar guiones)
+  const cuitNum = parseInt(data.cuit.replace(/-/g, ''), 10);
+  const caeNum = parseInt(data.cae, 10);
+
+  // Fecha en formato YYYY-MM-DD
+  const [day, month, year] = data.date.split('/');
+  const fecha = `${year}-${month}-${day}`;
+
+  const payload = {
+    ver: 1,
+    fecha,
+    cuit: cuitNum,
+    ptoVta,
+    tipoCmp,
+    nroCmp,
+    importe: data.total,
+    moneda: 'PES',
+    ctz: 1,
+    tipoDocRec,
+    nroDocRec,
+    tipoCodAut: 'E',
+    codAut: caeNum,
+  };
+
+  const base64url = Buffer.from(JSON.stringify(payload))
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  return `https://www.afip.gob.ar/fe/qr/?p=${base64url}`;
 }
 
 export const printerService = new PrinterService();
