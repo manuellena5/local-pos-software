@@ -386,7 +386,6 @@ class PrinterService {
     if (data.businessAddress) p.println(ticketTruncate(data.businessAddress, W));
     p.println(ticketTruncate(`CUIT: ${data.cuit}`, W));
     if (data.ingBrutos) p.println(ticketTruncate(`I.B.: ${data.ingBrutos}`, W));
-    if (data.businessFiscalCondition) p.println(ticketTruncate(data.businessFiscalCondition, W));
 
     p.drawLine();
 
