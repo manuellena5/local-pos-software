@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useCashbox } from '@/core/hooks/useCashbox';
 import { cashboxApi } from '@/lib/api/cashbox';
 import { CashAuditForm } from './CashAuditForm';
-import type { CashMovementType } from '@shared/types';
+import { ReporteZModal } from './ReporteZModal';
+import type { CashAudit, CashMovementType } from '@shared/types';
 import type { AuditWithTimes } from '@/lib/api/cashbox';
 
 interface Props {
@@ -273,7 +274,7 @@ function AuditModal({
 }: {
   businessUnitId: number;
   theoreticalBalance: number;
-  onDone: () => void;
+  onDone: (audit: CashAudit) => void;
   onClose: () => void;
 }) {
   return (
@@ -304,6 +305,15 @@ export function CashboxPage({ businessUnitId }: Props) {
   const [showOpenPanel, setShowOpenPanel] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showAddMovement, setShowAddMovement] = useState(false);
+  const [reporteZAuditId, setReporteZAuditId] = useState<number | null>(null);
+
+  const reporteZOverlay = reporteZAuditId !== null ? (
+    <ReporteZModal
+      auditId={reporteZAuditId}
+      businessUnitId={businessUnitId}
+      onClose={() => setReporteZAuditId(null)}
+    />
+  ) : null;
 
   if (loading) {
     return <p className="text-center text-gray-400 py-8">Cargando caja...</p>;
@@ -311,25 +321,36 @@ export function CashboxPage({ businessUnitId }: Props) {
 
   if (sessionStatus !== 'open' && !showOpenPanel) {
     if (sessionStatus === 'never_opened') {
-      return <OpenSessionPanel businessUnitId={businessUnitId} onOpened={refetch} />;
+      return (
+        <>
+          {reporteZOverlay}
+          <OpenSessionPanel businessUnitId={businessUnitId} onOpened={refetch} />
+        </>
+      );
     }
     return (
-      <ClosedSessionPanel
-        lastAudit={auditHistory[0] ?? null}
-        onReopen={() => setShowOpenPanel(true)}
-      />
+      <>
+        {reporteZOverlay}
+        <ClosedSessionPanel
+          lastAudit={auditHistory[0] ?? null}
+          onReopen={() => setShowOpenPanel(true)}
+        />
+      </>
     );
   }
 
   if (showOpenPanel) {
     return (
-      <OpenSessionPanel
-        businessUnitId={businessUnitId}
-        onOpened={() => {
-          setShowOpenPanel(false);
-          refetch();
-        }}
-      />
+      <>
+        {reporteZOverlay}
+        <OpenSessionPanel
+          businessUnitId={businessUnitId}
+          onOpened={() => {
+            setShowOpenPanel(false);
+            refetch();
+          }}
+        />
+      </>
     );
   }
 
@@ -359,13 +380,16 @@ export function CashboxPage({ businessUnitId }: Props) {
         <AuditModal
           businessUnitId={businessUnitId}
           theoreticalBalance={balance}
-          onDone={() => {
+          onDone={(audit) => {
             setShowAuditModal(false);
+            setReporteZAuditId(audit.id);
             refetch();
           }}
           onClose={() => setShowAuditModal(false)}
         />
       )}
+
+      {reporteZOverlay}
 
       <div className="flex gap-6">
         {/* COLUMNA IZQUIERDA */}
@@ -572,6 +596,7 @@ export function CashboxPage({ businessUnitId }: Props) {
                   <th className="text-left text-xs text-gray-500 font-medium py-2.5 px-4">
                     Estado
                   </th>
+                  <th className="py-2.5 px-4" />
                 </tr>
               </thead>
               <tbody>
@@ -606,6 +631,14 @@ export function CashboxPage({ businessUnitId }: Props) {
                       >
                         {AUDIT_STATUS_LABEL[a.status]}
                       </span>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <button
+                        onClick={() => setReporteZAuditId(a.id)}
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline whitespace-nowrap"
+                      >
+                        Ver Reporte Z
+                      </button>
                     </td>
                   </tr>
                 ))}

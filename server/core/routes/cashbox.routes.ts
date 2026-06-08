@@ -3,11 +3,16 @@ import { CashMovementRepository } from '../repositories/CashMovementRepository';
 import { CashAuditRepository } from '../repositories/CashAuditRepository';
 import { CashboxService } from '../services/CashboxService';
 import { CashboxController } from '../controllers/CashboxController';
+import { ReporteZService } from '../services/ReporteZService';
+import { ReporteZController } from '../controllers/ReporteZController';
 
 const movementRepo = new CashMovementRepository();
 const auditRepo = new CashAuditRepository();
 export const cashboxService = new CashboxService(movementRepo, auditRepo);
 const controller = new CashboxController(cashboxService);
+
+const reporteZService = new ReporteZService(auditRepo, movementRepo);
+const reporteZController = new ReporteZController(reporteZService);
 
 export const cashboxRouter = Router();
 
@@ -20,3 +25,6 @@ cashboxRouter.get('/cashbox/status', (req, res, next) => controller.getSessionSt
 cashboxRouter.post('/cashbox/open', (req, res, next) => controller.openSession(req, res, next));
 cashboxRouter.get('/cashbox/session-data', (req, res, next) => controller.getSessionData(req, res, next));
 cashboxRouter.get('/cashbox/audit-history', (req, res, next) => controller.getAuditHistoryWithTimes(req, res, next));
+cashboxRouter.get('/cashbox/audits/:auditId/reporte-z', (req, res, next) =>
+  reporteZController.getReporteZ(req, res, next),
+);

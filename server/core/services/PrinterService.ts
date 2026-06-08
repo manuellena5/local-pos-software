@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import type { PrinterConfig, PrinterStatus, SaleTicketData } from '../../../shared/types';
+import type { PrinterConfig, PrinterStatus, SaleTicketData, ReporteZData } from '../../../shared/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PowerShell: impresión real via Win32 WritePrinter (RAW).
@@ -447,6 +447,132 @@ class PrinterService {
       this.printer = null;
       return { success: false, error: message };
     }
+  }
+
+  // ── printReporteZ ─────────────────────────────────────────────────────────
+
+  /**
+   * Imprime el Reporte Z de cierre de caja en formato ESC/POS 58mm.
+   */
+  async printReporteZ(data: ReporteZData): Promise<{ success: boolean; error?: string }> {
+    if (this.currentStatus !== 'connected') {
+      return { success: false, error: 'La impresora no está conectada.' };
+    }
+
+    try {
+      if (process.platform === 'win32' && this.currentConfig?.type === 'usb') {
+        const printerName = this.currentConfig.portPath ?? '';
+        const buffer = await this.buildEscPosBuffer((p) => this.buildReporteZContent(p, data));
+        await this.printWindowsRaw(printerName, buffer);
+        return { success: true };
+      }
+
+      if (!this.printer) return { success: false, error: 'La impresora no está conectada.' };
+      this.buildReporteZContent(this.printer, data);
+      await this.printer.execute();
+      this.printer.clear();
+      return { success: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al imprimir el Reporte Z.';
+      this.currentStatus = 'disconnected';
+      this.currentConfig = null;
+      this.printer = null;
+      return { success: false, error: message };
+    }
+  }
+
+  private buildReporteZContent(p: ThermalPrinter, data: ReporteZData): void {
+    const W = this.currentConfig?.width ?? 32;
+
+    p.newLine();
+    p.newLine();
+    p.newLine();
+
+    p.alignCenter();
+    p.bold(true);
+    p.setTextSize(1, 1);
+    p.println(ticketTruncate(data.businessName, Math.floor(W / 2)));
+    p.setTextSize(0, 0);
+    p.bold(false);
+
+    p.println(ticketTruncate(data.businessUnitName, W));
+    p.println('*** REPORTE Z ***');
+
+    p.drawLine();
+
+    p.alignLeft();
+    const openDate = data.openedAt.slice(0, 10).split('-').reverse().join('/');
+    const openTime = data.openedAt.slice(11, 16);
+    const closeDate = data.closedAt.slice(0, 10).split('-').reverse().join('/');
+    const closeTime = data.closedAt.slice(11, 16);
+    p.println(`Apertura: ${openDate} ${openTime}`);
+    p.println(`Cierre:   ${closeDate} ${closeTime}`);
+    if (data.operatorEmail) {
+      p.println(ticketTruncate(`Operador: ${data.operatorEmail}`, W));
+    }
+
+    p.drawLine();
+
+    p.bold(true);
+    p.println('VENTAS DEL PERIODO');
+    p.bold(false);
+    p.println(ticketRightAlign('Cantidad:', String(data.sales.count), W));
+    p.println(ticketRightAlign('Anuladas:', String(data.sales.cancelledCount), W));
+    p.println(ticketRightAlign('Ticket prom.:', ticketMoney(data.sales.averageTicket), W));
+    p.bold(true);
+    p.println(ticketRightAlign('TOTAL VENTAS', ticketMoney(data.sales.total), W));
+    p.bold(false);
+
+    if (data.sales.byPaymentMethod.length > 0) {
+      p.drawLine();
+      p.bold(true);
+      p.println('DESGLOSE POR MEDIO DE PAGO');
+      p.bold(false);
+      for (const pm of data.sales.byPaymentMethod) {
+        p.println(ticketRightAlign(pm.method, ticketMoney(pm.amount), W));
+      }
+    }
+
+    p.drawLine();
+
+    p.bold(true);
+    p.println('MOVIMIENTOS DE CAJA');
+    p.bold(false);
+    p.println(ticketRightAlign('Saldo inicial:', ticketMoney(data.cash.openingBalance), W));
+    p.println(ticketRightAlign('Ing. manuales:', ticketMoney(data.cash.manualIncome), W));
+    p.println(ticketRightAlign('Egr. manuales:', ticketMoney(data.cash.manualExpense), W));
+    p.println(ticketRightAlign('Cobros:', ticketMoney(data.cash.cashSalesTotal), W));
+    p.println(ticketRightAlign('Saldo teorico:', ticketMoney(data.cash.theoreticalBalance), W));
+    p.println(ticketRightAlign('Saldo declarado:', ticketMoney(data.cash.declaredBalance), W));
+    const diffSign = data.cash.difference >= 0 ? '+' : '-';
+    p.bold(true);
+    p.println(
+      ticketRightAlign(
+        'Diferencia:',
+        `${diffSign}${ticketMoney(Math.abs(data.cash.difference))}`,
+        W,
+      ),
+    );
+    p.bold(false);
+
+    if (data.afip.emitted > 0 || data.afip.pending > 0) {
+      p.drawLine();
+      p.bold(true);
+      p.println('FACTURACION AFIP');
+      p.bold(false);
+      p.println(ticketRightAlign('Emitidos:', String(data.afip.emitted), W));
+      p.println(ticketRightAlign('Pendientes:', String(data.afip.pending), W));
+    }
+
+    p.drawLine();
+    p.alignCenter();
+    p.println(data.generatedAt);
+
+    p.newLine();
+    p.newLine();
+    p.newLine();
+    p.newLine();
+    p.partialCut();
   }
 
   // ── disconnect ────────────────────────────────────────────────────────────

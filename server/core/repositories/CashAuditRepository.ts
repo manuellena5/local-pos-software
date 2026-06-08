@@ -66,6 +66,11 @@ export class CashAuditRepository {
     return row ? rowToModel(row) : null;
   }
 
+  getById(id: number): CashAudit | null {
+    const row = db.select().from(cashAudits).where(eq(cashAudits.id, id)).get();
+    return row ? rowToModel(row) : null;
+  }
+
   getByDate(businessUnitId: number, date: string): CashAudit | null {
     const row = db
       .select()

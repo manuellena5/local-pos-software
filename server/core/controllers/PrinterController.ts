@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ValidationError } from '../../lib/errors';
 import { printerService } from '../services/PrinterService';
 import type { PrinterRepository } from '../repositories/PrinterRepository';
+import type { ReporteZData } from '../../../shared/types';
 
 const saleTicketDataSchema = z.object({
   saleNumber: z.string(),
@@ -116,6 +117,19 @@ export class PrinterController {
         throw new ValidationError(parsed.error.errors[0]?.message ?? 'Datos del ticket inválidos');
       }
       const result = await printerService.printSaleTicket(parsed.data);
+      res.json({ data: result, error: null });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  printReporteZ = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = req.body as ReporteZData;
+      if (!data || typeof data.sessionId !== 'number') {
+        throw new ValidationError('Datos del Reporte Z inválidos');
+      }
+      const result = await printerService.printReporteZ(data);
       res.json({ data: result, error: null });
     } catch (err) {
       next(err);

@@ -387,6 +387,42 @@ export interface CashAudit {
   createdAt: string;
 }
 
+// ── DT-02: Reporte Z ─────────────────────────────────────────────────────
+
+export interface ReporteZData {
+  sessionId: number;
+  businessUnitName: string;
+  businessName: string;
+  openedAt: string;
+  closedAt: string;
+  operatorEmail: string | null;
+
+  sales: {
+    total: number;
+    count: number;
+    cancelledCount: number;
+    averageTicket: number;
+    byPaymentMethod: Array<{ method: string; amount: number }>;
+  };
+
+  cash: {
+    openingBalance: number;
+    manualIncome: number;
+    manualExpense: number;
+    cashSalesTotal: number;
+    theoreticalBalance: number;
+    declaredBalance: number;
+    difference: number;
+  };
+
+  afip: {
+    emitted: number;
+    pending: number;
+  };
+
+  generatedAt: string;
+}
+
 // ── Fase 5: Reportes ──────────────────────────────────────────────────────
 
 export interface SalesReport {

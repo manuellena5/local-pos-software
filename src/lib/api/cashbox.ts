@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { CashMovement, CashAudit, CashSessionStatus } from '@shared/types';
+import type { CashMovement, CashAudit, CashSessionStatus, ReporteZData } from '@shared/types';
 
 export interface CashBalance {
   theoretical: number;
@@ -70,5 +70,15 @@ export const cashboxApi = {
 
   getAuditHistoryWithTimes(businessUnitId: number): Promise<AuditWithTimes[]> {
     return apiClient.get(`/api/cashbox/audit-history?businessUnitId=${businessUnitId}`);
+  },
+
+  getReporteZ(auditId: number, businessUnitId: number): Promise<ReporteZData> {
+    return apiClient.get(
+      `/api/cashbox/audits/${auditId}/reporte-z?businessUnitId=${businessUnitId}`,
+    );
+  },
+
+  printReporteZ(data: ReporteZData): Promise<{ success: boolean; error?: string }> {
+    return apiClient.post('/api/printer/print-reporte-z', data);
   },
 };
