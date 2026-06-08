@@ -339,11 +339,11 @@ class PrinterService {
       return { success: true };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al imprimir.';
-      // Solo cambiar estado si no es Windows USB (en Windows la conexión puede seguir válida)
-      if (!(process.platform === 'win32' && this.currentConfig?.type === 'usb')) {
-        this.currentStatus = 'disconnected';
-        this.printer = null;
-      }
+      // Cualquier fallo de impresión marca como desconectada — el usuario tendrá
+      // que reconectar manualmente, pero es mejor que mostrar un estado falso.
+      this.currentStatus = 'disconnected';
+      this.currentConfig = null;
+      this.printer = null;
       return { success: false, error: message };
     }
   }
@@ -377,10 +377,9 @@ class PrinterService {
       return { success: true };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al imprimir el ticket.';
-      if (!(process.platform === 'win32' && this.currentConfig?.type === 'usb')) {
-        this.currentStatus = 'disconnected';
-        this.printer = null;
-      }
+      this.currentStatus = 'disconnected';
+      this.currentConfig = null;
+      this.printer = null;
       return { success: false, error: message };
     }
   }

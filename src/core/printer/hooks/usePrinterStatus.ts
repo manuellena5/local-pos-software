@@ -3,7 +3,7 @@ import { useAppStore } from '@/core/store/appStore';
 import { printerApi } from '@/lib/api/printer';
 import type { PrinterConfig, PrinterStatus } from '@shared/types';
 
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 10_000;
 
 /**
  * Hook que hace polling al estado de la impresora cada 30 segundos
