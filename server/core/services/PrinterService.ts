@@ -174,6 +174,20 @@ class PrinterService {
         };
       }
 
+      // Verificación física: enviar ESC @ (inicializar impresora — no imprime nada).
+      // wmic solo consulta el spooler de Windows y muestra la impresora como
+      // disponible incluso cuando está desenchufada. El write real al puerto USB
+      // falla si el dispositivo no está físicamente presente.
+      try {
+        const pingBuffer = Buffer.from([0x1b, 0x40]); // ESC @ = printer init
+        await this.printWindowsRaw(printerName, pingBuffer);
+      } catch {
+        return {
+          success: false,
+          error: `La impresora "${printerName}" no responde. Verificá que esté encendida y conectada por USB.`,
+        };
+      }
+
       this.currentStatus = 'connected';
       this.currentConfig = config;
       return { success: true };
@@ -232,48 +246,21 @@ class PrinterService {
   /**
    * Verifica activamente el estado. Detecta desconexiones físicas sin crashear.
    * Usado por el endpoint de polling.
+   *
+   * Para Windows USB: envía ESC @ (inicializar impresora, sin output visible)
+   * via Win32 WritePrinter. Si el dispositivo USB no está presente, el write
+   * falla y marcamos como desconectada. wmic por sí solo no es suficiente
+   * porque muestra la impresora instalada aunque esté desenchufada.
    */
   async checkStatus(): Promise<PrinterStatus> {
     if (this.currentStatus === 'disconnected') return 'disconnected';
 
-    // Windows USB: verificar via wmic con PrinterStatus + WorkOffline.
-    // Solo usar WorkOffline no alcanza: esa flag solo se pone TRUE cuando el
-    // usuario la activa manualmente. PrinterStatus refleja el estado real del
-    // driver (0/3=Idle=listo, 128=offline, 2=error).
     if (process.platform === 'win32' && this.currentConfig?.type === 'usb') {
+      const printerName = this.currentConfig.portPath ?? '';
       try {
-        const printerName = this.currentConfig.portPath ?? '';
-        // Pedimos PrinterStatus además de WorkOffline
-        const output = execSync(
-          'wmic printer get Name,WorkOffline,PrinterStatus /format:csv',
-          { encoding: 'utf8', timeout: 3000 },
-        );
-        const lines = output.split('\n');
-        const line = lines.find((l) => l.toLowerCase().includes(printerName.toLowerCase()));
-
-        if (!line) {
-          // Impresora no encontrada en Windows → desconectada
-          this.currentStatus = 'disconnected';
-          this.currentConfig = null;
-          return this.currentStatus;
-        }
-
-        // WorkOffline: si TRUE → desconectada
-        const isOfflineByFlag = /,TRUE[,\r]?$/i.test(line) || line.toUpperCase().includes(',TRUE,');
-
-        // PrinterStatus: extraer el número de la línea CSV
-        // Formato CSV: Node,Name,PrinterStatus,WorkOffline
-        const cols = line.split(',');
-        // cols[2] debería ser PrinterStatus (orden alfabético wmic)
-        const statusCode = parseInt(cols[2] ?? '0', 10);
-        // Códigos de estado Windows: 3=Idle(OK), 4=Printing(OK), 128=Offline, 2=Error
-        // Si el status no es Idle(3) ni Printing(4) ni Warmup(5), algo no está bien
-        const isReadyStatus = statusCode === 0 || statusCode === 3 || statusCode === 4 || statusCode === 5;
-
-        if (isOfflineByFlag || !isReadyStatus) {
-          this.currentStatus = 'disconnected';
-          this.currentConfig = null;
-        }
+        const pingBuffer = Buffer.from([0x1b, 0x40]); // ESC @ = printer init
+        await this.printWindowsRaw(printerName, pingBuffer);
+        // Si llegamos acá, la impresora respondió correctamente
       } catch {
         this.currentStatus = 'disconnected';
         this.currentConfig = null;
