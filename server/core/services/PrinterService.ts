@@ -138,10 +138,10 @@ class PrinterService {
       return { success: false, error: 'Nombre de impresora requerido.' };
     }
     try {
-      const output = execSync('wmic printer get Name,WorkOffline /format:csv', {
-        encoding: 'utf8',
-        timeout: 5000,
-      });
+      const output = execSync(
+        'wmic printer get Name,WorkOffline,PrinterStatus /format:csv',
+        { encoding: 'utf8', timeout: 5000 },
+      );
       const lines = output.split('\n').map((l) => l.trim()).filter(Boolean);
       const printerLine = lines.find((l) =>
         l.toLowerCase().includes(printerName.toLowerCase()),
@@ -153,13 +153,27 @@ class PrinterService {
           error: `Impresora "${printerName}" no encontrada en Windows. Verificá el nombre en Dispositivos e impresoras.`,
         };
       }
-      // WorkOffline = TRUE → offline
+
+      // WorkOffline = TRUE → modo offline manual
       if (/,TRUE[,\r]?$/i.test(printerLine) || printerLine.toUpperCase().includes(',TRUE,')) {
         return {
           success: false,
           error: `La impresora "${printerName}" está en modo offline. Desactivá "Usar impresora sin conexión" desde Windows.`,
         };
       }
+
+      // PrinterStatus: 3=Idle, 4=Printing, 5=Warmup → OK
+      // 128=Offline, 2=Error → no disponible
+      const cols = printerLine.split(',');
+      const statusCode = parseInt(cols[2] ?? '0', 10);
+      const isReady = statusCode === 0 || statusCode === 3 || statusCode === 4 || statusCode === 5;
+      if (!isReady) {
+        return {
+          success: false,
+          error: `La impresora "${printerName}" no está disponible (estado: ${statusCode}). Verificá que esté encendida y conectada.`,
+        };
+      }
+
       this.currentStatus = 'connected';
       this.currentConfig = config;
       return { success: true };
@@ -222,17 +236,41 @@ class PrinterService {
   async checkStatus(): Promise<PrinterStatus> {
     if (this.currentStatus === 'disconnected') return 'disconnected';
 
-    // Windows USB: verify via wmic
+    // Windows USB: verificar via wmic con PrinterStatus + WorkOffline.
+    // Solo usar WorkOffline no alcanza: esa flag solo se pone TRUE cuando el
+    // usuario la activa manualmente. PrinterStatus refleja el estado real del
+    // driver (0/3=Idle=listo, 128=offline, 2=error).
     if (process.platform === 'win32' && this.currentConfig?.type === 'usb') {
       try {
         const printerName = this.currentConfig.portPath ?? '';
-        const output = execSync('wmic printer get Name,WorkOffline /format:csv', {
-          encoding: 'utf8',
-          timeout: 3000,
-        });
+        // Pedimos PrinterStatus además de WorkOffline
+        const output = execSync(
+          'wmic printer get Name,WorkOffline,PrinterStatus /format:csv',
+          { encoding: 'utf8', timeout: 3000 },
+        );
         const lines = output.split('\n');
         const line = lines.find((l) => l.toLowerCase().includes(printerName.toLowerCase()));
-        if (!line || /,TRUE[,\r]?$/i.test(line) || line.toUpperCase().includes(',TRUE,')) {
+
+        if (!line) {
+          // Impresora no encontrada en Windows → desconectada
+          this.currentStatus = 'disconnected';
+          this.currentConfig = null;
+          return this.currentStatus;
+        }
+
+        // WorkOffline: si TRUE → desconectada
+        const isOfflineByFlag = /,TRUE[,\r]?$/i.test(line) || line.toUpperCase().includes(',TRUE,');
+
+        // PrinterStatus: extraer el número de la línea CSV
+        // Formato CSV: Node,Name,PrinterStatus,WorkOffline
+        const cols = line.split(',');
+        // cols[2] debería ser PrinterStatus (orden alfabético wmic)
+        const statusCode = parseInt(cols[2] ?? '0', 10);
+        // Códigos de estado Windows: 3=Idle(OK), 4=Printing(OK), 128=Offline, 2=Error
+        // Si el status no es Idle(3) ni Printing(4) ni Warmup(5), algo no está bien
+        const isReadyStatus = statusCode === 0 || statusCode === 3 || statusCode === 4 || statusCode === 5;
+
+        if (isOfflineByFlag || !isReadyStatus) {
           this.currentStatus = 'disconnected';
           this.currentConfig = null;
         }
