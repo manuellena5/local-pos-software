@@ -9,7 +9,7 @@ import { execSync } from 'child_process';
 import type { PrinterConfig, PrinterStatus, SaleTicketData } from '../../../shared/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PowerShell script for raw Windows printing via Win32 WritePrinter API.
+// PowerShell: impresión real via Win32 WritePrinter (RAW).
 // Receives -PrinterName and -FilePath as parameters.
 // ─────────────────────────────────────────────────────────────────────────────
 const WIN_PRINT_PS = `
@@ -60,6 +60,72 @@ try {
 [LocalPosPrint]::EndPagePrinter($hPrinter) | Out-Null
 [LocalPosPrint]::EndDocPrinter($hPrinter) | Out-Null
 [LocalPosPrint]::ClosePrinter($hPrinter) | Out-Null
+Write-Output "OK"
+`.trim();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PowerShell: PING de conexión — verifica que el dispositivo USB responda.
+// Envía ESC @ (inicializar impresora, sin output visible) y usa AbortPrinter
+// para cancelar el job inmediatamente. Así no imprime nada y no genera
+// notificaciones de Windows si la impresora no está disponible.
+// Exits 1 si la impresora no responde; exits 0 si OK.
+// ─────────────────────────────────────────────────────────────────────────────
+const WIN_PING_PS = `
+param([string]$PrinterName)
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class LocalPosPing {
+    [DllImport("winspool.drv", CharSet=CharSet.Unicode, EntryPoint="OpenPrinterW")]
+    public static extern bool OpenPrinter(string n, out IntPtr h, IntPtr d);
+    [DllImport("winspool.drv")]
+    public static extern bool ClosePrinter(IntPtr h);
+    [DllImport("winspool.drv")]
+    public static extern bool AbortPrinter(IntPtr h);
+    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+    public struct DOCINFOW {
+        [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+        [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+        [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+    }
+    [DllImport("winspool.drv", CharSet=CharSet.Unicode, EntryPoint="StartDocPrinterW")]
+    public static extern int StartDocPrinter(IntPtr h, int lvl, ref DOCINFOW doc);
+    [DllImport("winspool.drv")]
+    public static extern bool StartPagePrinter(IntPtr h);
+    [DllImport("winspool.drv")]
+    public static extern bool WritePrinter(IntPtr h, IntPtr p, int c, out int w);
+}
+"@
+$hPrinter = [IntPtr]::Zero
+if (-not [LocalPosPing]::OpenPrinter($PrinterName, [ref]$hPrinter, [IntPtr]::Zero)) {
+    Write-Error "ERROR: Cannot open printer '$PrinterName'"
+    exit 1
+}
+$doc = New-Object LocalPosPing+DOCINFOW
+$doc.pDocName = "LocalPOS-Ping"
+$doc.pDataType = "RAW"
+$jobId = [LocalPosPing]::StartDocPrinter($hPrinter, 1, [ref]$doc)
+if ($jobId -le 0) {
+    [LocalPosPing]::ClosePrinter($hPrinter)
+    Write-Error "ERROR: StartDocPrinter failed - printer not available"
+    exit 1
+}
+# Enviar ESC @ (2 bytes: inicializar impresora, sin output visible)
+$bytes = [byte[]]@(0x1B, 0x40)
+[LocalPosPing]::StartPagePrinter($hPrinter) | Out-Null
+$pin = [System.Runtime.InteropServices.GCHandle]::Alloc($bytes, "Pinned")
+$written = 0
+$writeOk = $false
+try {
+    $writeOk = [LocalPosPing]::WritePrinter($hPrinter, $pin.AddrOfPinnedObject(), $bytes.Length, [ref]$written)
+} finally { $pin.Free() }
+# AbortPrinter cancela el job inmediatamente (sin imprimir, sin notificacion de Windows)
+[LocalPosPing]::AbortPrinter($hPrinter) | Out-Null
+[LocalPosPing]::ClosePrinter($hPrinter) | Out-Null
+if (-not $writeOk -or $written -ne $bytes.Length) {
+    Write-Error "ERROR: WritePrinter failed (ok=$writeOk written=$written)"
+    exit 1
+}
 Write-Output "OK"
 `.trim();
 
@@ -174,17 +240,14 @@ class PrinterService {
         };
       }
 
-      // Verificación física: enviar ESC @ (inicializar impresora — no imprime nada).
-      // wmic solo consulta el spooler de Windows y muestra la impresora como
-      // disponible incluso cuando está desenchufada. El write real al puerto USB
-      // falla si el dispositivo no está físicamente presente.
-      try {
-        const pingBuffer = Buffer.from([0x1b, 0x40]); // ESC @ = printer init
-        await this.printWindowsRaw(printerName, pingBuffer);
-      } catch {
+      // Verificación física real: WIN_PING_PS envía ESC @ y usa AbortPrinter
+      // para cancelar inmediatamente. wmic solo ve el spooler de Windows, que
+      // muestra la impresora instalada aunque esté desenchufada.
+      const pingError = await this.pingWindowsUsb(printerName);
+      if (pingError) {
         return {
           success: false,
-          error: `La impresora "${printerName}" no responde. Verificá que esté encendida y conectada por USB.`,
+          error: `La impresora "${printerName}" no responde. Verificá que esté encendida y conectada por USB. (${pingError})`,
         };
       }
 
@@ -247,20 +310,35 @@ class PrinterService {
    * Verifica activamente el estado. Detecta desconexiones físicas sin crashear.
    * Usado por el endpoint de polling.
    *
-   * Para Windows USB: envía ESC @ (inicializar impresora, sin output visible)
-   * via Win32 WritePrinter. Si el dispositivo USB no está presente, el write
-   * falla y marcamos como desconectada. wmic por sí solo no es suficiente
-   * porque muestra la impresora instalada aunque esté desenchufada.
+   * Para Windows USB: usa wmic (sin enviar datos, para no generar notificaciones
+   * de Windows cuando la impresora está offline) + chequea jobs en error.
+   * La detección definitiva ocurre cuando una impresión falla.
    */
   async checkStatus(): Promise<PrinterStatus> {
     if (this.currentStatus === 'disconnected') return 'disconnected';
 
     if (process.platform === 'win32' && this.currentConfig?.type === 'usb') {
-      const printerName = this.currentConfig.portPath ?? '';
       try {
-        const pingBuffer = Buffer.from([0x1b, 0x40]); // ESC @ = printer init
-        await this.printWindowsRaw(printerName, pingBuffer);
-        // Si llegamos acá, la impresora respondió correctamente
+        const printerName = this.currentConfig.portPath ?? '';
+        const output = execSync(
+          'wmic printer get Name,WorkOffline,PrinterStatus /format:csv',
+          { encoding: 'utf8', timeout: 3000 },
+        );
+        const lines = output.split('\n');
+        const line = lines.find((l) => l.toLowerCase().includes(printerName.toLowerCase()));
+        if (!line) {
+          this.currentStatus = 'disconnected';
+          this.currentConfig = null;
+          return this.currentStatus;
+        }
+        const isOffline = /,TRUE[,\r]?$/i.test(line) || line.toUpperCase().includes(',TRUE,');
+        const cols = line.split(',');
+        const statusCode = parseInt(cols[2] ?? '0', 10);
+        const isReady = statusCode === 0 || statusCode === 3 || statusCode === 4 || statusCode === 5;
+        if (isOffline || !isReady) {
+          this.currentStatus = 'disconnected';
+          this.currentConfig = null;
+        }
       } catch {
         this.currentStatus = 'disconnected';
         this.currentConfig = null;
@@ -550,6 +628,29 @@ class PrinterService {
    * la Win32 WritePrinter API via PowerShell.
    * No requiere @thiagoelg/node-printer ni compartir la impresora.
    */
+  /**
+   * Verifica la conexión física USB enviando ESC @ y cancelando el job
+   * inmediatamente con AbortPrinter (sin imprimir, sin notificación Windows).
+   * Retorna null si OK, o un string de error si no responde.
+   */
+  private async pingWindowsUsb(printerName: string): Promise<string | null> {
+    const tempDir = os.tmpdir();
+    const ts = Date.now();
+    const scriptFile = path.join(tempDir, `localpos_ping_${ts}.ps1`);
+    fs.writeFileSync(scriptFile, WIN_PING_PS, { encoding: 'utf8' });
+    try {
+      execSync(
+        `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${scriptFile}" -PrinterName "${printerName}"`,
+        { timeout: 8_000 },
+      );
+      return null; // OK
+    } catch (err) {
+      return err instanceof Error ? err.message : 'No responde';
+    } finally {
+      try { fs.unlinkSync(scriptFile); } catch { /* ignorar */ }
+    }
+  }
+
   private async printWindowsRaw(printerName: string, buffer: Buffer): Promise<void> {
     const tempDir = os.tmpdir();
     const ts = Date.now();

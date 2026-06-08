@@ -46,9 +46,11 @@ const { printerService } = await import('../../server/core/services/PrinterServi
 const { ThermalPrinter: MockThermalPrinter } = await import('node-thermal-printer');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const WMIC_ONLINE  = 'Node,Name,WorkOffline\nOZARG094,POS-80-Series,FALSE\n';
-const WMIC_OFFLINE = 'Node,Name,WorkOffline\nOZARG094,POS-80-Series,TRUE\n';
-const WMIC_EMPTY   = 'Node,Name,WorkOffline\n';
+// wmic /format:csv ordena columnas alfabéticamente:
+// Node, Name, PrinterStatus, WorkOffline
+const WMIC_ONLINE  = 'Node,Name,PrinterStatus,WorkOffline\nOZARG094,POS-80-Series,3,FALSE\n';
+const WMIC_OFFLINE = 'Node,Name,PrinterStatus,WorkOffline\nOZARG094,POS-80-Series,3,TRUE\n';
+const WMIC_EMPTY   = 'Node,Name,PrinterStatus,WorkOffline\n';
 const WMIC_NAMES   = 'Node,Name\nOZARG094,POS-80-Series\nOZARG094,HP DeskJet 2700 series\n';
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
