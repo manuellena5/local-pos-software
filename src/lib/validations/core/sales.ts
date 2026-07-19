@@ -7,6 +7,7 @@ export const paymentMethodSchema = z.object({
 
 export const cartItemSchema = z.object({
   productId: z.number().int().positive(),
+  variantId: z.number().int().positive().optional(),
   productName: z.string().min(1),
   quantity: z.number().int().min(1, 'La cantidad debe ser al menos 1'),
   unitPrice: z.number().min(0),

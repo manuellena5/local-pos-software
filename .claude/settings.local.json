@@ -39,7 +39,12 @@
       "mcp__Claude_in_Chrome__find",
       "mcp__Claude_in_Chrome__javascript_tool",
       "Bash(npx eslint *)",
-      "mcp__Claude_in_Chrome__form_input"
+      "mcp__Claude_in_Chrome__form_input",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\manuel.ellena\\\\Git\\\\local-pos-software\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\manuel.ellena\\\\Git\\\\local-pos-software\")",
+      "Bash(Find-Content -Path \"C:\\\\Users\\\\manuel.ellena\\\\Git\\\\local-pos-software\\\\electron\" -Filter \"*.ts\")",
+      "Bash(Select-Object -ExpandProperty Name)"
     ]
   }
 }

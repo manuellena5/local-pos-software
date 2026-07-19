@@ -7,6 +7,10 @@ export const createCashMovementSchema = z.object({
   amount: z.number().positive('El monto debe ser mayor a 0'),
   description: z.string().min(3, 'La descripción debe tener al menos 3 caracteres').max(500),
   saleId: z.number().int().positive().optional(),
+  paymentMethod: z
+    .enum(['cash', 'transfer', 'mercadopago', 'card', 'other'])
+    .optional()
+    .default('cash'),
 });
 
 export const createCashAuditSchema = z.object({

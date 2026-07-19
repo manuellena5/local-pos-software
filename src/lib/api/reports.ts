@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { SalesReport, TopProductsReport, TopCustomersReport, StockMovement, DashboardData } from '@shared/types';
+import type { SalesReport, TopProductsReport, TopCustomersReport, StockMovement, DashboardDTO } from '@shared/types';
 
 export const reportsApi = {
   getSalesReport(
@@ -29,8 +29,8 @@ export const reportsApi = {
     return apiClient.get(`/api/reports/stock-movements?${params}`);
   },
 
-  getDashboard(businessUnitId: number, moduleId: string): Promise<DashboardData> {
-    return apiClient.get(`/api/dashboard?buId=${businessUnitId}&moduleId=${encodeURIComponent(moduleId)}`);
+  getDashboard(businessUnitId: number): Promise<DashboardDTO> {
+    return apiClient.get(`/api/dashboard?businessUnitId=${businessUnitId}`);
   },
 
   getTallerOrdersReport(businessUnitId: number): Promise<{ byStatus: { status: string; count: number; totalAmount: number }[]; orders: unknown[] }> {

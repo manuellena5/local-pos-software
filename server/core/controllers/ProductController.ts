@@ -151,7 +151,7 @@ export class ProductController {
     try {
       const parsed = bulkPriceUpdateSchema.safeParse(req.body);
       if (!parsed.success) throw new ValidationError('Datos inválidos', parsed.error.errors);
-      const { businessUnitId, adjustmentType, value, categoryId } = parsed.data;
+      const { businessUnitId, adjustmentType, value } = parsed.data;
       const preview = req.query.preview === 'true';
       // categoryId is numeric but service filters by category name — pass null for now
       const result = this.service.bulkUpdatePrices(businessUnitId, adjustmentType, value, null, preview);
@@ -193,6 +193,24 @@ export class ProductController {
       if (!Number.isInteger(id) || id <= 0) throw new ValidationError('ID inválido');
       if (!Number.isInteger(businessUnitId) || businessUnitId <= 0) throw new ValidationError('businessUnitId inválido');
       res.json({ data: { count: this.service.countTransactions(id, businessUnitId) }, error: null });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  searchForPOS(req: Request, res: Response, next: NextFunction): void {
+    try {
+      const businessUnitId = Number(req.query.businessUnitId);
+      const q = req.query.q ? String(req.query.q) : '';
+      const all = req.query.all === '1';
+      if (!Number.isInteger(businessUnitId) || businessUnitId <= 0) {
+        throw new ValidationError('businessUnitId debe ser un número válido');
+      }
+      if (!all && q.trim().length === 0) {
+        res.json({ data: [], error: null });
+        return;
+      }
+      res.json({ data: this.service.searchForPOS(businessUnitId, q, all ? 999 : undefined), error: null });
     } catch (err) {
       next(err);
     }

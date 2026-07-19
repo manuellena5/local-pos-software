@@ -1,49 +1,21 @@
 import { useState } from 'react';
 import { useCashbox } from '@/core/hooks/useCashbox';
 import { cashboxApi } from '@/lib/api/cashbox';
+import { formatDate as fmtDate, formatTime as fmtTime } from '@/lib/utils/dateFormat';
 import { CashAuditForm } from './CashAuditForm';
 import { ReporteZModal } from './ReporteZModal';
-import type { CashAudit, CashMovementType } from '@shared/types';
+import { CashSessionMovementsTable } from './CashSessionMovementsTable';
+import type { CashAudit, CashMovementType, CashPaymentMethodType } from '@shared/types';
 import type { AuditWithTimes } from '@/lib/api/cashbox';
 
 interface Props {
   businessUnitId: number;
+  onNavigateToSale?: (saleId: number) => void;
 }
 
 function fmtMoney(n: number): string {
   return `$${Math.abs(n).toFixed(2)}`;
 }
-
-function fmtTime(dt: string): string {
-  return dt.slice(11, 16);
-}
-
-function fmtDate(dt: string): string {
-  const [y, m, d] = dt.slice(0, 10).split('-');
-  return `${d}/${m}/${y}`;
-}
-
-function isEgress(type: CashMovementType): boolean {
-  return type === 'refund' || type === 'withdrawal';
-}
-
-const MOVEMENT_LABEL: Record<CashMovementType, string> = {
-  opening: 'Apertura',
-  sale: 'Venta',
-  refund: 'Anulación',
-  deposit: 'Ingreso',
-  withdrawal: 'Egreso',
-  other: 'Otro',
-};
-
-const MOVEMENT_BADGE: Record<CashMovementType, string> = {
-  opening: 'bg-gray-100 text-gray-600',
-  sale: 'bg-blue-100 text-blue-700',
-  refund: 'bg-red-100 text-red-700',
-  deposit: 'bg-green-100 text-green-700',
-  withdrawal: 'bg-amber-100 text-amber-700',
-  other: 'bg-gray-100 text-gray-500',
-};
 
 const AUDIT_STATUS_LABEL: Record<string, string> = {
   balanced: '✓ Cuadra',
@@ -56,18 +28,6 @@ const AUDIT_STATUS_COLOR: Record<string, string> = {
   discrepancy: 'bg-red-100 text-red-700',
   discrepancy_resolved: 'bg-blue-100 text-blue-700',
 };
-
-function BreakdownRow({ label, amount }: { label: string; amount: number }) {
-  const isNeg = amount < 0;
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-600">{label}</span>
-      <span className={`text-xs font-medium ${isNeg ? 'text-red-600' : 'text-green-700'}`}>
-        {isNeg ? '−' : '+'}${Math.abs(amount).toFixed(2)}
-      </span>
-    </div>
-  );
-}
 
 function OpenSessionPanel({
   businessUnitId,
@@ -175,6 +135,7 @@ function AddMovementForm({
   onCancel: () => void;
 }) {
   const [type, setType] = useState<CashMovementType>('deposit');
+  const [paymentMethod, setPaymentMethod] = useState<CashPaymentMethodType>('cash');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
@@ -194,7 +155,12 @@ function AddMovementForm({
     setSaving(true);
     setErr(null);
     try {
-      await cashboxApi.recordMovement(businessUnitId, { type, amount: amountNum, description });
+      await cashboxApi.recordMovement(businessUnitId, {
+        type,
+        amount: amountNum,
+        description,
+        paymentMethod,
+      });
       onSaved();
     } catch (caughtErr) {
       setErr(caughtErr instanceof Error ? caughtErr.message : 'Error al guardar');
@@ -209,17 +175,41 @@ function AddMovementForm({
       className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3 mb-4"
     >
       {err && <p className="text-xs text-red-600">{err}</p>}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">Tipo</label>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value as CashMovementType)}
+          className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+        >
+          <option value="deposit">Ingreso manual</option>
+          <option value="withdrawal">Egreso manual</option>
+          <option value="refund">Anulación</option>
+          <option value="other">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+        <input
+          type="text"
+          placeholder="Motivo del movimiento"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+        />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Tipo</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Medio de pago</label>
           <select
-            value={type}
-            onChange={(e) => setType(e.target.value as CashMovementType)}
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value as CashPaymentMethodType)}
             className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
           >
-            <option value="deposit">Ingreso manual</option>
-            <option value="withdrawal">Egreso manual</option>
-            <option value="refund">Anulación</option>
+            <option value="cash">Efectivo</option>
+            <option value="transfer">Transferencia</option>
+            <option value="mercadopago">Mercado Pago</option>
+            <option value="card">Tarjeta</option>
             <option value="other">Otro</option>
           </select>
         </div>
@@ -235,16 +225,6 @@ function AddMovementForm({
             className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
           />
         </div>
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
-        <input
-          type="text"
-          placeholder="Motivo del movimiento"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-        />
       </div>
       <div className="flex gap-2">
         <button
@@ -268,12 +248,14 @@ function AddMovementForm({
 
 function AuditModal({
   businessUnitId,
-  theoreticalBalance,
+  cashTheoretical,
+  otherByMethod,
   onDone,
   onClose,
 }: {
   businessUnitId: number;
-  theoreticalBalance: number;
+  cashTheoretical: number;
+  otherByMethod: { transfer: number; mercadopago: number; card: number; other: number };
   onDone: (audit: CashAudit) => void;
   onClose: () => void;
 }) {
@@ -291,7 +273,8 @@ function AuditModal({
         </div>
         <CashAuditForm
           businessUnitId={businessUnitId}
-          theoreticalBalance={theoreticalBalance}
+          cashTheoretical={cashTheoretical}
+          otherByMethod={otherByMethod}
           onAuditDone={onDone}
         />
       </div>
@@ -299,7 +282,7 @@ function AuditModal({
   );
 }
 
-export function CashboxPage({ businessUnitId }: Props) {
+export function CashboxPage({ businessUnitId, onNavigateToSale }: Props) {
   const { sessionData, auditHistory, sessionStatus, loading, refetch } =
     useCashbox(businessUnitId);
   const [showOpenPanel, setShowOpenPanel] = useState(false);
@@ -356,30 +339,52 @@ export function CashboxPage({ businessUnitId }: Props) {
 
   // Sesión abierta
   const movements = sessionData?.movements ?? [];
-  const balance = sessionData?.balance ?? 0;
+  const sessionBalance = sessionData?.sessionBalance;
+  const byMethod = sessionBalance?.byMethod ?? {
+    cash: 0, transfer: 0, mercadopago: 0, card: 0, other: 0,
+  };
   const openingMovement = sessionData?.openingMovement ?? null;
-  const lastAudit = auditHistory[0] ?? null;
 
   const openingAmt = movements.find((m) => m.type === 'opening')?.amount ?? 0;
-  const salesAmt = movements.filter((m) => m.type === 'sale').reduce((s, m) => s + m.amount, 0);
-  const depositsAmt = movements
-    .filter((m) => m.type === 'deposit')
+
+  // Desglose cash-only para Sección A
+  const cashSalesAmt = movements
+    .filter((m) => m.type === 'sale' && m.paymentMethod === 'cash')
     .reduce((s, m) => s + m.amount, 0);
-  const withdrawalsAmt = movements
-    .filter((m) => m.type === 'withdrawal')
+  const cashEgressAmt = movements
+    .filter((m) => m.type === 'withdrawal' && m.paymentMethod === 'cash')
     .reduce((s, m) => s + m.amount, 0);
-  const refundsAmt = movements
-    .filter((m) => m.type === 'refund')
+  const cashVoidsAmt = movements
+    .filter((m) => m.type === 'refund' && m.paymentMethod === 'cash')
     .reduce((s, m) => s + m.amount, 0);
-  const othersAmt = movements.filter((m) => m.type === 'other').reduce((s, m) => s + m.amount, 0);
-  const egressAmt = withdrawalsAmt + refundsAmt;
+
+  // Agregados de la sesión (de sessionBalance)
+  const totalSales = sessionBalance?.totalSales ?? 0;
+  const totalVoids = sessionBalance?.totalVoids ?? 0;
+  const totalManualOut = sessionBalance?.totalManualOut ?? 0;
+  const totalManualIn = sessionBalance?.totalManualIn ?? 0;
+
+  const cashAmt = sessionBalance?.cashBalance ?? byMethod.cash;
+  const cashIsNegative = cashAmt < 0;
+
+  const hasDigital =
+    byMethod.transfer !== 0 ||
+    byMethod.mercadopago !== 0 ||
+    byMethod.card !== 0 ||
+    byMethod.other !== 0;
 
   return (
     <>
       {showAuditModal && (
         <AuditModal
           businessUnitId={businessUnitId}
-          theoreticalBalance={balance}
+          cashTheoretical={sessionBalance?.cashBalance ?? 0}
+          otherByMethod={{
+            transfer: byMethod.transfer,
+            mercadopago: byMethod.mercadopago,
+            card: byMethod.card,
+            other: byMethod.other,
+          }}
           onDone={(audit) => {
             setShowAuditModal(false);
             setReporteZAuditId(audit.id);
@@ -400,6 +405,11 @@ export function CashboxPage({ businessUnitId }: Props) {
               <span className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
               <span className="text-sm font-semibold text-gray-900">Caja abierta</span>
             </div>
+            {openingMovement?.code && (
+              <p className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-100 rounded px-2 py-1">
+                Sesión: {openingMovement.code}
+              </p>
+            )}
             {openingMovement && (
               <p className="text-xs text-gray-500">
                 Abierta desde las {fmtTime(openingMovement.createdAt)}
@@ -413,56 +423,128 @@ export function CashboxPage({ businessUnitId }: Props) {
             </button>
           </div>
 
-          {/* Card 2: Saldo de sesión */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-xs text-blue-600 font-medium uppercase tracking-wide mb-1">
-              Saldo de sesión
+          {/* Sección A: EFECTIVO EN CAJA */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+              Efectivo en caja
             </p>
-            <p
-              className={`text-3xl font-bold ${balance >= 0 ? 'text-blue-700' : 'text-red-700'}`}
-            >
-              {balance >= 0 ? '' : '−'}
-              {fmtMoney(balance)}
-            </p>
-            <p className="text-xs text-blue-500 mt-1.5 leading-relaxed">
-              Apertura {fmtMoney(openingAmt)}
-              {salesAmt > 0 && ` + ventas ${fmtMoney(salesAmt)}`}
-              {depositsAmt > 0 && ` + ingresos ${fmtMoney(depositsAmt)}`}
-              {egressAmt > 0 && ` − egresos ${fmtMoney(egressAmt)}`}
-              {othersAmt > 0 && ` + otros ${fmtMoney(othersAmt)}`}
-            </p>
-          </div>
-
-          {/* Card 3: Composición + último arqueo */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-              Composición
-            </p>
-            <div className="space-y-1.5">
-              {openingAmt > 0 && <BreakdownRow label="Apertura" amount={openingAmt} />}
-              {salesAmt > 0 && <BreakdownRow label="Ventas" amount={salesAmt} />}
-              {depositsAmt > 0 && <BreakdownRow label="Ingresos manuales" amount={depositsAmt} />}
-              {withdrawalsAmt > 0 && (
-                <BreakdownRow label="Egresos" amount={-withdrawalsAmt} />
+            <div className="flex items-baseline justify-between">
+              <span
+                className={`text-2xl font-bold ${cashIsNegative ? 'text-red-600' : 'text-gray-900'}`}
+              >
+                {cashIsNegative ? '−' : ''}${Math.abs(cashAmt).toFixed(2)}
+              </span>
+            </div>
+            {cashIsNegative && (
+              <p className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 leading-snug">
+                ⚠ Egresos superan el efectivo disponible
+              </p>
+            )}
+            <div className="space-y-1 pt-1">
+              <div className="flex justify-between">
+                <span className="text-xs text-gray-400">Apertura:</span>
+                <span className="text-xs text-gray-600">+${openingAmt.toFixed(2)}</span>
+              </div>
+              {cashSalesAmt > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Ventas ef.:</span>
+                  <span className="text-xs text-gray-600">+${cashSalesAmt.toFixed(2)}</span>
+                </div>
               )}
-              {refundsAmt > 0 && <BreakdownRow label="Anulaciones" amount={-refundsAmt} />}
-              {othersAmt > 0 && <BreakdownRow label="Otros" amount={othersAmt} />}
-              {movements.length === 0 && (
-                <p className="text-xs text-gray-400">Sin movimientos</p>
+              {cashEgressAmt > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Egresos ef.:</span>
+                  <span className="text-xs text-red-500">−${cashEgressAmt.toFixed(2)}</span>
+                </div>
+              )}
+              {cashVoidsAmt > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Anulaciones:</span>
+                  <span className="text-xs text-red-500">−${cashVoidsAmt.toFixed(2)}</span>
+                </div>
               )}
             </div>
-            {lastAudit && (
-              <div className="pt-2 border-t border-gray-100">
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${AUDIT_STATUS_COLOR[lastAudit.status]}`}
-                >
-                  {AUDIT_STATUS_LABEL[lastAudit.status]}
-                  {lastAudit.status === 'discrepancy' &&
-                    ` ${lastAudit.difference >= 0 ? '+' : '−'}${fmtMoney(lastAudit.difference)}`}
-                </span>
-                <p className="text-xs text-gray-400 mt-1">
-                  Último arqueo: {fmtDate(lastAudit.auditDate)}
-                </p>
+          </div>
+
+          {/* Sección B: PARA VERIFICAR (solo si hay métodos digitales != 0) */}
+          {hasDigital && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                Para verificar
+              </p>
+              <div className="space-y-1">
+                {byMethod.transfer !== 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-500">Transferencias:</span>
+                    <span className={`text-xs font-medium ${byMethod.transfer < 0 ? 'text-red-600' : 'text-gray-700'}`}>
+                      {byMethod.transfer < 0 ? '−' : ''}${Math.abs(byMethod.transfer).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {byMethod.mercadopago !== 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-500">Mercado Pago:</span>
+                    <span className={`text-xs font-medium ${byMethod.mercadopago < 0 ? 'text-red-600' : 'text-gray-700'}`}>
+                      {byMethod.mercadopago < 0 ? '−' : ''}${Math.abs(byMethod.mercadopago).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {byMethod.card !== 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-500">Tarjeta:</span>
+                    <span className={`text-xs font-medium ${byMethod.card < 0 ? 'text-red-600' : 'text-gray-700'}`}>
+                      {byMethod.card < 0 ? '−' : ''}${Math.abs(byMethod.card).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {byMethod.other !== 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-500">Otro:</span>
+                    <span className={`text-xs font-medium ${byMethod.other < 0 ? 'text-red-600' : 'text-gray-700'}`}>
+                      {byMethod.other < 0 ? '−' : ''}${Math.abs(byMethod.other).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
+                Verificar contra banco / app al cerrar
+              </p>
+            </div>
+          )}
+
+          {/* Sección C: OPERADO HOY */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+              Operado hoy
+            </p>
+            {totalSales === 0 && totalVoids === 0 && totalManualOut === 0 && totalManualIn === 0 ? (
+              <p className="text-xs text-gray-400">Sin operaciones</p>
+            ) : (
+              <div className="space-y-1">
+                {totalSales > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-500">Ventas:</span>
+                    <span className="text-xs font-medium text-green-700">+${totalSales.toFixed(2)}</span>
+                  </div>
+                )}
+                {totalVoids > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-500">Anulaciones:</span>
+                    <span className="text-xs font-medium text-red-600">−${totalVoids.toFixed(2)}</span>
+                  </div>
+                )}
+                {totalManualOut > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-500">Egresos:</span>
+                    <span className="text-xs font-medium text-red-600">−${totalManualOut.toFixed(2)}</span>
+                  </div>
+                )}
+                {totalManualIn > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-500">Ingresos man.:</span>
+                    <span className="text-xs font-medium text-green-700">+${totalManualIn.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -501,66 +583,12 @@ export function CashboxPage({ businessUnitId }: Props) {
               <p className="text-sm">No hay movimientos en esta sesión.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">
-                      Hora
-                    </th>
-                    <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">
-                      Tipo
-                    </th>
-                    <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">
-                      Descripción
-                    </th>
-                    <th className="text-right text-xs text-gray-500 font-medium py-2 px-3">
-                      Monto
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.map((m) => (
-                    <tr key={m.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2 px-3 text-gray-400 font-mono text-xs">
-                        {fmtTime(m.createdAt)}
-                      </td>
-                      <td className="py-2 px-3">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${MOVEMENT_BADGE[m.type]}`}
-                        >
-                          {MOVEMENT_LABEL[m.type]}
-                        </span>
-                      </td>
-                      <td className="py-2 px-3 text-gray-700">{m.description}</td>
-                      <td
-                        className={`py-2 px-3 text-right font-medium ${
-                          isEgress(m.type) ? 'text-red-600' : 'text-green-700'
-                        }`}
-                      >
-                        {isEgress(m.type) ? '−' : '+'}
-                        {fmtMoney(m.amount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-200">
-                    <td colSpan={3} className="py-2.5 px-3 text-sm font-semibold text-gray-700">
-                      Balance de la sesión
-                    </td>
-                    <td
-                      className={`py-2.5 px-3 text-right text-sm font-bold ${
-                        balance >= 0 ? 'text-blue-700' : 'text-red-700'
-                      }`}
-                    >
-                      {balance >= 0 ? '+' : '−'}
-                      {fmtMoney(balance)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+            <CashSessionMovementsTable
+              movements={movements}
+              businessUnitId={businessUnitId}
+              cashSessionId={openingMovement?.id ?? null}
+              onNavigateToSale={onNavigateToSale}
+            />
           )}
         </div>
       </div>
@@ -576,6 +604,9 @@ export function CashboxPage({ businessUnitId }: Props) {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="text-left text-xs text-gray-500 font-medium py-2.5 px-4">
+                    Sesión
+                  </th>
+                  <th className="text-left text-xs text-gray-500 font-medium py-2.5 px-4">
                     Fecha
                   </th>
                   <th className="text-left text-xs text-gray-500 font-medium py-2.5 px-4">
@@ -585,13 +616,16 @@ export function CashboxPage({ businessUnitId }: Props) {
                     Cierre
                   </th>
                   <th className="text-right text-xs text-gray-500 font-medium py-2.5 px-4">
-                    Teórico
+                    Efectivo teórico
                   </th>
                   <th className="text-right text-xs text-gray-500 font-medium py-2.5 px-4">
-                    Real
+                    Efectivo contado
                   </th>
                   <th className="text-right text-xs text-gray-500 font-medium py-2.5 px-4">
                     Diferencia
+                  </th>
+                  <th className="text-right text-xs text-gray-500 font-medium py-2.5 px-4">
+                    Otros medios
                   </th>
                   <th className="text-left text-xs text-gray-500 font-medium py-2.5 px-4">
                     Estado
@@ -602,6 +636,9 @@ export function CashboxPage({ businessUnitId }: Props) {
               <tbody>
                 {auditHistory.slice(0, 10).map((a) => (
                   <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="py-2.5 px-4 font-mono text-xs text-blue-700">
+                      {a.code ?? '—'}
+                    </td>
                     <td className="py-2.5 px-4 font-medium text-gray-900">
                       {fmtDate(a.auditDate)}
                     </td>
@@ -624,6 +661,9 @@ export function CashboxPage({ businessUnitId }: Props) {
                     >
                       {a.difference >= 0 ? '+' : '−'}
                       {fmtMoney(a.difference)}
+                    </td>
+                    <td className="py-2.5 px-4 text-right text-gray-500 text-xs">
+                      {a.otherMethodsTotal > 0 ? fmtMoney(a.otherMethodsTotal) : '—'}
                     </td>
                     <td className="py-2.5 px-4">
                       <span

@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { ProductWithStock } from '@shared/types';
 import { formatCurrency } from '@/lib/utils/pricing';
+import { productImageUrl } from '@/lib/utils/imageUrl';
 import { useProductColumns } from '../hooks/useProductColumns';
 import { useColumnResize } from '../hooks/useColumnResize';
 import { useProductsStore } from '../store/productsStore';
@@ -10,7 +12,6 @@ import type { ColumnId } from '../types';
 import {
   calcMargin,
   calcPriceNet,
-  calcPriceNetFromGross,
 } from '../types';
 
 interface ProductsTableProps {
@@ -24,6 +25,65 @@ function marginClass(margin: number): string {
   if (margin >= 80) return 'text-green-700 font-bold';
   if (margin >= 30) return 'text-amber-600 font-bold';
   return 'text-red-600 font-bold';
+}
+
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+function ProductThumbnail({ product }: { product: ProductWithStock }) {
+  const [imgError, setImgError] = useState(false);
+  if (product.primaryImage && !imgError) {
+    return (
+      <img
+        src={productImageUrl(product.primaryImage)}
+        alt={product.name}
+        onError={() => setImgError(true)}
+        style={{ width: 36, height: 36, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0 }}
+      className="bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 select-none"
+      title={product.name}
+    >
+      {getInitials(product.name)}
+    </div>
+  );
+}
+
+function VariantStockTooltip({ breakdown }: { breakdown: string }) {
+  const [visible, setVisible] = useState(false);
+  const lines = breakdown.split(' · ').map((part) => {
+    const sep = part.lastIndexOf(':');
+    return { label: part.slice(0, sep), stock: part.slice(sep + 1).trim() };
+  });
+  return (
+    <span className="relative inline-flex items-center" style={{ marginLeft: 4 }}>
+      <button
+        onMouseEnter={() => setVisible(true)}
+        onMouseLeave={() => setVisible(false)}
+        className="text-purple-500 hover:text-purple-700 leading-none"
+        title="Ver desglose de variantes"
+        style={{ fontSize: 11 }}
+      >
+        ⊞
+      </button>
+      {visible && (
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[11px] rounded px-2 py-1.5 whitespace-nowrap z-30 shadow-lg pointer-events-none">
+          {lines.map((l, i) => (
+            <span key={i} className="block">
+              <span className="text-gray-300">{l.label}:</span> {l.stock} u.
+            </span>
+          ))}
+        </span>
+      )}
+    </span>
+  );
 }
 
 /**
@@ -109,7 +169,7 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
         : 0;
       basePrice = Math.round(costPrice * (1 + currentMargin) * 100) / 100;
     } else if (field === 'price') {
-      basePrice = calcPriceNetFromGross(val, product.taxRate);
+      basePrice = val; // usuario ingresa precio base directamente
     } else {
       basePrice = calcPriceNet(costPrice, val);
     }
@@ -153,6 +213,7 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
       <div className="overflow-x-auto">
         <table className="text-xs border-collapse" style={{ tableLayout: 'fixed', minWidth: 400 }}>
           <colgroup>
+            <col style={{ width: 44 }} />
             <col style={{ width: getWidth('name') }} />
             {isVisible('category')         && <col style={{ width: getWidth('category') }} />}
             {isVisible('cost')             && <col style={{ width: getWidth('cost') }} />}
@@ -170,6 +231,7 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
 
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
+              <th style={{ width: 44 }} />
               <th className={thCls} style={{ width: getWidth('name') }}>
                 <span className="block truncate pr-2">Producto</span>
                 <ResizeHandle col="name" {...resizeProps} />
@@ -182,13 +244,13 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
               )}
               {isVisible('cost') && (
                 <th className={thCls} style={{ width: getWidth('cost') }}>
-                  <span className="block truncate pr-2" title="Costo con IVA incluido · Doble click para editar">Costo c/IVA</span>
+                  <span className="block truncate pr-2" title="Doble click para editar">Costo</span>
                   <ResizeHandle col="cost" {...resizeProps} />
                 </th>
               )}
               {isVisible('price') && (
                 <th className={thCls} style={{ width: getWidth('price') }}>
-                  <span className="block truncate pr-2" title="Doble click para editar">Precio c/IVA</span>
+                  <span className="block truncate pr-2" title="Doble click para editar">Precio</span>
                   <ResizeHandle col="price" {...resizeProps} />
                 </th>
               )}
@@ -248,11 +310,15 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
 
           <tbody>
             {products.map((p) => {
-              const priceGross = p.basePrice * (1 + p.taxRate / 100);
-              const margin     = calcMargin(p.costPrice, p.basePrice);
+              const margin = calcMargin(p.costPrice, p.basePrice);
 
               return (
                 <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors">
+                  {/* Thumbnail */}
+                  <td className="px-1 py-1" style={{ width: 44 }}>
+                    <ProductThumbnail product={p} />
+                  </td>
+
                   {/* Nombre + SKU — max-w-0 fuerza que overflow:hidden funcione en table-layout:fixed */}
                   <td className={tdCls} style={{ maxWidth: 0 }}>
                     <div className="font-semibold text-gray-900 truncate leading-tight" title={p.name}>{p.name}</div>
@@ -277,10 +343,9 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
                         value={String(p.costPrice)}
                         displayValue={
                           <span className="text-gray-700">
-                            {formatCurrency(p.costPrice * (1 + p.taxRate / 100))}
+                            {formatCurrency(p.costPrice)}
                           </span>
                         }
-                        subValue={`s/IVA: ${formatCurrency(p.costPrice)}`}
                         onConfirm={(raw) => handleInlineConfirm(p, 'cost', raw)}
                       />
                     </td>
@@ -289,9 +354,8 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
                   {isVisible('price') && (
                     <td className={tdCls}>
                       <InlineEditCell
-                        value={String(Math.round(priceGross * 100) / 100)}
-                        displayValue={<span className="font-semibold text-gray-900">{formatCurrency(priceGross)}</span>}
-                        subValue={`s/IVA: ${formatCurrency(p.basePrice)}`}
+                        value={String(p.basePrice)}
+                        displayValue={<span className="font-semibold text-gray-900">{formatCurrency(p.basePrice)}</span>}
                         onConfirm={(raw) => handleInlineConfirm(p, 'price', raw)}
                       />
                     </td>
@@ -310,7 +374,12 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
 
                   {isVisible('stock') && (
                     <td className={tdCls}>
-                      <StockBadge quantity={p.currentStock} minimumThreshold={p.minimumThreshold} />
+                      <span className="inline-flex items-center gap-0.5">
+                        <StockBadge quantity={p.currentStock} minimumThreshold={p.minimumThreshold} />
+                        {p.hasVariants && p.variantBreakdown && (
+                          <VariantStockTooltip breakdown={p.variantBreakdown} />
+                        )}
+                      </span>
                     </td>
                   )}
 

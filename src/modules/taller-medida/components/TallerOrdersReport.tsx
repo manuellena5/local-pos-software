@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api/reports';
 import { useAppStore } from '@/core/store/appStore';
+import { formatLocalDayKey } from '@/lib/utils/dateFormat';
 import { ORDER_STATUS_LABELS } from '../types';
 import * as XLSX from 'xlsx';
 
@@ -52,7 +53,7 @@ export function TallerOrdersReport() {
       Pagado: o.paidAmount,
       Pendiente: o.pendingAmount,
       'Entrega estimada': o.estimatedDelivery ?? '',
-      'Fecha creación': o.createdAt.slice(0, 10),
+      'Fecha creación': formatLocalDayKey(o.createdAt),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();

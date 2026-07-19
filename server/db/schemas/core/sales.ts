@@ -80,6 +80,8 @@ export const saleItems = sqliteTable('sale_items', {
   productId: integer('product_id')
     .notNull()
     .references(() => products.id),
+  // Variante vendida (módulo retail-textil) — null si el producto no usa variantes
+  variantId: integer('variant_id'),
   // Snapshot inmutable del nombre al momento de la venta
   productName: text('product_name').notNull().default(''),
   quantity: integer('quantity').notNull(),

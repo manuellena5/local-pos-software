@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNetworkStatus } from '@/core/hooks/useNetworkStatus';
+import { parseUtcTimestamp } from '@/lib/utils/dateFormat';
 
 function timeAgo(isoStr: string): string {
-  const diffMs = Date.now() - new Date(isoStr).getTime();
+  const diffMs = Date.now() - parseUtcTimestamp(isoStr).getTime();
   const diffMin = Math.floor(diffMs / 60_000);
   if (diffMin < 1)  return 'hace un momento';
   if (diffMin === 1) return 'hace 1 min';

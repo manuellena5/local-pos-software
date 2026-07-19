@@ -9,3 +9,5 @@ export const MODULE_IDS = {
 } as const;
 
 export type ModuleId = (typeof MODULE_IDS)[keyof typeof MODULE_IDS];
+
+export const LOW_STOCK_THRESHOLD = 3;

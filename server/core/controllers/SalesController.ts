@@ -53,19 +53,20 @@ export class SalesController {
         throw new ValidationError('businessUnitId debe ser un número válido');
       }
 
-      const { dateFrom, dateTo, status, paymentMethod, search } = req.query;
+      const { dateFrom, dateTo, status, paymentMethod, search, cashSessionId } = req.query;
 
-      const hasFilters = dateFrom || dateTo || status || paymentMethod || search;
+      const hasFilters = dateFrom || dateTo || status || paymentMethod || search || cashSessionId;
 
       const sales = hasFilters
-        ? this.service.getSalesFiltered(businessUnitId, {
+        ? this.service.getSalesFilteredWithPreview(businessUnitId, {
             dateFrom: dateFrom as string | undefined,
             dateTo: dateTo as string | undefined,
             status: (status as 'all' | 'completed' | 'cancelled' | undefined) ?? 'all',
             paymentMethod: paymentMethod as string | undefined,
             search: search as string | undefined,
+            cashSessionId: cashSessionId ? Number(cashSessionId) : undefined,
           })
-        : this.service.getAllSales(businessUnitId);
+        : this.service.getAllSalesWithPreview(businessUnitId);
 
       res.json({ data: sales, error: null });
     } catch (err) {
@@ -99,7 +100,7 @@ export class SalesController {
         throw new ValidationError('businessUnitId debe ser un número válido');
       }
 
-      const { items, discountPercent, discountAmount, paymentMethods, userId } = req.body;
+      const { items, discountPercent, discountAmount, paymentMethods, userId, customerId } = req.body;
 
       if (!Array.isArray(items) || items.length === 0) {
         throw new ValidationError('Se requiere al menos un item en el carrito');
@@ -111,6 +112,7 @@ export class SalesController {
       const result = this.service.confirmSale({
         businessUnitId,
         userId: userId ? Number(userId) : undefined,
+        customerId: customerId ? Number(customerId) : undefined,
         items,
         discountPercent: discountPercent ? Number(discountPercent) : 0,
         discountAmount: discountAmount ? Number(discountAmount) : 0,

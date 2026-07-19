@@ -158,19 +158,22 @@ export function CustomerForm({ customer, onSuccess, onCancel }: Props) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Límite de crédito ($)
-            </label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              value={form.creditLimit ?? 0}
-              onChange={(e) => set('creditLimit', parseFloat(e.target.value) || 0)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {/* Límite de crédito — oculto hasta rediseño */}
+          {false && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Límite de crédito ($)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                value={form.creditLimit ?? 0}
+                onChange={(e) => set('creditLimit', parseFloat(e.target.value) || 0)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>

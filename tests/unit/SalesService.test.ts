@@ -109,6 +109,61 @@ describe('SalesService', () => {
     });
   });
 
+  describe('confirmSale — customerId', () => {
+    const baseItem = {
+      productId: 1,
+      productName: 'Remera',
+      quantity: 1,
+      unitPrice: 121,
+      taxRate: 21,
+      discountPercent: 0,
+    };
+
+    it('should save customer_id when sale is created with a selected customer', () => {
+      const fakeProduct = { id: 1, businessUnitId: 1 };
+      const fakeResult = {
+        sale: { id: 10, saleNumber: 1, totalAmount: 121, paymentMethods: [] },
+        items: [],
+      };
+      const mockProductRepo = { getById: vi.fn().mockReturnValue(fakeProduct) } as unknown as never;
+      const mockSaleRepo = { create: vi.fn().mockReturnValue(fakeResult) } as unknown as never;
+      const svc = new SalesService(mockSaleRepo, mockProductRepo);
+
+      svc.confirmSale({
+        businessUnitId: 1,
+        customerId: 42,
+        items: [baseItem],
+        paymentMethods: [{ method: 'cash', amount: 121 }],
+      });
+
+      const callArgs = vi.mocked(mockSaleRepo.create).mock.calls[0]?.[0];
+      expect(callArgs).toBeDefined();
+      expect((callArgs as { customerId: unknown }).customerId).toBe(42);
+    });
+
+    it('should save null customer_id when sale is created as consumidor final', () => {
+      const fakeProduct = { id: 1, businessUnitId: 1 };
+      const fakeResult = {
+        sale: { id: 11, saleNumber: 2, totalAmount: 121, paymentMethods: [] },
+        items: [],
+      };
+      const mockProductRepo = { getById: vi.fn().mockReturnValue(fakeProduct) } as unknown as never;
+      const mockSaleRepo = { create: vi.fn().mockReturnValue(fakeResult) } as unknown as never;
+      const svc = new SalesService(mockSaleRepo, mockProductRepo);
+
+      svc.confirmSale({
+        businessUnitId: 1,
+        // customerId not provided
+        items: [baseItem],
+        paymentMethods: [{ method: 'cash', amount: 121 }],
+      });
+
+      const callArgs = vi.mocked(mockSaleRepo.create).mock.calls[0]?.[0];
+      expect(callArgs).toBeDefined();
+      expect((callArgs as { customerId: unknown }).customerId).toBeNull();
+    });
+  });
+
   describe('confirmSale', () => {
     it('should throw when cart is empty', () => {
       const mockProductRepo = { getById: vi.fn() } as unknown as never;

@@ -77,14 +77,27 @@ export class StockService {
     return this.stockRepo.getStockSummary(businessUnitId);
   }
 
+  /** Movimientos de un producto, enriquecidos con variante y proveedor. */
+  getProductMovements(productId: number, businessUnitId: number): StockMovement[] {
+    return this.stockRepo.getMovementsByProduct(productId, businessUnitId);
+  }
+
   /**
    * Crea un movimiento de stock tipado (entrada/salida/ajuste).
-   * Si es entrada con unitCost, actualiza el costo del producto.
+   * Con variantId opera sobre el stock de la variante (el padre se resincroniza).
+   * Si es entrada con unitCost, actualiza el costo de la variante o del producto.
    */
   createMovement(
     productId: number,
     businessUnitId: number,
-    data: { type: 'entrada' | 'salida' | 'ajuste'; quantity: number; unitCost?: number; reason?: string },
+    data: {
+      type: 'entrada' | 'salida' | 'ajuste';
+      quantity: number;
+      unitCost?: number;
+      reason?: string;
+      variantId?: number;
+      supplierId?: number;
+    },
     userId?: number,
   ): { movement: StockMovement; newQuantity: number } {
     const parsed = createStockMovementSchema.safeParse(data);
@@ -102,11 +115,17 @@ export class StockService {
         parsed.data.unitCost,
         parsed.data.reason,
         userId,
+        parsed.data.variantId,
+        parsed.data.supplierId,
       );
 
-      // Si es entrada con costo unitario, actualizar costPrice del producto
+      // Entrada con costo unitario: actualizar el costo de la variante o del producto
       if (parsed.data.type === 'entrada' && parsed.data.unitCost && parsed.data.unitCost > 0) {
-        this.productRepo.inlineUpdate(productId, businessUnitId, parsed.data.unitCost, product.basePrice);
+        if (parsed.data.variantId) {
+          this.stockRepo.updateVariantCost(parsed.data.variantId, parsed.data.unitCost);
+        } else {
+          this.productRepo.inlineUpdate(productId, businessUnitId, parsed.data.unitCost, product.basePrice);
+        }
       }
 
       return result;
@@ -116,6 +135,13 @@ export class StockService {
       }
       throw err;
     }
+  }
+
+  /** Detalle de stock (con variantes) para el modal de movimientos. */
+  getStockDetail(productId: number, businessUnitId: number) {
+    const detail = this.stockRepo.getStockDetail(productId, businessUnitId);
+    if (!detail) throw new NotFoundError(`Producto ${productId} no encontrado`);
+    return detail;
   }
 
   getLastEntryDate(productId: number, businessUnitId: number): string | null {

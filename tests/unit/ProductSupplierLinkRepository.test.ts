@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+// Mock generateSkuCore so tests don't need a real SQLite instance
+vi.mock('../../server/core/lib/skuUtils', () => ({
+  generateSkuCore: vi.fn(() => 'GEN-PRD-001'),
+  toSkuPart: vi.fn((text: string, len: number) => text.slice(0, len).toUpperCase().padEnd(len, 'X')),
+}));
+
 // Mock db before importing the repository
 vi.mock('../../server/db/connection', () => {
   const mockDb = {
@@ -29,10 +35,13 @@ vi.mock('../../server/db/connection', () => {
   mockDb.returning.mockReturnValue(mockDb);
   mockDb.all.mockReturnValue([]);
   mockDb.get.mockReturnValue(null);
-  return { db: mockDb, sqlite: {} };
+  // sqlite.transaction(fn) returns fn so doCreate() invokes the body directly
+  const mockSqlite = { transaction: vi.fn((fn: (...args: unknown[]) => unknown) => fn) };
+  return { db: mockDb, sqlite: mockSqlite };
 });
 
 import { db } from '../../server/db/connection';
+import { generateSkuCore } from '../../server/core/lib/skuUtils';
 import {
   ProductSupplierLinkRepository,
 } from '../../server/modules/proveedores/repositories/ProductSupplierLinkRepository';
@@ -139,5 +148,87 @@ describe('ProductSupplierLinkRepository.setPreferred', () => {
     repo.setPreferred(999);
 
     expect(vi.mocked(mockDb.update)).not.toHaveBeenCalled();
+  });
+});
+
+// ── createProductFromSupplier ─────────────────────────────────────────────
+
+describe('ProductSupplierLinkRepository.createProductFromSupplier', () => {
+  let repo: ProductSupplierLinkRepository;
+
+  const fakeCreatedProduct = {
+    id: 42, businessUnitId: 1, name: 'Toalla Lisa', sku: 'GEN-PRD-001',
+    costPrice: 500, basePrice: 900, taxRate: 21, isActive: true,
+    description: null, category: null, barcode: null, supplierCode: null,
+    minimumSalePrice: null, supplierId: null, supplierLeadTime: null,
+    showInCatalog: false, catalogDescription: null,
+    showCatalogPrice: true, showCatalogStock: false,
+    createdAt: '2026-06-10T00:00:00', updatedAt: '2026-06-10T00:00:00',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    repo = new ProductSupplierLinkRepository();
+    vi.mocked(mockDb.select).mockReturnValue(mockDb);
+    vi.mocked(mockDb.from).mockReturnValue(mockDb);
+    vi.mocked(mockDb.where).mockReturnValue(mockDb);
+    vi.mocked(mockDb.insert).mockReturnValue(mockDb);
+    vi.mocked(mockDb.values).mockReturnValue(mockDb);
+    vi.mocked(mockDb.returning).mockReturnValue(mockDb);
+    vi.mocked(mockDb.run).mockReturnValue(undefined);
+    // First .get() is for reading supplierProduct; second is for the created product
+    vi.mocked(mockDb.get)
+      .mockReturnValueOnce({ id: 10, supplierCode: 'TEX-01', categoryHint: 'Textiles' })
+      .mockReturnValueOnce(fakeCreatedProduct);
+  });
+
+  it('uses generateSkuCore with resolved category from supplierProduct.categoryHint', () => {
+    repo.createProductFromSupplier({
+      supplierProductId: 10,
+      businessUnitId: 1,
+      name: 'Toalla Lisa',
+      salePrice: 900,
+      costPrice: 500,
+    });
+
+    expect(vi.mocked(generateSkuCore)).toHaveBeenCalledWith(
+      'Textiles', 'Toalla Lisa', 1, expect.anything(),
+    );
+  });
+
+  it('persists supplierCode from supplierProduct into the link insert', () => {
+    repo.createProductFromSupplier({
+      supplierProductId: 10,
+      businessUnitId: 1,
+      name: 'Toalla Lisa',
+      salePrice: 900,
+      costPrice: 500,
+    });
+
+    const valuesCall = vi.mocked(mockDb.values).mock.calls.find(
+      ([arg]) => arg && typeof arg === 'object' && 'supplierProductId' in arg,
+    );
+    expect(valuesCall).toBeDefined();
+    expect(valuesCall![0]).toMatchObject({ supplierCode: 'TEX-01', supplierProductId: 10 });
+  });
+
+  it('persists null supplierCode when supplierProduct has no code', () => {
+    vi.mocked(mockDb.get)
+      .mockReset()
+      .mockReturnValueOnce({ id: 11, supplierCode: null, categoryHint: null })
+      .mockReturnValueOnce(fakeCreatedProduct);
+
+    repo.createProductFromSupplier({
+      supplierProductId: 11,
+      businessUnitId: 1,
+      name: 'Toalla sin código',
+      salePrice: 800,
+      costPrice: 400,
+    });
+
+    const valuesCall = vi.mocked(mockDb.values).mock.calls.find(
+      ([arg]) => arg && typeof arg === 'object' && 'supplierProductId' in arg,
+    );
+    expect(valuesCall![0]).toMatchObject({ supplierCode: null });
   });
 });

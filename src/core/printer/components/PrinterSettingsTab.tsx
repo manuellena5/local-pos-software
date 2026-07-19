@@ -3,6 +3,9 @@ import { useAppStore } from '@/core/store/appStore';
 import { printerApi } from '@/lib/api/printer';
 import type { PrinterConfig, PrinterStatus } from '@shared/types';
 
+// Ancho en caracteres por línea según tamaño de papel
+const PAPER_WIDTH_CHARS: Record<58 | 80, number> = { 58: 32, 80: 48 };
+
 interface PrinterSettingsTabProps {
   onStatusChange?: (status: PrinterStatus) => void;
 }
@@ -10,16 +13,20 @@ interface PrinterSettingsTabProps {
 export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) {
   const printerStatus = useAppStore((s) => s.printerStatus);
   const setPrinterStatus = useAppStore((s) => s.setPrinterStatus);
+  const businessName = useAppStore((s) => s.config?.businessName ?? '');
 
   const [connectionType, setConnectionType] = useState<'usb' | 'network'>('usb');
   const [portPath, setPortPath] = useState('');
   const [host, setHost] = useState('');
   const [port, setPort] = useState(9100);
+  const [paperWidth, setPaperWidth] = useState<58 | 80>(58);
   const [detectedPorts, setDetectedPorts] = useState<string[]>([]);
   const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
 
@@ -39,10 +46,25 @@ export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) 
   }
 
   function buildConfig(): PrinterConfig {
+    const width = PAPER_WIDTH_CHARS[paperWidth];
     if (connectionType === 'usb') {
-      return { type: 'usb', portPath };
+      return { type: 'usb', portPath, width };
     }
-    return { type: 'network', host, port };
+    return { type: 'network', host, port, width };
+  }
+
+  async function handleSaveConfig(): Promise<void> {
+    setSaving(true);
+    setSaveResult(null);
+    try {
+      await printerApi.saveConfig(buildConfig());
+      setSaveResult('✓ Configuración guardada');
+      setTimeout(() => setSaveResult(null), 2500);
+    } catch (e) {
+      setSaveResult(`Error: ${e instanceof Error ? e.message : 'No se pudo guardar'}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleConnect(): Promise<void> {
@@ -70,8 +92,8 @@ export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) 
     setTesting(true);
     setTestResult(null);
     try {
-      const result = await printerApi.testPrint();
-      setTestResult(result.success ? '✓ Página de prueba enviada correctamente.' : `Error: ${result.error ?? 'fallo desconocido'}`);
+      const result = await printerApi.testPrint(businessName);
+      setTestResult(result.success ? '✓ Ticket de prueba enviado correctamente.' : `Error: ${result.error ?? 'fallo desconocido'}`);
     } catch (e) {
       setTestResult(`Error: ${e instanceof Error ? e.message : 'fallo al imprimir'}`);
     } finally {
@@ -197,6 +219,36 @@ export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) 
         </div>
       )}
 
+      {/* Ancho de papel */}
+      <div>
+        <p className="text-sm font-medium text-gray-700 mb-2">Ancho de papel</p>
+        <div className="flex gap-4">
+          {([58, 80] as const).map((w) => (
+            <label key={w} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="paperWidth"
+                value={w}
+                checked={paperWidth === w}
+                onChange={() => setPaperWidth(w)}
+                className="accent-blue-600"
+              />
+              <span className="text-sm text-gray-700">{w}mm</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-[11px] text-gray-400 mt-1">
+          Nictom IT03 y la mayoría de impresoras de bolsillo usan 58mm.
+        </p>
+      </div>
+
+      {/* Resultado de guardar */}
+      {saveResult && (
+        <p className={`text-sm rounded-lg px-3 py-2 ${saveResult.startsWith('✓') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+          {saveResult}
+        </p>
+      )}
+
       {/* Errores de conexión */}
       {connectError && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{connectError}</p>
@@ -211,6 +263,15 @@ export function PrinterSettingsTab({ onStatusChange }: PrinterSettingsTabProps) 
 
       {/* Acciones */}
       <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void handleSaveConfig()}
+          disabled={saving}
+          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          {saving ? 'Guardando...' : 'Guardar configuración'}
+        </button>
+
         <button
           type="button"
           onClick={() => void handleConnect()}

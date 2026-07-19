@@ -1,9 +1,14 @@
 import { apiClient } from './client';
-import type { StockSummary, StockMovement } from '@shared/types';
+import type { StockSummary, StockMovement, ProductStockDetail } from '@shared/types';
 
 export const stockApi = {
   getSummary(businessUnitId: number): Promise<StockSummary[]> {
     return apiClient.get(`/api/stock/summary?businessUnitId=${businessUnitId}`);
+  },
+
+  /** Stock actual + variantes activas, para el modal de movimientos */
+  getDetail(productId: number, businessUnitId: number): Promise<ProductStockDetail> {
+    return apiClient.get(`/api/stock/${productId}/detail?businessUnitId=${businessUnitId}`);
   },
 
   getMovements(

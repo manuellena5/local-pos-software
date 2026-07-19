@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { reportsApi } from '@/lib/api/reports';
+import { formatDateTime } from '@/lib/utils/dateFormat';
 import type { StockMovement } from '@shared/types';
 
 interface Props {
@@ -18,8 +19,19 @@ const TYPE_COLORS: Record<string, string> = {
   adjustment: 'bg-yellow-100 text-yellow-700',
 };
 
+// stockMovements.createdAt se guarda en UTC — el default debe calcularse en
+// hora LOCAL, o "hoy" pediría el día siguiente apenas UTC cruza medianoche
+// (~21:00 ART), mostrando el reporte vacío.
+function getToday(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function StockMovementReport({ businessUnitId }: Props) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getToday();
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
   const [data, setData] = useState<StockMovement[]>([]);
@@ -79,7 +91,7 @@ export function StockMovementReport({ businessUnitId }: Props) {
               {data.map((m) => (
                 <tr key={m.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-2 px-3 text-gray-400 text-xs font-mono">
-                    {new Date(m.createdAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    {formatDateTime(m.createdAt)}
                   </td>
                   <td className="py-2 px-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_COLORS[m.type] ?? 'bg-gray-100 text-gray-600'}`}>

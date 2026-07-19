@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { ProductWithStock, CartItem, Product } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Product extensions — módulos registran campos/UI extra en formularios de producto
@@ -7,6 +8,56 @@ import type { ComponentType } from 'react';
 export interface ProductExtension {
   name: string;
   component: ComponentType<{ productId: number; businessUnitId: number }>;
+}
+
+// ---------------------------------------------------------------------------
+// Product tab extensions — módulos registran tabs extras en el formulario
+// ---------------------------------------------------------------------------
+
+export interface ProductTabComponentProps {
+  product: ProductWithStock | undefined;
+  formData: Partial<ProductWithStock>;
+  businessUnitId: number;
+  isCreating: boolean;
+}
+
+export interface ProductTabExtension {
+  id: string;
+  label: string;
+  insertAfter: 'base' | 'precios' | 'catalogo';
+  component: ComponentType<ProductTabComponentProps>;
+}
+
+const productTabExtensions: ProductTabExtension[] = [];
+
+export function registerProductTab(ext: ProductTabExtension): void {
+  if (productTabExtensions.some((e) => e.id === ext.id)) return;
+  productTabExtensions.push(ext);
+}
+
+export function getRegisteredProductTabs(): ProductTabExtension[] {
+  return productTabExtensions;
+}
+
+// ---------------------------------------------------------------------------
+// Product save hooks — módulos registran acciones que se ejecutan al guardar
+// Se llaman con el productId definitivo (post-create o post-update).
+// ---------------------------------------------------------------------------
+
+type ProductSaveHook = (
+  productId: number,
+  businessUnitId: number,
+  isCreating: boolean
+) => Promise<void>;
+
+const productSaveHooks: ProductSaveHook[] = [];
+
+export function registerProductSaveHook(hook: ProductSaveHook): void {
+  productSaveHooks.push(hook);
+}
+
+export function getProductSaveHooks(): ProductSaveHook[] {
+  return productSaveHooks;
 }
 
 const productExtensions: ProductExtension[] = [];
@@ -68,6 +119,8 @@ export interface ReportDefinition {
   id: string;
   name: string;
   component: ComponentType;
+  /** Si se especifica, el reporte solo aparece en BUs con ese módulo activo */
+  moduleId?: string;
 }
 
 const customReports: ReportDefinition[] = [];
@@ -100,4 +153,42 @@ export function registerMenuItem(item: MenuItemDefinition): void {
 
 export function getRegisteredMenuItems(): MenuItemDefinition[] {
   return menuItems;
+}
+
+// ---------------------------------------------------------------------------
+// POS product interceptors — módulos interceptan la selección de un producto
+// Retornar true indica que el módulo manejó el item (no llamar addToCart default)
+// ---------------------------------------------------------------------------
+
+type POSProductInterceptor = (
+  product: Product,
+  addToCart: (item: Omit<CartItem, 'lineTotal'>) => void,
+  businessUnitId: number,
+) => boolean;
+
+const posProductInterceptors: POSProductInterceptor[] = [];
+
+export function registerPOSProductInterceptor(fn: POSProductInterceptor): void {
+  if (posProductInterceptors.includes(fn)) return;
+  posProductInterceptors.push(fn);
+}
+
+export function getPOSProductInterceptors(): POSProductInterceptor[] {
+  return posProductInterceptors;
+}
+
+// ---------------------------------------------------------------------------
+// POS overlay components — módulos registran componentes que se renderizan
+// encima del POS (ej. VariantSelectorOverlay)
+// ---------------------------------------------------------------------------
+
+const posOverlayComponents: ComponentType[] = [];
+
+export function registerPOSOverlayComponent(component: ComponentType): void {
+  if (posOverlayComponents.includes(component)) return;
+  posOverlayComponents.push(component);
+}
+
+export function getPOSOverlayComponents(): ComponentType[] {
+  return posOverlayComponents;
 }

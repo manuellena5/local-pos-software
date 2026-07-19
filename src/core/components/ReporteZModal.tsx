@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cashboxApi } from '@/lib/api/cashbox';
+import { formatDateTime } from '@/lib/utils/dateFormat';
 import type { ReporteZData } from '@shared/types';
 
 interface Props {
@@ -13,12 +14,6 @@ function fmtMoney(n: number): string {
     .toFixed(2)
     .replace('.', ',')
     .replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
-}
-
-function fmtDatetime(dt: string): string {
-  const date = dt.slice(0, 10).split('-').reverse().join('/');
-  const time = dt.slice(11, 16);
-  return `${date} ${time}`;
 }
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
@@ -113,8 +108,8 @@ export function ReporteZModal({ auditId, businessUnitId, onClose }: Props) {
 
               <Separator />
 
-              <p>Apertura: {fmtDatetime(data.openedAt)}</p>
-              <p>Cierre:   {fmtDatetime(data.closedAt)}</p>
+              <p>Apertura: {formatDateTime(data.openedAt)}</p>
+              <p>Cierre:   {formatDateTime(data.closedAt)}</p>
               {data.operatorEmail && <p className="truncate">Operador: {data.operatorEmail}</p>}
 
               <Separator />

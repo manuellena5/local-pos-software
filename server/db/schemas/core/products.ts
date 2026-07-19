@@ -49,7 +49,15 @@ export const stockMovements = sqliteTable('stock_movements', {
   quantity:  integer('quantity').notNull(),
   reason:    text('reason').notNull(),
   unitCost:  real('unit_cost'),
-  userId:    integer('user_id').references(() => users.id),
+  userId:        integer('user_id').references(() => users.id),
+  reasonLabel:   text('reason_label'),
+  quantityBefore: integer('quantity_before'),
+  quantityAfter:  integer('quantity_after'),
+  notes:          text('notes'),
+  // Variante afectada (módulo retail-textil) — null si el producto no usa variantes
+  variantId:      integer('variant_id'),
+  // Proveedor asociado al movimiento (entradas de mercadería)
+  supplierId:     integer('supplier_id'),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
 

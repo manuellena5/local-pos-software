@@ -40,6 +40,7 @@ export interface AdjustStockRequest {
 // DTO interno para cada ítem dentro de una venta (usado por SaleRepository)
 export interface SaleItemInput {
   productId: number;
+  variantId?: number;
   productName: string;
   quantity: number;
   unitPrice: number;
@@ -55,6 +56,7 @@ export interface ConfirmSaleRequest {
   customerId?: number;
   items: Array<{
     productId: number;
+    variantId?: number;
     productName: string;
     quantity: number;
     unitPrice: number;
@@ -101,7 +103,7 @@ export interface AFIPInvoiceResponse {
 export interface CreateSaleRequest {
   businessUnitId: number;
   userId?: number;
-  customerId?: number;
+  customerId?: number | null;
   items: SaleItemInput[];
   subtotal: number;
   discountAmount: number;
@@ -148,6 +150,7 @@ export interface CreateCashMovementRequest {
   amount: number;
   description: string;
   saleId?: number;
+  paymentMethod?: 'cash' | 'transfer' | 'mercadopago' | 'card' | 'other';
 }
 
 export interface CreateCashAuditRequest {

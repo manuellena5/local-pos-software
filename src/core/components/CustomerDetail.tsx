@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { customersApi, type CustomerHistory } from '@/lib/api/customers';
+import { formatDate } from '@/lib/utils/dateFormat';
 import type { Customer } from '@shared/types';
 
 interface Props {
@@ -7,9 +8,10 @@ interface Props {
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
+  onNavigateToSale?: (saleId: number) => void;
 }
 
-export function CustomerDetail({ customer, onEdit, onDelete, onClose }: Props) {
+export function CustomerDetail({ customer, onEdit, onDelete, onClose, onNavigateToSale }: Props) {
   const [history, setHistory] = useState<CustomerHistory | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
@@ -76,8 +78,8 @@ export function CustomerDetail({ customer, onEdit, onDelete, onClose }: Props) {
             )}
           </div>
 
-          {/* Crédito */}
-          {customer.creditLimit > 0 && (
+          {/* Crédito — oculto hasta rediseño */}
+          {false && customer.creditLimit > 0 && (
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-700 mb-3">Crédito</p>
               <div className="flex justify-between text-sm mb-2">
@@ -118,10 +120,21 @@ export function CustomerDetail({ customer, onEdit, onDelete, onClose }: Props) {
                     <div>
                       <span className="font-medium text-gray-800">Venta #{sale.saleNumber}</span>
                       <span className="text-gray-400 ml-2 text-xs">
-                        {new Date(sale.createdAt).toLocaleDateString('es-AR')}
+                        {formatDate(sale.createdAt)}
                       </span>
                     </div>
-                    <span className="font-semibold text-gray-900">${sale.totalAmount.toFixed(2)}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-gray-900">${sale.totalAmount.toFixed(2)}</span>
+                      {onNavigateToSale && (
+                        <button
+                          onClick={() => { onClose(); onNavigateToSale(sale.id); }}
+                          className="text-xs font-medium hover:underline"
+                          style={{ color: '#2563eb' }}
+                        >
+                          Ver venta →
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

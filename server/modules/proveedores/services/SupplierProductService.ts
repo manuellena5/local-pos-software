@@ -43,6 +43,8 @@ export class SupplierProductService {
         currency:     'ARS',
         unit:         row.unit?.trim() || 'unidad',
         categoryHint: row.categoryHint?.trim() || null,
+        description:  row.description?.trim() || null,
+        imageName:    row.imageName?.trim() || null,
       });
     });
 

@@ -10,18 +10,28 @@ interface Props {
 
 type Preset = 'today' | 'week' | 'month' | 'custom';
 
+// Los presets de fecha se calculan en hora LOCAL (no UTC): sales.createdAt
+// se guarda en UTC, y usar toISOString().slice(0,10) hace que "Hoy" pida el
+// día siguiente en cuanto UTC cruza medianoche (~21:00 ART) — quedando sin
+// ventas hasta que también sea "mañana" en hora local.
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 function getToday() {
-  return new Date().toISOString().slice(0, 10);
+  return formatLocalDate(new Date());
 }
 function getWeekStart() {
   const d = new Date();
   d.setDate(d.getDate() - 6);
-  return d.toISOString().slice(0, 10);
+  return formatLocalDate(d);
 }
 function getMonthStart() {
   const d = new Date();
   d.setDate(1);
-  return d.toISOString().slice(0, 10);
+  return formatLocalDate(d);
 }
 
 const METHOD_LABELS: Record<string, string> = {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { tallerMedidaApi } from '../api/tallerMedidaApi';
+import { formatDate } from '@/lib/utils/dateFormat';
 import { ORDER_STATUS_LABELS, ORDER_STATUSES, type OrderStatus } from '../types';
 import type { TallerOrder } from '../types';
 
@@ -189,7 +190,7 @@ export function OrderListScreen({ businessUnitId, onNewOrder, onSelectOrder }: P
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-2">
-              #{order.id} · {new Date(order.createdAt).toLocaleDateString('es-AR')}
+              #{order.id} · {formatDate(order.createdAt)}
             </p>
           </button>
         ))}

@@ -38,12 +38,20 @@ export const adjustStockSchema = z.object({
     .max(500, 'La razón no puede exceder 500 caracteres'),
 });
 
-export const createStockMovementSchema = z.object({
-  type:     z.enum(['entrada', 'salida', 'ajuste']),
-  quantity: z.number().int().positive('La cantidad debe ser un entero positivo'),
-  unitCost: z.number().min(0).optional(),
-  reason:   z.string().max(500).optional(),
-});
+export const createStockMovementSchema = z
+  .object({
+    type:       z.enum(['entrada', 'salida', 'ajuste']),
+    // 'ajuste' admite 0 (conteo físico en cero); entrada/salida requieren > 0
+    quantity:   z.number().int().min(0, 'La cantidad no puede ser negativa'),
+    unitCost:   z.number().min(0).optional(),
+    reason:     z.string().max(500).optional(),
+    variantId:  z.number().int().positive().optional(),
+    supplierId: z.number().int().positive().optional(),
+  })
+  .refine((d) => d.type === 'ajuste' || d.quantity > 0, {
+    message: 'La cantidad debe ser un entero positivo',
+    path: ['quantity'],
+  });
 
 export const inlineUpdateSchema = z.object({
   costPrice: z.number().min(0).optional(),

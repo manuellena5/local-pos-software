@@ -5,8 +5,15 @@ function getBUId(req: Request): number {
   return parseInt(req.query['businessUnitId'] as string, 10);
 }
 
+// getSalesByRange interpreta fromDate/toDate como día calendario LOCAL — el
+// fallback debe coincidir, o "hoy" podría desalinearse un día al cruzar la
+// medianoche UTC (~21:00 ART).
 function getToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export class ReportsController {

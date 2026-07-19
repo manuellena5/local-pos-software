@@ -18,9 +18,9 @@ interface POSState {
 
   // Actions
   addToCart: (item: Omit<CartItem, 'lineTotal'>) => void;
-  removeFromCart: (productId: number) => void;
-  updateQuantity: (productId: number, quantity: number) => void;
-  updateItemDiscount: (productId: number, discountPercent: number) => void;
+  removeFromCart: (productId: number, variantId?: number) => void;
+  updateQuantity: (productId: number, quantity: number, variantId?: number) => void;
+  updateItemDiscount: (productId: number, discountPercent: number, variantId?: number) => void;
   setDiscountPercent: (pct: number) => void;
   setDiscountAmount: (amount: number) => void;
   setPaymentMethods: (methods: PaymentMethod[]) => void;
@@ -34,6 +34,10 @@ function calcLineTotal(item: Omit<CartItem, 'lineTotal'>): number {
   return Math.round(raw * 100) / 100;
 }
 
+function sameKey(c: CartItem, productId: number, variantId?: number): boolean {
+  return c.productId === productId && c.variantId === variantId;
+}
+
 export const usePOSStore = create<POSState>((set, get) => ({
   cart: [],
   discountPercent: 0,
@@ -43,12 +47,11 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   addToCart: (item) => {
     set((state) => {
-      const existing = state.cart.find((c) => c.productId === item.productId);
+      const existing = state.cart.find((c) => sameKey(c, item.productId, item.variantId));
       if (existing) {
-        // Incrementar cantidad si ya está en el carrito
         return {
           cart: state.cart.map((c) =>
-            c.productId === item.productId
+            sameKey(c, item.productId, item.variantId)
               ? {
                   ...c,
                   quantity: c.quantity + item.quantity,
@@ -67,25 +70,25 @@ export const usePOSStore = create<POSState>((set, get) => ({
     });
   },
 
-  removeFromCart: (productId) => {
-    set((state) => ({ cart: state.cart.filter((c) => c.productId !== productId) }));
+  removeFromCart: (productId, variantId) => {
+    set((state) => ({ cart: state.cart.filter((c) => !sameKey(c, productId, variantId)) }));
   },
 
-  updateQuantity: (productId, quantity) => {
+  updateQuantity: (productId, quantity, variantId) => {
     if (quantity < 1) return;
     set((state) => ({
       cart: state.cart.map((c) =>
-        c.productId === productId
+        sameKey(c, productId, variantId)
           ? { ...c, quantity, lineTotal: calcLineTotal({ ...c, quantity }) }
           : c
       ),
     }));
   },
 
-  updateItemDiscount: (productId, discountPercent) => {
+  updateItemDiscount: (productId, discountPercent, variantId) => {
     set((state) => ({
       cart: state.cart.map((c) =>
-        c.productId === productId
+        sameKey(c, productId, variantId)
           ? {
               ...c,
               discountPercent,

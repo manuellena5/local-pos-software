@@ -1,7 +1,7 @@
-import { eq, and, like } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db, sqlite } from '../../db/connection';
 import { products } from '../../db/schema';
-import type { Product, ProductWithStock, PurchaseHistoryEntry, ProductStats, ProductStat, ProductStatSale } from '../../../shared/types';
+import type { Product, ProductWithStock, ProductSearchResult, PurchaseHistoryEntry, ProductStats, ProductStat, ProductStatSale } from '../../../shared/types';
 import type { CreateProductRequest, UpdateProductRequest } from '../types';
 import { NotFoundError } from '../../lib/errors';
 import { toSkuPart } from '../lib/skuUtils';
@@ -268,7 +268,7 @@ export class ProductRepository {
     };
   }
 
-  /** Lista todos los productos (activos) con datos de stock y nombre de proveedor. */
+  /** Lista todos los productos (activos) con datos de stock, proveedor, imagen principal y variantes. */
   getAllWithStock(businessUnitId: number): ProductWithStock[] {
     type Row = {
       id: number; business_unit_id: number; name: string; description: string | null;
@@ -281,15 +281,25 @@ export class ProductRepository {
       code: string | null; show_in_catalog: number; catalog_description: string | null;
       minimum_sale_price: number | null; supplier_id: number | null;
       supplier_lead_time: number | null; show_catalog_price: number; show_catalog_stock: number;
+      primary_image: string | null;
+      variant_count: number | null;
+      variant_breakdown: string | null;
     };
 
     const rows = sqlite.prepare(`
       SELECT p.*,
              si.quantity, si.minimum_threshold,
-             s.name AS supplier_name
+             s.name AS supplier_name,
+             pi.file_path AS primary_image,
+             (SELECT COUNT(*) FROM product_variants pv
+              WHERE pv.product_id = p.id AND pv.is_active = 1) AS variant_count,
+             (SELECT GROUP_CONCAT(pv.attribute_value || ':' || pv.stock, ' · ')
+              FROM product_variants pv
+              WHERE pv.product_id = p.id AND pv.is_active = 1) AS variant_breakdown
       FROM products p
       LEFT JOIN stock_items si ON si.product_id = p.id AND si.business_unit_id = p.business_unit_id
       LEFT JOIN suppliers s ON s.id = p.supplier_id
+      LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = 1
       WHERE p.business_unit_id = ? AND p.is_active = 1
       ORDER BY p.name ASC
     `).all(businessUnitId) as Row[];
@@ -326,6 +336,9 @@ export class ProductRepository {
         minimumThreshold: threshold,
         stockStatus:      status,
         supplierName:     row.supplier_name,
+        primaryImage:     row.primary_image ?? null,
+        hasVariants:      (row.variant_count ?? 0) > 0,
+        variantBreakdown: row.variant_breakdown ?? null,
       };
     });
   }
@@ -440,8 +453,7 @@ export class ProductRepository {
              s.name AS supplier_name
       FROM stock_movements sm
       JOIN stock_items si ON si.id = sm.stock_item_id
-      LEFT JOIN products p ON p.id = si.product_id
-      LEFT JOIN suppliers s ON s.id = p.supplier_id
+      LEFT JOIN suppliers s ON s.id = sm.supplier_id
       WHERE si.product_id = ? AND sm.business_unit_id = ? AND sm.type = 'entry'
       ORDER BY sm.created_at DESC
       LIMIT 50
@@ -449,11 +461,50 @@ export class ProductRepository {
 
     return rows.map((r) => ({
       date:         r.created_at,
-      supplierName: r.supplier_name ?? 'Sin proveedor',
+      supplierName: r.supplier_name ?? '',
       quantity:     r.quantity,
       unitCost:     r.unit_cost ?? 0,
-      invoiceRef:   r.reason ?? null,
+      invoiceRef:   null,
+      reason:       r.reason ?? null,
     }));
+  }
+
+  /**
+   * Búsqueda para el POS: devuelve productos con info de variantes.
+   * Reutiliza search() (insensible a acentos y mayúsculas, busca en nombre,
+   * SKU, categoría, barcode y código de proveedor) y anexa el conteo de
+   * variantes activas en una sola query agrupada.
+   */
+  searchForPOS(businessUnitId: number, query: string, limit = 10): ProductSearchResult[] {
+    const matches = this.search(businessUnitId, query).slice(0, limit);
+    if (matches.length === 0) return [];
+
+    // Conteo de variantes por producto. Sin filtro de BU: las variantes
+    // heredan la BU del producto, que ya está filtrado arriba.
+    type CountRow = { product_id: number; variant_count: number; available_variant_count: number };
+    const byId = new Map<number, CountRow>();
+    try {
+      const placeholders = matches.map(() => '?').join(',');
+      const counts = sqlite.prepare(`
+        SELECT product_id,
+               COUNT(*) AS variant_count,
+               SUM(CASE WHEN stock > 0 THEN 1 ELSE 0 END) AS available_variant_count
+        FROM product_variants
+        WHERE is_active = 1 AND product_id IN (${placeholders})
+        GROUP BY product_id
+      `).all(...matches.map((p) => p.id)) as CountRow[];
+      for (const c of counts) byId.set(c.product_id, c);
+    } catch { /* tabla del módulo retail-textil no migrada */ }
+
+    return matches.map((p) => {
+      const counts = byId.get(p.id);
+      return {
+        ...p,
+        hasVariants: (counts?.variant_count ?? 0) > 0,
+        variantCount: counts?.variant_count ?? 0,
+        availableVariantCount: counts?.available_variant_count ?? 0,
+      };
+    });
   }
 
   /** Estadísticas de ventas del producto para un período dado. */

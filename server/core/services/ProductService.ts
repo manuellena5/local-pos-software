@@ -1,10 +1,10 @@
-import type { Product, ProductWithStock, PurchaseHistoryEntry, ProductStats, BulkPricePreviewItem } from '../../../shared/types';
+import type { Product, ProductWithStock, ProductSearchResult, PurchaseHistoryEntry, ProductStats, BulkPricePreviewItem } from '../../../shared/types';
 import type { CreateProductRequest, UpdateProductRequest } from '../types';
-import { createProductSchema, updateProductSchema, inlineUpdateSchema, bulkPriceUpdateSchema } from '../schemas/products.schema';
+import { createProductSchema, updateProductSchema, inlineUpdateSchema } from '../schemas/products.schema';
 import type { ProductRepository } from '../repositories/ProductRepository';
 import { NotFoundError, ValidationError, BusinessRuleError } from '../../lib/errors';
 import { stockItems } from '../../db/schema';
-import { db } from '../../db/connection';
+import { db, sqlite } from '../../db/connection';
 
 
 export class ProductService {
@@ -182,9 +182,12 @@ export class ProductService {
     return this.productRepo.toggleActive(id, businessUnitId, true);
   }
 
-  countTransactions(id: number, businessUnitId: number): number {
-    // Contamos ventas asociadas al producto
-    const { sqlite } = require('../../db/connection');
+  searchForPOS(businessUnitId: number, query: string, limit?: number): ProductSearchResult[] {
+    if (!limit && (!query || query.trim().length === 0)) return [];
+    return this.productRepo.searchForPOS(businessUnitId, query.trim(), limit);
+  }
+
+  countTransactions(id: number, _businessUnitId: number): number {
     type Row = { cnt: number };
     const row = sqlite
       .prepare('SELECT COUNT(*) as cnt FROM sale_items WHERE product_id = ?')

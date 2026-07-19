@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { SuppliersView } from './SuppliersView';
-import { ComparatorView } from './ComparatorView';
+// ComparatorView oculto hasta ser rediseñado — no borrar
+// import { ComparatorView } from './ComparatorView';
 
-type SubTab = 'lista' | 'comparador';
+type SubTab = 'lista';
 
 const TABS: { key: SubTab; label: string; icon: string }[] = [
-  { key: 'lista',       label: 'Proveedores', icon: '🏭' },
-  { key: 'comparador',  label: 'Comparador',  icon: '📊' },
+  { key: 'lista', label: 'Proveedores', icon: '🏭' },
+  // { key: 'comparador', label: 'Comparador', icon: '📊' },
 ];
 
 export function ProveedoresPage() {
@@ -32,8 +33,8 @@ export function ProveedoresPage() {
         ))}
       </div>
 
-      {subTab === 'lista'      && <SuppliersView />}
-      {subTab === 'comparador' && <ComparatorView />}
+      {subTab === 'lista' && <SuppliersView />}
+      {false && <>{/* <ComparatorView /> — oculto hasta rediseño */}</>}
     </div>
   );
 }

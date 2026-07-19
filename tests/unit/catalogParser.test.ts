@@ -118,4 +118,50 @@ describe('catalogParser', () => {
       expect(result.errors[0]?.reason).toContain('vacío');
     });
   });
+
+  // ── description e imageName ───────────────────────────────────────────────
+
+  describe('description and imageName columns', () => {
+    it('should detect descripcion_producto and imagen columns in Excel', () => {
+      const buffer = makeExcelBuffer([
+        { nombre: 'Toalla', precio: 500, descripcion_producto: 'Toalla de algodón 500g', imagen: 'toalla.jpg' },
+        { nombre: 'Sábana', precio: 800, descripcion_producto: 'Sábana doble percal' },
+      ]);
+
+      const result = parseExcel(buffer);
+
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toMatchObject({
+        name:        'Toalla',
+        description: 'Toalla de algodón 500g',
+        imageName:   'toalla.jpg',
+      });
+      expect(result.rows[1]).toMatchObject({ description: 'Sábana doble percal' });
+      expect(result.rows[1]?.imageName).toBeUndefined();
+    });
+
+    it('should detect "detalle" and "foto" synonyms in CSV', () => {
+      const csv = `nombre,precio,detalle,foto\nToalla lisa,500,Detalle largo,foto.png`;
+
+      const result = parseCSV(csv);
+
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]).toMatchObject({
+        description: 'Detalle largo',
+        imageName:   'foto.png',
+      });
+    });
+
+    it('should not map plain "descripcion" column to description (keeps going to name patterns)', () => {
+      // "descripcion" matches the "name" pattern, NOT "description"
+      const buffer = makeExcelBuffer([
+        { descripcion: 'Toalla lisa', precio: 500 },
+      ]);
+
+      const result = parseExcel(buffer);
+
+      expect(result.rows[0]?.name).toBe('Toalla lisa');
+      expect(result.rows[0]?.description).toBeUndefined();
+    });
+  });
 });

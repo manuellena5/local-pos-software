@@ -1,7 +1,7 @@
-import { db } from '../../db/connection';
+import { db, sqlite } from '../../db/connection';
 import { cashMovements } from '../../db/schema';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
-import type { CashMovement, CashMovementType } from '../../../shared/types';
+import type { CashMovement, CashMovementType, CashPaymentMethodType } from '../../../shared/types';
 import type { CreateCashMovementRequest } from '../types';
 
 function rowToModel(row: typeof cashMovements.$inferSelect): CashMovement {
@@ -13,6 +13,8 @@ function rowToModel(row: typeof cashMovements.$inferSelect): CashMovement {
     description: row.description,
     saleId: row.saleId,
     userId: row.userId,
+    code: row.code ?? null,
+    paymentMethod: (row.paymentMethod ?? 'cash') as CashPaymentMethodType,
     createdAt: row.createdAt,
   };
 }
@@ -20,7 +22,7 @@ function rowToModel(row: typeof cashMovements.$inferSelect): CashMovement {
 export class CashMovementRepository {
   create(
     businessUnitId: number,
-    data: CreateCashMovementRequest,
+    data: CreateCashMovementRequest & { code?: string },
     userId?: number,
   ): CashMovement {
     const row = db
@@ -32,6 +34,8 @@ export class CashMovementRepository {
         description: data.description,
         saleId: data.saleId ?? null,
         userId: userId ?? null,
+        code: data.code ?? null,
+        paymentMethod: data.paymentMethod ?? 'cash',
       })
       .returning()
       .get();
@@ -83,6 +87,47 @@ export class CashMovementRepository {
       .where(eq(cashMovements.saleId, saleId))
       .get();
     return row ? rowToModel(row) : null;
+  }
+
+  getById(id: number): CashMovement | null {
+    const row = db
+      .select()
+      .from(cashMovements)
+      .where(eq(cashMovements.id, id))
+      .get();
+    return row ? rowToModel(row) : null;
+  }
+
+  getAllOpenings(businessUnitId: number): CashMovement[] {
+    return db
+      .select()
+      .from(cashMovements)
+      .where(
+        and(
+          eq(cashMovements.businessUnitId, businessUnitId),
+          eq(cashMovements.type, 'opening'),
+        ),
+      )
+      .orderBy(desc(cashMovements.createdAt))
+      .all()
+      .map(rowToModel);
+  }
+
+  /**
+   * Cuenta cuántos movimientos de apertura existen para una BU en una fecha dada.
+   * Usado para generar el sufijo del código de sesión.
+   */
+  countSameDayOpenings(businessUnitId: number, date: string): number {
+    type Row = { count: number };
+    const result = sqlite
+      .prepare(
+        `SELECT COUNT(*) as count FROM cash_movements
+         WHERE type = 'opening'
+           AND business_unit_id = ?
+           AND DATE(created_at, 'localtime') = ?`,
+      )
+      .get(businessUnitId, date) as Row;
+    return result?.count ?? 0;
   }
 
   /**

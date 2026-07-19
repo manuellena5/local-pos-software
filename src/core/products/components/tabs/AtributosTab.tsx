@@ -82,7 +82,7 @@ export function AtributosTab({ formData }: AtributosTabProps) {
   const addValue = (key: string, v: string) => setValues(key, [...getValues(key), v]);
   const removeValue = (key: string, v: string) => setValues(key, getValues(key).filter((x) => x !== v));
 
-  const customKeys = Object.keys(attrs).filter((k) => !rawCategoryAttrs.hasOwnProperty(k));
+  const customKeys = Object.keys(attrs).filter((k) => !Object.prototype.hasOwnProperty.call(rawCategoryAttrs, k));
 
   const addCustom = () => {
     const k = newKey.trim(); const v = newVal.trim();

@@ -103,4 +103,18 @@ export class CashboxController {
       next(err);
     }
   };
+
+  getSessions = (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const businessUnitId = getBUId(req);
+      if (!Number.isFinite(businessUnitId) || businessUnitId <= 0) {
+        res.status(400).json({ data: null, error: 'businessUnitId inválido' });
+        return;
+      }
+      const data = this.service.getSessions(businessUnitId);
+      res.json({ data, error: null });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

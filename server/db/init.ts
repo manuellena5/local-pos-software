@@ -3,7 +3,9 @@ import path from 'path';
 import { sqlite } from './connection';
 
 export function initDatabase(): void {
-  // Run all migrations in order
+  // Todas las migraciones en orden de aplicación.
+  // Los errores de "ya aplicado" (duplicate column, already exists) se ignoran
+  // para que initDatabase() sea idempotente en reinicios.
   const migrations = [
     '0001_initial_schema.sql',
     '0002_products_and_stock.sql',
@@ -28,21 +30,32 @@ export function initDatabase(): void {
     '0021_sales_cancellation.sql',
     '0022_business_units_description.sql',
     '0023_printer_config.sql',
+    '0024_installation_ing_brutos.sql',
+    '0024_product_variants.sql',
+    '0025_products_brand.sql',
+    '0025_stock_movements_extended.sql',
+    '0026_installation_fiscal_fields.sql',
+    '0026_sale_items_variant_id.sql',
+    '0027_stock_movements_variant_supplier.sql',
+    '0028_product_supplier_links_supplier_code.sql',
+    '0029_supplier_products_description_image.sql',
+    '0030_cash_movements_code.sql',
+    '0031_cash_payment_methods.sql',
   ];
 
+  const migrationsDir =
+    process.env.LOCALPOS_MIGRATIONS_PATH ?? path.join(__dirname, 'migrations');
+
+  let applied = 0;
   for (const migration of migrations) {
-    const migrationPath = path.join(__dirname, 'migrations', migration);
+    const migrationPath = path.join(migrationsDir, migration);
     const sqlText = fs.readFileSync(migrationPath, 'utf-8');
 
-    // Ejecutar cada sentencia por separado para tolerar errores de migraciones
-    // ya aplicadas (ALTER TABLE, CREATE UNIQUE INDEX con datos duplicados).
-    // Filtramos sentencias vacías o que son solo comentarios.
     const statements = sqlText
       .split(';')
       .map((s) => s.trim())
       .filter((s) => {
         if (!s) return false;
-        // Quitar líneas de comentario y ver si queda algo de SQL
         const withoutComments = s
           .split('\n')
           .filter((line) => !line.trim().startsWith('--'))
@@ -54,25 +67,22 @@ export function initDatabase(): void {
     for (const stmt of statements) {
       try {
         sqlite.exec(stmt + ';');
+        applied++;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        // Ignorar errores de migraciones ya aplicadas o con datos incompatibles:
-        // - "duplicate column name"  → ALTER TABLE ADD COLUMN ya existente
-        // - "already exists"         → CREATE INDEX sobre índice ya creado
-        // - "UNIQUE constraint failed" → CREATE UNIQUE INDEX sobre datos duplicados
-        //   (en ese caso el constraint se aplica a nivel service, no DB)
         if (
           msg.includes('duplicate column name') ||
           msg.includes('already exists') ||
           msg.includes('UNIQUE constraint failed')
         ) {
-          console.warn(`[DB] Skipping migration statement (already applied): ${msg.slice(0, 80)}`);
+          // Migración ya aplicada — silencioso en arranques normales
           continue;
         }
+        console.error(`[DB] Error en migración ${migration}: ${msg}`);
         throw err;
       }
     }
   }
 
-  console.log('[DB] Database initialized');
+  console.log(`[DB] Migraciones aplicadas: ${applied} sentencias`);
 }

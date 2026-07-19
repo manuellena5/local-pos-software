@@ -22,8 +22,11 @@ export function AddToCatalogModal({ supplierProduct, businessUnitId, onClose, on
   const { createProduct, isCreating, error } = useCreateFromSupplier();
 
   const defaultCost = getUnitCost(supplierProduct);
+  const defaultDescription = 'description' in supplierProduct ? (supplierProduct.description ?? '') : '';
+  const defaultCategory    = 'categoryHint' in supplierProduct ? (supplierProduct.categoryHint ?? undefined) : undefined;
 
   const [name,          setName]          = useState(supplierProduct.name);
+  const [description,   setDescription]   = useState(defaultDescription);
   const [salePrice,     setSalePrice]     = useState('');
   const [costPrice,     setCostPrice]     = useState(String(defaultCost));
   const [initialStock,  setInitialStock]  = useState('');
@@ -54,6 +57,8 @@ export function AddToCatalogModal({ supplierProduct, businessUnitId, onClose, on
       salePrice:    salePriceNum,
       costPrice:    isNaN(costPriceNum) ? null : costPriceNum,
       initialStock: initialStock !== '' ? parseInt(initialStock, 10) : null,
+      categoryName: defaultCategory ?? null,
+      description:  description.trim() || null,
     });
 
     if (result) onSuccess();
@@ -78,6 +83,18 @@ export function AddToCatalogModal({ supplierProduct, businessUnitId, onClose, on
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
+
+          {/* Descripción */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Descripción (opcional)</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descripción del producto"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>

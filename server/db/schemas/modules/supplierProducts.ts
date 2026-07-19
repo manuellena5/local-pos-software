@@ -15,6 +15,8 @@ export const supplierProducts = sqliteTable(
     currency:     text('currency').notNull().default('ARS'),
     unit:         text('unit').notNull().default('unidad'),
     categoryHint: text('category_hint'),
+    description:  text('description'),
+    imageName:    text('image_name'),
     isActive:     integer('is_active', { mode: 'boolean' }).notNull().default(true),
     lastUpdated:  text('last_updated').notNull().default(sql`(datetime('now'))`),
     createdAt:    text('created_at').notNull().default(sql`(datetime('now'))`),

@@ -23,19 +23,19 @@ export interface ColumnConfig {
 }
 
 export const ALL_COLUMNS: ColumnConfig[] = [
-  { id: 'name',             label: 'Producto',            defaultVisible: true,  alwaysVisible: true  },
-  { id: 'category',         label: 'Categoría',           defaultVisible: true,  alwaysVisible: false },
-  { id: 'cost',             label: 'Costo',               defaultVisible: true,  alwaysVisible: false },
-  { id: 'price',            label: 'Precio c/IVA',        defaultVisible: true,  alwaysVisible: false },
-  { id: 'margin',           label: 'Margen %',            defaultVisible: true,  alwaysVisible: false },
-  { id: 'stock',            label: 'Stock',               defaultVisible: true,  alwaysVisible: false },
-  { id: 'lastSupplier',     label: 'Último proveedor',    defaultVisible: true,  alwaysVisible: false },
-  { id: 'actions',          label: 'Acciones',            defaultVisible: true,  alwaysVisible: true  },
-  { id: 'barcode',          label: 'Código de barras',    defaultVisible: false, alwaysVisible: false },
-  { id: 'supplierCode',     label: 'Código proveedor',    defaultVisible: false, alwaysVisible: false },
-  { id: 'priceNet',         label: 'Precio s/IVA',        defaultVisible: false, alwaysVisible: false },
-  { id: 'ivaRate',          label: 'Alícuota IVA',        defaultVisible: false, alwaysVisible: false },
-  { id: 'lastPurchaseDate', label: 'Última compra',       defaultVisible: false, alwaysVisible: false },
+  { id: 'name', label: 'Producto', defaultVisible: true, alwaysVisible: true },
+  { id: 'category', label: 'Categoría', defaultVisible: true, alwaysVisible: false },
+  { id: 'cost', label: 'Costo', defaultVisible: true, alwaysVisible: false },
+  { id: 'price', label: 'Precio', defaultVisible: true, alwaysVisible: false },
+  { id: 'margin', label: 'Margen %', defaultVisible: true, alwaysVisible: false },
+  { id: 'stock', label: 'Stock', defaultVisible: true, alwaysVisible: false },
+  { id: 'lastSupplier', label: 'Último proveedor', defaultVisible: true, alwaysVisible: false },
+  { id: 'actions', label: 'Acciones', defaultVisible: true, alwaysVisible: true },
+  { id: 'barcode', label: 'Código de barras', defaultVisible: false, alwaysVisible: false },
+  { id: 'supplierCode', label: 'Código proveedor', defaultVisible: false, alwaysVisible: false },
+  { id: 'priceNet', label: 'Precio s/IVA', defaultVisible: false, alwaysVisible: false },
+  { id: 'ivaRate', label: 'Alícuota IVA', defaultVisible: false, alwaysVisible: false },
+  { id: 'lastPurchaseDate', label: 'Última compra', defaultVisible: false, alwaysVisible: false },
 ];
 
 export type ChipFilter = 'all' | 'low' | 'nocost' | 'instock';
@@ -48,7 +48,8 @@ export interface ProductsFilter {
   chip: ChipFilter;
 }
 
-export type ProductModalTab = 'base' | 'precios' | 'atributos' | 'catalogo' | 'estadisticas';
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type ProductModalTab = 'base' | 'precios' | 'catalogo' | 'estadisticas' | (string & {});
 
 export type InlineEditField = 'cost' | 'price' | 'margin';
 
@@ -64,28 +65,28 @@ export interface CategoryAttributes {
 
 export const CATEGORY_ATTRIBUTES: Record<string, CategoryAttributes> = {
   Blanquería: {
-    'Tamaño / Medidas':      [],
+    'Tamaño / Medidas': [],
     'Material / Composición': [],
-    'Color':                  [],
-    'Hilos / Calidad':        [],
+    Color: [],
+    'Hilos / Calidad': [],
   },
   Aromas: {
-    'Fragancia':  [],
-    'Formato':    [],
-    'Volumen':    [],
-    'Color':      [],
+    Fragancia: [],
+    Formato: [],
+    Volumen: [],
+    Color: [],
   },
   Deco: {
-    'Material':   [],
-    'Estilo':     [],
-    'Color':      [],
-    'Dimensiones': [],
+    Material: [],
+    Estilo: [],
+    Color: [],
+    Dimensiones: [],
   },
   Textil: {
-    'Talla':      [],
-    'Color':      [],
-    'Material':   [],
-    'Género':     [],
+    Talla: [],
+    Color: [],
+    Material: [],
+    Género: [],
   },
 };
 
@@ -100,19 +101,23 @@ export interface ProductsChipCounts {
 
 export function computeChipCounts(products: ProductWithStock[]): ProductsChipCounts {
   return {
-    all:     products.length,
-    low:     products.filter(p => p.currentStock > 0 && p.currentStock <= p.minimumThreshold).length,
-    nocost:  products.filter(p => !p.costPrice || p.costPrice === 0).length,
-    instock: products.filter(p => p.currentStock > 0).length,
+    all: products.length,
+    low: products.filter((p) => p.currentStock > 0 && p.currentStock <= p.minimumThreshold).length,
+    nocost: products.filter((p) => !p.costPrice || p.costPrice === 0).length,
+    instock: products.filter((p) => p.currentStock > 0).length,
   };
 }
 
 export function filterByChip(products: ProductWithStock[], chip: ChipFilter): ProductWithStock[] {
   switch (chip) {
-    case 'low':     return products.filter(p => p.currentStock > 0 && p.currentStock <= p.minimumThreshold);
-    case 'nocost':  return products.filter(p => !p.costPrice || p.costPrice === 0);
-    case 'instock': return products.filter(p => p.currentStock > 0);
-    default:        return products;
+    case 'low':
+      return products.filter((p) => p.currentStock > 0 && p.currentStock <= p.minimumThreshold);
+    case 'nocost':
+      return products.filter((p) => !p.costPrice || p.costPrice === 0);
+    case 'instock':
+      return products.filter((p) => p.currentStock > 0);
+    default:
+      return products;
   }
 }
 

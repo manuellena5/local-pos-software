@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { tallerMedidaApi } from '../api/tallerMedidaApi';
+import { formatLocalDayKey } from '@/lib/utils/dateFormat';
 import { ORDER_STATUS_LABELS, ORDER_STATUSES, type OrderStatus, type TallerOrder } from '../types';
 
 type OrderWithTotals = TallerOrder & { paidAmount: number; pendingAmount: number };
@@ -31,7 +32,7 @@ export function OrderReportScreen({ businessUnitId }: Props) {
   useEffect(() => { void load(); }, [load]);
 
   const filtered = orders.filter((o) => {
-    const date = o.createdAt.slice(0, 10);
+    const date = formatLocalDayKey(o.createdAt);
     if (fromDate && date < fromDate) return false;
     if (toDate   && date > toDate)   return false;
     return true;

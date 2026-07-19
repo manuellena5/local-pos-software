@@ -78,7 +78,7 @@ export function CancelSaleModal({ saleId, saleNumber, businessUnitId, onCancelle
             <ul className="text-xs text-amber-700 mt-1 space-y-0.5 list-disc list-inside">
               <li>El stock de todos los ítems será devuelto al inventario</li>
               <li>Se registrará un egreso de caja si la caja está abierta</li>
-              <li>La venta quedará marcada como "Anulada" en el historial</li>
+              <li>La venta quedará marcada como &ldquo;Anulada&rdquo; en el historial</li>
             </ul>
           </div>
 

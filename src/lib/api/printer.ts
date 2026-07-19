@@ -11,8 +11,8 @@ export const printerApi = {
   connect(config: PrinterConfig): Promise<{ success: boolean; error?: string }> {
     return apiClient.post('/api/printer/connect', config);
   },
-  testPrint(): Promise<{ success: boolean; error?: string }> {
-    return apiClient.post('/api/printer/test', {});
+  testPrint(businessName?: string): Promise<{ success: boolean; error?: string }> {
+    return apiClient.post('/api/printer/test', { businessName: businessName ?? '' });
   },
   disconnect(): Promise<{ success: boolean }> {
     return apiClient.post('/api/printer/disconnect', {});

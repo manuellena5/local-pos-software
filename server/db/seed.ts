@@ -1,65 +1,77 @@
 import bcrypt from 'bcryptjs';
 import { db } from './connection';
-import { initDatabase } from './init';
+import { sqlite } from './connection';
 import { installationConfig, businessUnits, users } from './schema';
-import { seedProductsAndStock } from './seeds/02_products_and_stock.seed';
-import { seedCustomersAndCashbox } from './seeds/03_customers_cashbox.seed';
 
-initDatabase();
+/**
+ * Corre el seed de datos iniciales solo si la DB está vacía.
+ * Se llama desde server.ts después de initDatabase().
+ * Es idempotente: si ya hay datos, no hace nada.
+ */
+export function runSeedIfEmpty(): void {
+  const existing = sqlite.prepare('SELECT COUNT(*) as count FROM installation_config').get() as {
+    count: number;
+  };
 
-// Instalación: Espacio BIP
-db.insert(installationConfig)
-  .values({
-    id: 1,
-    businessName: 'Espacio BIP',
-    cuit: '20000000000',
-    address: 'Landeta, Santa Fe, Argentina',
-  })
-  .onConflictDoNothing()
-  .run();
+  if (existing.count > 0) {
+    console.log('[DB] Seed: base de datos ya inicializada');
+    return;
+  }
 
-// Unidades de negocio
-db.insert(businessUnits)
-  .values([
-    {
-      installationId: 1,
-      name: 'Front',
-      moduleId: 'retail-textil',
-      invoicePrefix: 'A',
-      isActive: true,
-    },
-    {
-      installationId: 1,
-      name: 'Back',
-      moduleId: 'taller-medida',
-      invoicePrefix: 'B',
-      isActive: true,
-    },
-  ])
-  .onConflictDoNothing()
-  .run();
+  const passwordHash = bcrypt.hashSync('admin1234', 12);
 
-// Usuario admin
-const passwordHash = bcrypt.hashSync('admin123', 12);
-db.insert(users)
-  .values({
-    installationId: 1,
-    email: 'admin@espaciobip.com',
-    passwordHash,
-    role: 'admin',
-    isActive: true,
-  })
-  .onConflictDoNothing()
-  .run();
+  // Transacción única — si cualquier INSERT falla, rollback completo
+  const runSeed = sqlite.transaction(() => {
+    db.insert(installationConfig)
+      .values({
+        id: 1,
+        businessName: 'Espacio BIP',
+        cuit: '00-00000000-0',
+        address: 'Landeta, Santa Fe, Argentina',
+      })
+      .run();
 
-console.log('[Seed] Datos de Espacio BIP cargados correctamente');
-console.log('[Seed]   Installation: Espacio BIP');
-console.log('[Seed]   BU 1: Front (retail-textil)');
-console.log('[Seed]   BU 2: Back (taller-medida)');
-console.log('[Seed]   Usuario: admin@espaciobip.com / admin123');
+    db.insert(businessUnits)
+      .values([
+        {
+          installationId: 1,
+          name: 'Front',
+          description: 'Blanquería, Decoración y Aromas',
+          moduleId: 'retail-textil',
+          invoicePrefix: 'A',
+          isActive: true,
+        },
+        {
+          installationId: 1,
+          name: 'Back',
+          description: 'Diseño de vestidos a medida',
+          moduleId: 'taller-medida',
+          invoicePrefix: 'B',
+          isActive: true,
+        },
+      ])
+      .run();
 
-// Seed products and stock
-seedProductsAndStock();
+    db.insert(users)
+      .values({
+        installationId: 1,
+        email: 'admin@espaciobip.com',
+        passwordHash,
+        role: 'admin',
+        isActive: true,
+      })
+      .run();
+  });
 
-// Seed customers and cashbox
-seedCustomersAndCashbox();
+  try {
+    runSeed();
+    console.log('[DB] Seed aplicado:');
+    console.log('[DB]   Instalación: Espacio BIP (CUIT placeholder — actualizar en Ajustes)');
+    console.log('[DB]   BU 1: Front (retail-textil)');
+    console.log('[DB]   BU 2: Back (taller-medida)');
+    console.log('[DB]   Usuario: admin@espaciobip.com / admin1234');
+  } catch (err) {
+    console.error('[DB] Error en seed — rollback aplicado:', err);
+    throw err;
+  }
+}

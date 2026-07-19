@@ -12,6 +12,9 @@ const stockController = new StockController(stockService);
 export const stockRouter = Router();
 
 stockRouter.get('/stock/summary', (req, res, next) => stockController.getSummary(req, res, next));
+stockRouter.get('/stock/:productId/detail', (req, res, next) =>
+  stockController.getDetail(req, res, next)
+);
 stockRouter.get('/stock/:productId/movements', (req, res, next) =>
   stockController.getMovements(req, res, next)
 );

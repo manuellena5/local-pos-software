@@ -104,6 +104,38 @@ describe('CustomerService', () => {
     });
   });
 
+  describe('getWithHistory', () => {
+    it('should return customer purchase history filtered by customer_id', () => {
+      const customer = makeCustomer({ id: 5 });
+      const fakePurchases = [
+        {
+          sale: { id: 1, saleNumber: 1, totalAmount: 200, status: 'completed', customerId: 5 },
+          items: [],
+        },
+        {
+          sale: { id: 2, saleNumber: 2, totalAmount: 150, status: 'completed', customerId: 5 },
+          items: [],
+        },
+      ];
+      vi.mocked(repo.getWithPurchaseHistory).mockReturnValue({
+        customer,
+        purchases: fakePurchases as never,
+        totalSpent: 350,
+      });
+
+      const result = service.getWithHistory(5);
+      expect(result.customer.id).toBe(5);
+      expect(result.purchases).toHaveLength(2);
+      expect(result.totalSpent).toBe(350);
+      expect(repo.getWithPurchaseHistory).toHaveBeenCalledWith(5);
+    });
+
+    it('should throw NotFoundError when customer does not exist', () => {
+      vi.mocked(repo.getWithPurchaseHistory).mockReturnValue(null);
+      expect(() => service.getWithHistory(99)).toThrow('no encontrado');
+    });
+  });
+
   describe('getCreditStatus', () => {
     it('should calculate available credit correctly', () => {
       vi.mocked(repo.getById).mockReturnValue(makeCustomer({ creditLimit: 5000, creditUsed: 1200 }));

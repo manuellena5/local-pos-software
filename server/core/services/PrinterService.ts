@@ -369,43 +369,39 @@ class PrinterService {
    * al printer por nombre usando la Win32 WritePrinter API (PowerShell).
    * En red / Linux USB: usa la instancia de ThermalPrinter directamente.
    */
-  async testPrint(): Promise<{ success: boolean; error?: string }> {
+  async testPrint(businessName = ''): Promise<{ success: boolean; error?: string }> {
     if (this.currentStatus !== 'connected') {
       return { success: false, error: 'La impresora no está conectada.' };
     }
 
+    const buildContent = (p: ThermalPrinter): void => {
+      const now = format(new Date(), 'dd/MM/yyyy HH:mm:ss', { locale: es });
+      p.newLine();
+      p.alignCenter();
+      p.println('=== TICKET DE PRUEBA ===');
+      if (businessName) p.println(businessName);
+      p.println(now);
+      p.println('========================');
+      p.newLine();
+      p.cut();
+    };
+
     try {
       if (process.platform === 'win32' && this.currentConfig?.type === 'usb') {
         const printerName = this.currentConfig.portPath ?? '';
-        const buffer = await this.buildEscPosBuffer((p) => {
-          const now = format(new Date(), 'dd/MM/yyyy HH:mm:ss', { locale: es });
-          p.alignCenter();
-          p.println('Impresora configurada correctamente');
-          p.drawLine();
-          p.println(now);
-          p.newLine();
-          p.cut();
-        });
+        const buffer = await this.buildEscPosBuffer((p) => buildContent(p));
         await this.printWindowsRaw(printerName, buffer);
         return { success: true };
       }
 
       // Network / Linux USB
       if (!this.printer) return { success: false, error: 'La impresora no está conectada.' };
-      const now = format(new Date(), 'dd/MM/yyyy HH:mm:ss', { locale: es });
-      this.printer.alignCenter();
-      this.printer.println('Impresora configurada correctamente');
-      this.printer.drawLine();
-      this.printer.println(now);
-      this.printer.newLine();
-      this.printer.cut();
+      buildContent(this.printer);
       await this.printer.execute();
       this.printer.clear();
       return { success: true };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al imprimir.';
-      // Cualquier fallo de impresión marca como desconectada — el usuario tendrá
-      // que reconectar manualmente, pero es mejor que mostrar un estado falso.
       this.currentStatus = 'disconnected';
       this.currentConfig = null;
       this.printer = null;

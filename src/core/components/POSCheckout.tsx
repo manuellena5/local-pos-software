@@ -53,6 +53,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
 
   // ── Stock ────────────────────────────────────────────────────────────────────
   const stockIssues = cart.filter((item) => {
+    if (item.availableStock !== undefined) return item.quantity > item.availableStock;
     const available = stockData[item.productId]?.currentQuantity;
     return available !== undefined && item.quantity > available;
   });
@@ -83,9 +84,9 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   // Callback que recibe el modal: confirma la venta y opcionalmente imprime
   const handleConfirmWithPrint = useCallback(async (shouldPrint: boolean): Promise<ConfirmResult> => {
     const customerAtConfirm = selectedCustomer;
-    const result = await confirmSale();
+    const { result, errorMsg } = await confirmSale();
     if (!result) {
-      return { saleError: 'No se pudo registrar la venta. Intentá nuevamente.' };
+      return { saleError: errorMsg ?? 'No se pudo registrar la venta. Intentá nuevamente.' };
     }
 
     // Venta registrada — limpiar estado y notificar
@@ -272,8 +273,14 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
           <div className="shrink-0 px-3 py-1.5 border-b border-gray-100 text-red-600 bg-red-50" style={{ fontSize: 11 }}>
             <p className="font-semibold">⚠ Stock insuficiente:</p>
             {stockIssues.map((item) => {
-              const available = stockData[item.productId]?.currentQuantity ?? 0;
-              return <p key={item.productId}>• {item.name}: pedís {item.quantity}, disp. {available}</p>;
+              const available = item.availableStock !== undefined
+                ? item.availableStock
+                : (stockData[item.productId]?.currentQuantity ?? 0);
+              return (
+                <p key={`${item.productId}-${item.variantId ?? ''}`}>
+                  • {item.name}{item.variantLabel ? ` (${item.variantLabel})` : ''}: pedís {item.quantity}, disp. {available}
+                </p>
+              );
             })}
           </div>
         )}

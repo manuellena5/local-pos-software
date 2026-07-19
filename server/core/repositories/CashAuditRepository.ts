@@ -11,6 +11,7 @@ function rowToModel(row: typeof cashAudits.$inferSelect): CashAudit {
     theoreticalBalance: row.theoreticalBalance,
     realBalance: row.realBalance,
     difference: row.difference,
+    otherMethodsTotal: row.otherMethodsTotal ?? 0,
     notes: row.notes,
     status: row.status as CashAudit['status'],
     createdAt: row.createdAt,
@@ -25,6 +26,7 @@ export class CashAuditRepository {
       theoreticalBalance: number;
       realBalance: number;
       difference: number;
+      otherMethodsTotal: number;
       notes?: string;
       status: CashAudit['status'];
     },
@@ -37,6 +39,7 @@ export class CashAuditRepository {
         theoreticalBalance: data.theoreticalBalance,
         realBalance: data.realBalance,
         difference: data.difference,
+        otherMethodsTotal: data.otherMethodsTotal,
         notes: data.notes ?? null,
         status: data.status,
       })

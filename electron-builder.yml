@@ -1,0 +1,38 @@
+appId: com.espaciobip.localpos
+productName: LocalPosSoftware
+copyright: Espacio BIP
+
+directories:
+  output: dist
+
+files:
+  - build/**/*
+  - dist-server/**/*
+  - package.json
+
+extraResources:
+  - from: server/db/migrations
+    to: migrations
+  - from: assets
+    to: assets
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  installerIcon: assets/icon.ico
+  uninstallerIcon: assets/icon.ico
+  installerHeaderIcon: assets/icon.ico
+  displayLanguageSelector: false
+
+asar: true
+asarUnpack:
+  - "**/*.node"

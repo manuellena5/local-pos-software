@@ -26,5 +26,6 @@ export function initTallerMedidaModule(): void {
     id:        'taller-medida:pedidos',
     name:      'Pedidos por estado',
     component: TallerOrdersReport,
+    moduleId:  'taller-medida',
   });
 }

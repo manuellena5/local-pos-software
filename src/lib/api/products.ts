@@ -2,6 +2,7 @@ import { apiClient } from './client';
 import type {
   Product,
   ProductWithStock,
+  ProductSearchResult,
   PurchaseHistoryEntry,
   ProductStats,
   CreateStockMovementRequest,
@@ -76,6 +77,18 @@ export const productsApi = {
     data: CreateStockMovementRequest,
   ): Promise<{ movement: unknown; newQuantity: number }> {
     return apiClient.post(`/api/products/${id}/stock-movements`, data);
+  },
+
+  searchForPOS(businessUnitId: number, query: string): Promise<ProductSearchResult[]> {
+    return apiClient.get(
+      `/api/products/search?businessUnitId=${businessUnitId}&q=${encodeURIComponent(query)}`,
+    );
+  },
+
+  getAllForPOS(businessUnitId: number): Promise<ProductSearchResult[]> {
+    return apiClient.get(
+      `/api/products/search?businessUnitId=${businessUnitId}&q=&all=1`,
+    );
   },
 
   findByBarcode(

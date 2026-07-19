@@ -1,207 +1,232 @@
-import { db } from '../../db/connection';
-import { sales, saleItems, products, stockItems, cashMovements, cashAudits } from '../../db/schema';
-import { tallerOrders } from '../../db/schema';
-import { eq, and, gte, lte, desc, sql, notInArray } from 'drizzle-orm';
+import type { DashboardDTO } from '../../../shared/types';
+import type { DashboardRepository } from '../repositories/DashboardRepository';
 
-export interface SalesTodaySummary {
-  count: number;
-  total: number;
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: 'Efectivo',
+  transfer: 'Transferencia',
+  card: 'Tarjeta',
+  mercadopago: 'Mercado Pago',
+};
+
+const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+// `sales.createdAt` se guarda vía SQLite `datetime('now')`, que es SIEMPRE UTC.
+// Los límites de "día calendario" (hoy, semana, mes) deben calcularse en hora
+// LOCAL del negocio (Argentina) — no en UTC — porque de lo contrario las
+// ventas de las últimas horas del día local (después de las 21:00 ART, ya
+// "mañana" en UTC) quedan excluidas de "hoy" apenas cruza la medianoche UTC.
+// Por eso todo límite local se convierte a su equivalente UTC antes de usarlo
+// en una comparación contra `created_at`.
+
+function todayLocal(): string {
+  return formatLocalDate(new Date());
 }
 
-export interface CashboxSummary {
-  balance: number;
-  lastAuditDate: string | null;
-  lastAuditStatus: string | null;
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-export interface CriticalStockItem {
-  productId: number;
-  name: string;
-  current: number;
-  threshold: number;
-  status: 'low' | 'out';
+function shiftDateLocal(base: string, days: number): string {
+  const [y, m, d] = base.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return formatLocalDate(date);
 }
 
-export interface UpcomingOrder {
-  id: number;
-  customerName: string;
-  description: string;
-  estimatedDelivery: string;
-  daysLeft: number;
-  status: string;
+function mondayOfWeekLocal(today: string): string {
+  const [y, m, d] = today.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dow = date.getDay(); // 0 = domingo
+  const daysFromMonday = dow === 0 ? 6 : dow - 1;
+  date.setDate(date.getDate() - daysFromMonday);
+  return formatLocalDate(date);
 }
 
-export interface TopProductWeek {
-  productId: number;
-  name: string;
-  quantity: number;
-  revenue: number;
+function monthStartLocal(today: string): string {
+  return today.slice(0, 7) + '-01';
 }
 
-export interface DashboardData {
-  salesToday: SalesTodaySummary;
-  cashbox: CashboxSummary;
-  criticalStock: CriticalStockItem[];
-  upcomingOrders?: UpcomingOrder[];
-  topProductsWeek?: TopProductWeek[];
+/**
+ * Convierte una fecha calendario local (YYYY-MM-DD) al string UTC
+ * "YYYY-MM-DD HH:MM:SS" que representa la medianoche de ese día local.
+ * Es el formato que usa SQLite `datetime('now')`, así que el resultado
+ * se puede comparar directamente contra `created_at`.
+ */
+function localDateToUtcBoundary(localDate: string): string {
+  const [y, m, d] = localDate.split('-').map(Number);
+  const localMidnight = new Date(y, m - 1, d, 0, 0, 0, 0);
+  return localMidnight.toISOString().replace('T', ' ').slice(0, 19);
 }
 
 export class DashboardService {
-  getData(businessUnitId: number, moduleId: string): DashboardData {
-    const today = new Date().toISOString().slice(0, 10);
+  constructor(private readonly repo: DashboardRepository) {}
+
+  /**
+   * Builds the full DashboardDTO for a given business unit.
+   */
+  getFullDashboard(businessUnitId: number): DashboardDTO {
+    const today = todayLocal();
+    const yesterday = shiftDateLocal(today, -1);
+    const weekStart = mondayOfWeekLocal(today);
+    const sixDaysAgo = shiftDateLocal(today, -6);
+    const monthStart = monthStartLocal(today);
+
+    const todayBoundary = localDateToUtcBoundary(today);
+    const yesterdayBoundary = localDateToUtcBoundary(yesterday);
+    const weekStartBoundary = localDateToUtcBoundary(weekStart);
+    const sixDaysAgoBoundary = localDateToUtcBoundary(sixDaysAgo);
+    const monthStartBoundary = localDateToUtcBoundary(monthStart);
+
+    const todaySales = this.repo.getSalesToday(businessUnitId, todayBoundary);
+    const yesterdayTotal = this.repo.getSalesYesterday(
+      businessUnitId,
+      yesterdayBoundary,
+      todayBoundary,
+    );
+    const weekSales = this.repo.getSalesWeek(businessUnitId, weekStartBoundary);
+    const salesMonth = this.repo.getSalesMonth(businessUnitId, monthStartBoundary);
+
+    const salesTodayDelta =
+      yesterdayTotal === 0
+        ? null
+        : Math.round(((todaySales.total - yesterdayTotal) / yesterdayTotal) * 1000) / 10;
+
+    const avgTicketToday =
+      todaySales.count === 0 ? 0 : Math.round((todaySales.total / todaySales.count) * 100) / 100;
 
     return {
-      salesToday:      this.getSalesToday(businessUnitId, today),
-      cashbox:         this.getCashboxSummary(businessUnitId),
-      criticalStock:   this.getCriticalStock(businessUnitId),
-      upcomingOrders:  moduleId === 'taller-medida' ? this.getUpcomingOrders(businessUnitId, today) : undefined,
-      topProductsWeek: moduleId !== 'taller-medida' ? this.getTopProductsWeek(businessUnitId, today) : undefined,
+      kpis: {
+        salesToday: Math.round(todaySales.total * 100) / 100,
+        salesTodayDelta,
+        transactionsToday: todaySales.count,
+        avgTicketToday,
+        salesWeek: Math.round(weekSales.total * 100) / 100,
+        transactionsWeek: weekSales.count,
+        salesMonth: Math.round(salesMonth * 100) / 100,
+      },
+      last7Days: this.buildLast7Days(businessUnitId, sixDaysAgoBoundary, today),
+      paymentMethods: this.buildPaymentMethods(businessUnitId, todayBoundary),
+      cajaActual: this.buildCajaActual(businessUnitId),
+      lowStock: this.repo.getLowStockProducts(businessUnitId, 15),
+      recentSales: this.buildRecentSales(businessUnitId),
+      topProducts: this.buildTopProducts(businessUnitId, monthStartBoundary),
     };
   }
 
-  private getSalesToday(businessUnitId: number, today: string): SalesTodaySummary {
-    const rows = db
-      .select({ total: sql<number>`SUM(${sales.totalAmount})`, count: sql<number>`COUNT(*)` })
-      .from(sales)
-      .where(and(
-        eq(sales.businessUnitId, businessUnitId),
-        eq(sales.status, 'completed'),
-        gte(sales.createdAt, today),
-      ))
-      .get();
+  private buildLast7Days(
+    businessUnitId: number,
+    from: string,
+    today: string,
+  ): DashboardDTO['last7Days'] {
+    const byDate = new Map<string, number>();
+    for (const row of this.repo.getSalesByDate(businessUnitId, from)) {
+      byDate.set(row.date, row.total);
+    }
 
-    return {
-      count: rows?.count ?? 0,
-      total: Math.round((rows?.total ?? 0) * 100) / 100,
-    };
+    const result: DashboardDTO['last7Days'] = [];
+    for (let i = 6; i >= 0; i--) {
+      const dateStr = shiftDateLocal(today, -i);
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dow = new Date(y, m - 1, d).getDay();
+      const label = i === 0 ? 'Hoy' : DAYS_ES[dow];
+      result.push({
+        date: dateStr,
+        label,
+        total: Math.round((byDate.get(dateStr) ?? 0) * 100) / 100,
+      });
+    }
+    return result;
   }
 
-  private getCashboxSummary(businessUnitId: number): CashboxSummary {
-    const inTypes = ['sale', 'deposit'] as const;
+  private buildPaymentMethods(
+    businessUnitId: number,
+    today: string,
+  ): DashboardDTO['paymentMethods'] {
+    const rows = this.repo.getTodaySalesPaymentMethods(businessUnitId, today);
 
-    const movements = db
-      .select({ type: cashMovements.type, amount: cashMovements.amount })
-      .from(cashMovements)
-      .where(eq(cashMovements.businessUnitId, businessUnitId))
-      .all();
+    const totals = new Map<string, number>();
+    for (const row of rows) {
+      let parsed: Array<{ method: string; amount: number }>;
+      try {
+        parsed = JSON.parse(row.paymentMethods) as Array<{ method: string; amount: number }>;
+      } catch {
+        continue;
+      }
+      for (const entry of parsed) {
+        totals.set(entry.method, (totals.get(entry.method) ?? 0) + entry.amount);
+      }
+    }
 
-    const balance = movements.reduce((sum, m) => {
-      const isIn = (inTypes as readonly string[]).includes(m.type);
-      return sum + (isIn ? m.amount : -m.amount);
-    }, 0);
+    const grandTotal = Array.from(totals.values()).reduce((s, v) => s + v, 0);
 
-    const latestAudit = db
-      .select({ auditDate: cashAudits.auditDate, status: cashAudits.status })
-      .from(cashAudits)
-      .where(eq(cashAudits.businessUnitId, businessUnitId))
-      .orderBy(desc(cashAudits.createdAt))
-      .limit(1)
-      .get();
-
-    return {
-      balance:         Math.round(balance * 100) / 100,
-      lastAuditDate:   latestAudit?.auditDate ?? null,
-      lastAuditStatus: latestAudit?.status ?? null,
-    };
+    return Array.from(totals.entries())
+      .filter(([, total]) => total > 0)
+      .sort(([, a], [, b]) => b - a)
+      .map(([method, total]) => ({
+        method,
+        label: PAYMENT_LABELS[method] ?? method,
+        total: Math.round(total * 100) / 100,
+        percentage:
+          grandTotal === 0 ? 0 : Math.round((total / grandTotal) * 1000) / 10,
+      }));
   }
 
-  private getCriticalStock(businessUnitId: number): CriticalStockItem[] {
-    const rows = db
-      .select({
-        productId:  stockItems.productId,
-        name:       products.name,
-        current:    stockItems.quantity,
-        threshold:  stockItems.minimumThreshold,
-      })
-      .from(stockItems)
-      .innerJoin(products, eq(stockItems.productId, products.id))
-      .where(and(
-        eq(stockItems.businessUnitId, businessUnitId),
-        eq(products.businessUnitId, businessUnitId),   // evita mezclar productos de otra BU
-        eq(products.isActive, true),
-        sql`${stockItems.quantity} <= ${stockItems.minimumThreshold}`,
-      ))
-      .orderBy(sql`${stockItems.quantity} - ${stockItems.minimumThreshold}`)
-      .limit(5)
-      .all();
-
-    return rows.map((r) => ({
-      productId: r.productId,
-      name:      r.name,
-      current:   r.current,
-      threshold: r.threshold,
-      status:    r.current === 0 ? 'out' : 'low',
-    }));
-  }
-
-  private getUpcomingOrders(businessUnitId: number, today: string): UpcomingOrder[] {
-    const sevenDaysLater = new Date(today);
-    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-    const toDate = sevenDaysLater.toISOString().slice(0, 10);
-
-    const rows = db
-      .select()
-      .from(tallerOrders)
-      .where(and(
-        eq(tallerOrders.buId, businessUnitId),
-        notInArray(tallerOrders.status, ['entregado', 'cancelado']),
-        sql`${tallerOrders.estimatedDelivery} IS NOT NULL`,
-        lte(tallerOrders.estimatedDelivery, toDate),
-      ))
-      .orderBy(tallerOrders.estimatedDelivery)
-      .all();
-
+  private buildRecentSales(businessUnitId: number): DashboardDTO['recentSales'] {
+    const rows = this.repo.getRecentSales(businessUnitId, 5);
     return rows.map((r) => {
-      const delivery = r.estimatedDelivery!;
-      const diffMs = new Date(delivery).getTime() - new Date(today).getTime();
-      const daysLeft = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      let paymentMethod = 'cash';
+      try {
+        const parsed = JSON.parse(r.paymentMethods) as Array<{ method: string; amount: number }>;
+        if (parsed[0]?.method) paymentMethod = parsed[0].method;
+      } catch {
+        // default 'cash'
+      }
       return {
-        id:                r.id,
-        customerName:      r.customerName,
-        description:       r.description,
-        estimatedDelivery: delivery,
-        daysLeft,
-        status:            r.status,
+        id: r.id,
+        createdAt: r.createdAt,
+        total: Math.round(r.totalAmount * 100) / 100,
+        paymentMethod,
+        customerName: r.customerName ?? null,
+        itemsCount: r.itemsCount,
       };
     });
   }
 
-  private getTopProductsWeek(businessUnitId: number, today: string): TopProductWeek[] {
-    const weekStart = new Date(today);
-    weekStart.setDate(weekStart.getDate() - 6);
-    const fromDate = weekStart.toISOString().slice(0, 10);
+  private buildTopProducts(
+    businessUnitId: number,
+    monthStart: string,
+  ): DashboardDTO['topProducts'] {
+    return this.repo.getTopProducts(businessUnitId, monthStart, 5).map((r) => ({
+      productId: r.productId,
+      name: r.name,
+      sku: r.sku ?? '',
+      totalUnits: r.totalUnits,
+      totalRevenue: Math.round(r.totalRevenue * 100) / 100,
+    }));
+  }
 
-    const completedIds = db
-      .select({ id: sales.id })
-      .from(sales)
-      .where(and(
-        eq(sales.businessUnitId, businessUnitId),
-        eq(sales.status, 'completed'),
-        gte(sales.createdAt, fromDate),
-      ))
-      .all()
-      .map((r) => r.id);
+  private buildCajaActual(businessUnitId: number): DashboardDTO['cajaActual'] {
+    const session = this.repo.getCajaSession(businessUnitId);
+    if (!session) return null;
 
-    if (completedIds.length === 0) return [];
+    const salesToday = this.repo.getSalesSinceTimestamp(businessUnitId, session.openedAt);
+    const estimatedCash =
+      Math.round(
+        (session.openingAmount + session.cashSalesToday + session.manualIncome - session.manualExpense) * 100,
+      ) / 100;
 
-    return db
-      .select({
-        productId: saleItems.productId,
-        name:      saleItems.productName,
-        quantity:  sql<number>`SUM(${saleItems.quantity})`,
-        revenue:   sql<number>`SUM(${saleItems.lineTotal})`,
-      })
-      .from(saleItems)
-      .where(sql`${saleItems.saleId} IN (${completedIds.join(',')})`)
-      .groupBy(saleItems.productId, saleItems.productName)
-      .orderBy(desc(sql`SUM(${saleItems.quantity})`))
-      .limit(5)
-      .all()
-      .map((r) => ({
-        productId: r.productId,
-        name:      r.name,
-        quantity:  r.quantity,
-        revenue:   Math.round(r.revenue * 100) / 100,
-      }));
+    return {
+      isOpen: true,
+      openedAt: session.openedAt,
+      openingAmount: session.openingAmount,
+      salesToday: Math.round(salesToday * 100) / 100,
+      cashSalesToday: session.cashSalesToday,
+      manualIncome: session.manualIncome,
+      manualExpense: session.manualExpense,
+      estimatedCash,
+    };
   }
 }

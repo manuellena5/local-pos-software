@@ -5,7 +5,11 @@ import { CustomerForm } from './CustomerForm';
 import { CustomerDetail } from './CustomerDetail';
 import type { Customer } from '@shared/types';
 
-export function CustomerList() {
+interface Props {
+  onNavigateToSale?: (saleId: number) => void;
+}
+
+export function CustomerList({ onNavigateToSale }: Props) {
   const [search, setSearch] = useState('');
   const { customers, loading, error, refetch } = useCustomers(search || undefined);
   const [showForm, setShowForm] = useState(false);
@@ -67,7 +71,6 @@ export function CustomerList() {
                 <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">Documento</th>
                 <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">Teléfono</th>
                 <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">Email</th>
-                <th className="text-right text-xs text-gray-500 font-medium py-2 px-3">Crédito</th>
                 <th className="py-2 px-3"></th>
               </tr>
             </thead>
@@ -84,21 +87,6 @@ export function CustomerList() {
                   </td>
                   <td className="py-2.5 px-3 text-gray-500">{c.phone ?? '—'}</td>
                   <td className="py-2.5 px-3 text-gray-500">{c.email ?? '—'}</td>
-                  <td className="py-2.5 px-3 text-right">
-                    {c.creditLimit > 0 ? (
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        c.creditUsed >= c.creditLimit
-                          ? 'bg-red-100 text-red-700'
-                          : c.creditUsed > c.creditLimit * 0.5
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}>
-                        ${(c.creditLimit - c.creditUsed).toFixed(0)} disp.
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-400">Sin crédito</span>
-                    )}
-                  </td>
                   <td className="py-2.5 px-3 text-right">
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditingCustomer(c); setShowForm(true); }}
@@ -131,6 +119,7 @@ export function CustomerList() {
           onEdit={() => { setEditingCustomer(viewingCustomer); setShowForm(true); }}
           onDelete={() => handleDelete(viewingCustomer)}
           onClose={() => setViewingCustomer(null)}
+          onNavigateToSale={onNavigateToSale}
         />
       )}
     </div>

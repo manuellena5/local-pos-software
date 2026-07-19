@@ -23,6 +23,9 @@ const COLUMN_PATTERNS: Record<keyof RawImportRow, string[]> = {
   unitCost:     ['precio', 'price', 'costo', 'cost', 'valor', 'importe'],
   unit:         ['unidad', 'unit', 'um', 'medida'],
   categoryHint: ['categoria', 'category', 'rubro', 'tipo'],
+  // Más específicos que 'descripcion' para no colisionar con el patrón de name
+  description:  ['descripcion_producto', 'detalle', 'descripcion_larga', 'detail', 'notes', 'notas'],
+  imageName:    ['imagen', 'image', 'foto', 'photo', 'img', 'archivo_imagen'],
 };
 
 type ColMap = { [K in keyof RawImportRow]?: number };
@@ -82,6 +85,12 @@ function buildRows(
     const catVal   = colMap.categoryHint !== undefined
       ? String(dataRow[headers[colMap.categoryHint] ?? ''] ?? '').trim() || undefined
       : undefined;
+    const descVal  = colMap.description !== undefined
+      ? String(dataRow[headers[colMap.description] ?? ''] ?? '').trim() || undefined
+      : undefined;
+    const imgVal   = colMap.imageName !== undefined
+      ? String(dataRow[headers[colMap.imageName] ?? ''] ?? '').trim() || undefined
+      : undefined;
 
     rows.push({
       name:         nameVal,
@@ -89,6 +98,8 @@ function buildRows(
       unitCost,
       unit:         unitVal,
       categoryHint: catVal,
+      description:  descVal,
+      imageName:    imgVal,
     });
   });
 

@@ -103,6 +103,9 @@ export interface ProductWithStock extends Product {
   minimumThreshold: number;
   stockStatus: 'ok' | 'low' | 'out';
   supplierName: string | null;
+  primaryImage?: string | null;
+  hasVariants?: boolean;
+  variantBreakdown?: string | null;
 }
 
 export type StockMovementType = 'entrada' | 'salida' | 'ajuste';
@@ -113,6 +116,27 @@ export interface CreateStockMovementRequest {
   unitCost?: number;
   reason?: string;
   businessUnitId: number;
+  /** Variante afectada (módulo retail-textil) — omitir si el producto no usa variantes */
+  variantId?: number;
+  /** Proveedor asociado al movimiento */
+  supplierId?: number;
+}
+
+/** Detalle de stock de un producto para el modal de movimientos */
+export interface ProductStockDetail {
+  productId: number;
+  name: string;
+  sku: string;
+  currentStock: number;
+  minimumThreshold: number;
+  /** Variantes activas — vacío si el producto no usa variantes */
+  variants: Array<{
+    id: number;
+    attributeType: string;
+    attributeValue: string;
+    stock: number;
+    costPrice: number;
+  }>;
 }
 
 export type BulkPriceAdjustmentType = 'increase_price_pct' | 'increase_cost_pct' | 'set_margin_pct';
@@ -144,6 +168,7 @@ export interface PurchaseHistoryEntry {
   quantity: number;
   unitCost: number;
   invoiceRef: string | null;
+  reason?: string | null;
 }
 
 export interface ProductStat {
@@ -189,6 +214,15 @@ export interface StockMovement {
   reason: string;
   unitCost: number | null;
   userId: number | null;
+  reasonLabel?: string | null;
+  quantityBefore?: number | null;
+  quantityAfter?: number | null;
+  notes?: string | null;
+  variantId?: number | null;
+  supplierId?: number | null;
+  /** Enriquecidos por el endpoint de historial */
+  variantLabel?: string | null;
+  supplierName?: string | null;
   createdAt: string;
 }
 
@@ -242,6 +276,22 @@ export interface SaleFilters {
   status?: 'all' | 'completed' | 'cancelled';
   paymentMethod?: string;
   search?: string;
+  cashSessionId?: number;
+}
+
+export interface SalePreviewItem {
+  productName: string;
+  quantity: number;
+}
+
+/** Sale enriquecida con preview de ítems y datos de cliente — usada en el listado */
+export interface SaleListEntry extends Sale {
+  items: SalePreviewItem[];
+  totalItems: number;
+  totalUnits: number;
+  customerName: string | null;
+  customerDocument: string | null;
+  customerDocumentType: string | null;
 }
 
 export interface PendingInvoice {
@@ -267,6 +317,8 @@ export interface SaleItem {
   id: number;
   saleId: number;
   productId: number;
+  /** Variante vendida (módulo retail-textil) — null si no aplica */
+  variantId?: number | null;
   /** Snapshot del nombre al momento de la venta */
   productName: string;
   quantity: number;
@@ -277,9 +329,17 @@ export interface SaleItem {
   createdAt: string;
 }
 
+export interface InsufficientStockItem {
+  productName: string;
+  requested: number;
+  available: number;
+}
+
 // Estado local del carrito — NO se persiste en DB
 export interface CartItem {
   productId: number;
+  variantId?: number;
+  variantLabel?: string;
   name: string;
   sku: string;
   quantity: number;
@@ -287,6 +347,8 @@ export interface CartItem {
   taxRate: number;
   discountPercent: number;
   lineTotal: number;
+  /** Stock disponible de la variante específica (o del producto si no tiene variantes). Usado para la advertencia en el carrito. */
+  availableStock?: number;
 }
 
 export interface SaleWithItems {
@@ -362,7 +424,23 @@ export interface Customer {
 
 export type CashMovementType = 'opening' | 'sale' | 'refund' | 'deposit' | 'withdrawal' | 'other';
 
+export type CashPaymentMethodType = 'cash' | 'transfer' | 'mercadopago' | 'card' | 'other';
+
 export type CashSessionStatus = 'open' | 'closed' | 'never_opened';
+
+export interface SessionBalance {
+  total: number;
+  cashBalance: number;
+  byMethod: Record<CashPaymentMethodType, number>;
+  /** Suma de todas las ventas (todos los métodos), positivo */
+  totalSales: number;
+  /** Suma de todas las anulaciones (todos los métodos), positivo */
+  totalVoids: number;
+  /** Suma de egresos manuales (withdrawal, todos los métodos), positivo */
+  totalManualOut: number;
+  /** Suma de ingresos manuales (deposit + other, todos los métodos), positivo */
+  totalManualIn: number;
+}
 
 export interface CashMovement {
   id: number;
@@ -372,16 +450,30 @@ export interface CashMovement {
   description: string;
   saleId: number | null;
   userId: number | null;
+  code: string | null;
+  paymentMethod: CashPaymentMethodType;
   createdAt: string;
+}
+
+export interface CashSessionSummary {
+  id: number;
+  code: string;
+  openedAt: string;
+  closedAt: string | null;
 }
 
 export interface CashAudit {
   id: number;
   businessUnitId: number;
   auditDate: string;
+  /** Balance teórico del efectivo únicamente (excluye transferencias, MP, tarjeta) */
   theoreticalBalance: number;
+  /** Efectivo contado físicamente por el operador */
   realBalance: number;
+  /** realBalance - theoreticalBalance (negativo = faltante) */
   difference: number;
+  /** Suma de métodos no-efectivo en la sesión (informativo) */
+  otherMethodsTotal: number;
   notes: string | null;
   status: 'balanced' | 'discrepancy' | 'discrepancy_resolved';
   createdAt: string;
@@ -450,12 +542,62 @@ export interface TopCustomersReport {
 
 // ── Fase 9: Dashboard ─────────────────────────────────────────────────────
 
-export interface DashboardData {
-  salesToday: { count: number; total: number };
-  cashbox: { balance: number; lastAuditDate: string | null; lastAuditStatus: string | null };
-  criticalStock: { productId: number; name: string; current: number; threshold: number; status: 'low' | 'out' }[];
-  upcomingOrders?: { id: number; customerName: string; description: string; estimatedDelivery: string; daysLeft: number; status: string }[];
-  topProductsWeek?: { productId: number; name: string; quantity: number; revenue: number }[];
+export interface DashboardDTO {
+  kpis: {
+    salesToday: number;
+    salesTodayDelta: number | null;
+    transactionsToday: number;
+    avgTicketToday: number;
+    salesWeek: number;
+    transactionsWeek: number;
+    salesMonth: number;
+  };
+  last7Days: Array<{
+    date: string;
+    label: string;
+    total: number;
+  }>;
+  paymentMethods: Array<{
+    method: string;
+    label: string;
+    total: number;
+    percentage: number;
+  }>;
+  cajaActual: {
+    isOpen: boolean;
+    openedAt: string | null;
+    openingAmount: number;
+    salesToday: number;
+    cashSalesToday: number;
+    manualIncome: number;
+    manualExpense: number;
+    estimatedCash: number;
+  } | null;
+  lowStock: Array<{
+    productId: number;
+    variantId?: number;
+    name: string;
+    sku: string;
+    category: string;
+    currentStock: number;
+    minStock: number;
+    isCritical: boolean;
+  }>;
+  recentSales: Array<{
+    id: number;
+    createdAt: string;
+    total: number;
+    paymentMethod: string;
+    customerName: string | null;
+    itemsCount: number;
+  }>;
+  topProducts: Array<{
+    productId: number;
+    name: string;
+    sku: string;
+    totalUnits: number;
+    totalRevenue: number;
+  }>;
 }
 
 export interface Category {
@@ -497,6 +639,8 @@ export interface SupplierProduct {
   currency: string;
   unit: string;
   categoryHint?: string | null;
+  description?: string | null;
+  imageName?: string | null;
   isActive: boolean;
   lastUpdated: string;
   createdAt: string;
@@ -514,6 +658,8 @@ export interface RawImportRow {
   unitCost: number;
   unit?: string;
   categoryHint?: string;
+  description?: string;
+  imageName?: string;
 }
 
 export interface ImportResult {
@@ -548,6 +694,49 @@ export interface CreateFromSupplierInput {
   salePrice: number;
   costPrice?: number | null;
   initialStock?: number | null;
+  categoryName?: string | null;
+  description?: string | null;
+}
+
+// ── POS: resultado de búsqueda con info de variantes ─────────────────────
+
+export interface ProductSearchResult extends Product {
+  hasVariants: boolean;
+  variantCount: number;
+  availableVariantCount: number;
+}
+
+// ── retail-textil: Variantes de producto (RF-RT-01, RF-RT-02) ────────────
+
+export interface ProductVariant {
+  id: number;
+  productId: number;
+  businessUnitId: number;
+  attributeType: string;
+  attributeValue: string;
+  price: number;
+  costPrice: number;
+  sku: string | null;
+  barcode: string | null;
+  stock: number;
+  isActive: boolean;
+  hasSales?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductVariantInput {
+  id?: number;
+  attributeValue: string;
+  price: number;
+  costPrice: number;
+  barcode?: string | null;
+  stock?: number;
+}
+
+export interface UpsertProductVariantsRequest {
+  attributeType: string;
+  variants: ProductVariantInput[];
 }
 
 // ── Fase 10 Pasos 4-5: Comparador de proveedores ──────────────────────────

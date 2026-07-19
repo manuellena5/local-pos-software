@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Sistema POS modular, multiplataforma y offline-first para comercios minoristas",
-  "main": ".dist/electron/main.js",
+  "main": "dist-server/electron/main.js",
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
@@ -13,7 +13,7 @@
     "dev:server": "tsx watch server/server.ts",
     "dev:renderer": "vite",
     "dev:electron": "wait-on tcp:5173 && tsc -p tsconfig.node.json --outDir .dist && electron .dist/electron/main.js",
-    "build": "tsc -p tsconfig.node.json --outDir dist && vite build",
+    "build": "tsc -p tsconfig.node.json --outDir dist-server && vite build",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
@@ -28,8 +28,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx server/db/seed.ts",
     "db:reset": "tsx server/db/reset.ts",
-    "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "rebuild": "npm rebuild better-sqlite3",
+    "postinstall": "npm rebuild better-sqlite3",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:linux": "npm run build && electron-builder --linux"
@@ -93,25 +93,5 @@
     "vite": "^5.0.0",
     "vitest": "^1.2.0",
     "wait-on": "^7.2.0"
-  },
-  "build": {
-    "appId": "com.localpos.app",
-    "productName": "LocalPosSoftware",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "files": [
-      "dist/**/*",
-      ".dist/**/*"
-    ],
-    "win": {
-      "target": "nsis"
-    },
-    "mac": {
-      "target": "dmg"
-    },
-    "linux": {
-      "target": "AppImage"
-    }
   }
 }

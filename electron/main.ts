@@ -19,7 +19,7 @@ function createWindow(): void {
   if (!app.isPackaged) {
     win.loadURL(DEV_URL);
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'));
+    win.loadFile(path.join(__dirname, '../../build/index.html'));
   }
 }
 
@@ -28,6 +28,8 @@ app.whenReady().then(async () => {
   // Dynamic import prevents better-sqlite3 from loading into Electron's
   // Node.js (ABI mismatch) during development.
   if (app.isPackaged) {
+    process.env.LOCALPOS_DB_PATH = path.join(app.getPath('userData'), 'localpos.db');
+    process.env.LOCALPOS_MIGRATIONS_PATH = path.join(process.resourcesPath, 'migrations');
     const { startServer } = await import('../server/server');
     startServer(SERVER_PORT);
   }

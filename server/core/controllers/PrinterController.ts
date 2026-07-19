@@ -92,9 +92,10 @@ export class PrinterController {
     }
   };
 
-  testPrint = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  testPrint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const result = await printerService.testPrint();
+      const businessName = typeof req.body?.businessName === 'string' ? req.body.businessName : '';
+      const result = await printerService.testPrint(businessName);
       res.json({ data: result, error: null });
     } catch (err) {
       next(err);

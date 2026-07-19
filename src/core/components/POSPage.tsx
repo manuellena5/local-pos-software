@@ -7,6 +7,7 @@ import { useStockData } from '@/core/hooks/useStockData';
 import { useCashbox } from '@/core/hooks/useCashbox';
 import { useBarcodeScanner } from '@/core/pos/hooks/useBarcodeScanner';
 import { usePOSStore } from '@/core/store/posStore';
+import { getPOSOverlayComponents } from '@/core/api/extensions';
 import { productsApi } from '@/lib/api/products';
 import { getDisplayPrice } from '@/lib/utils/pricing';
 
@@ -124,6 +125,11 @@ export function POSPage({ businessUnitId }: POSPageProps) {
           onSaleComplete={refetchStock}
         />
       </div>
+
+      {/* Overlays de módulos (ej. VariantSelectorOverlay) */}
+      {getPOSOverlayComponents().map((Overlay, i) => (
+        <Overlay key={i} />
+      ))}
     </div>
   );
 }

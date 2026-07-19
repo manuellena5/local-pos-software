@@ -25,6 +25,16 @@ export const cashMovements = sqliteTable('cash_movements', {
 
   userId: integer('user_id').references(() => users.id),
 
+  /** Código de sesión — solo para type='opening'. Formato: CAJA-YYYYMMDD[-N] */
+  code: text('code'),
+
+  /** Medio de pago del movimiento. Aperturas siempre 'cash'. */
+  paymentMethod: text('payment_method', {
+    enum: ['cash', 'transfer', 'mercadopago', 'card', 'other'],
+  })
+    .notNull()
+    .default('cash'),
+
   createdAt: text('created_at')
     .notNull()
     .default(sql`(datetime('now'))`),
@@ -50,6 +60,9 @@ export const cashAudits = sqliteTable('cash_audits', {
   difference: real('difference').notNull(),
 
   notes: text('notes'),
+
+  /** Suma de métodos no-efectivo al cierre (informativo, no entra al arqueo) */
+  otherMethodsTotal: real('other_methods_total').notNull().default(0),
 
   status: text('status', {
     enum: ['balanced', 'discrepancy', 'discrepancy_resolved'],

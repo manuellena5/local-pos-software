@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '@/core/store/appStore';
 import { formatCurrency } from '@/lib/utils/pricing';
+import { formatDate, formatTime } from '@/lib/utils/dateFormat';
 import { printerApi } from '@/lib/api/printer';
 import type { SaleWithItems, SaleTicketData, Customer } from '@shared/types';
 
@@ -41,20 +42,8 @@ export function buildTicketData(
   customer: Customer | null | undefined,
 ): SaleTicketData {
   const { sale: s, items } = sale;
-  // createdAt viene de SQLite datetime('now') que devuelve UTC sin 'Z'.
-  // Sin el sufijo, JS lo interpreta como hora local → 3h de más en Argentina.
-  const raw = s.createdAt;
-  const utcStr = raw.includes('Z') || raw.includes('+') ? raw : raw.replace(' ', 'T') + 'Z';
-  const dateObj = new Date(utcStr);
-  const date = dateObj.toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-  const time = dateObj.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const date = formatDate(s.createdAt);
+  const time = formatTime(s.createdAt);
 
   const totalPaid = s.paymentMethods.reduce((acc, p) => acc + p.amount, 0);
   const change = totalPaid > s.totalAmount
@@ -111,13 +100,7 @@ export function POSReceiptModal({ sale, customer, onClose }: POSReceiptModalProp
   const [printResult, setPrintResult] = useState<'success' | 'error' | null>(null);
   const [printError, setPrintError] = useState<string | null>(null);
 
-  const fecha = new Date(s.createdAt).toLocaleString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const fecha = `${formatDate(s.createdAt)} ${formatTime(s.createdAt)}`;
 
   async function handlePrint() {
     if (printerStatus !== 'connected') return;

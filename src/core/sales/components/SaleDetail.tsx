@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { salesApi } from '@/lib/api/sales';
+import { formatDateTime as fmtDateTime } from '@/lib/utils/dateFormat';
 import { CancelSaleModal } from './CancelSaleModal';
 import { useSaleDetail } from '../hooks/useSaleDetail';
+import { useAppStore } from '@/core/store/appStore';
 import type { Sale } from '@shared/types';
 import type { CancelSaleResponse } from '@/lib/api/sales';
 
@@ -13,13 +15,6 @@ interface Props {
 
 function fmtMoney(n: number): string {
   return `$${Math.abs(n).toFixed(2)}`;
-}
-
-function fmtDateTime(dt: string): string {
-  const [date, time] = dt.split(' ');
-  if (!date) return dt;
-  const [y, m, d] = date.split('-');
-  return `${d}/${m}/${y} ${time?.slice(0, 5) ?? ''}`;
 }
 
 const INVOICE_STATUS_LABEL: Record<string, string> = {
@@ -53,17 +48,28 @@ export function SaleDetail({ sale, businessUnitId, onSaleUpdated }: Props) {
   const { detail, loading } = useSaleDetail(sale.id, businessUnitId);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [reprinting, setReprinting] = useState(false);
-  const [reprintMsg, setReprintMsg] = useState<string | null>(null);
+  const [reprintMsg, setReprintMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [cancelSuccess, setCancelSuccess] = useState<CancelSaleResponse | null>(null);
+  const printerStatus = useAppStore((s) => s.printerStatus);
 
   async function handleReprint() {
-    setReprinting(true);
     setReprintMsg(null);
+
+    if (printerStatus !== 'connected') {
+      setReprintMsg({ text: 'Impresora no disponible. Verificá la conexión en Configuración.', ok: false });
+      return;
+    }
+
+    setReprinting(true);
     try {
-      await salesApi.reprint(sale.id, businessUnitId);
-      setReprintMsg('Ticket enviado a la impresora.');
+      const result = await salesApi.reprint(sale.id, businessUnitId);
+      if (result.success) {
+        setReprintMsg({ text: 'Ticket enviado a la impresora.', ok: true });
+      } else {
+        setReprintMsg({ text: result.error ?? 'No se pudo imprimir. Verificá la impresora.', ok: false });
+      }
     } catch {
-      setReprintMsg('No se pudo reimprimir. Verificá la impresora.');
+      setReprintMsg({ text: 'No se pudo reimprimir. Verificá la impresora.', ok: false });
     } finally {
       setReprinting(false);
     }
@@ -82,7 +88,7 @@ export function SaleDetail({ sale, businessUnitId, onSaleUpdated }: Props) {
   const change = Math.max(0, paid - sale.totalAmount);
 
   return (
-    <div className="flex flex-col h-full overflow-auto">
+    <div className="flex flex-col h-full overflow-hidden">
       {showCancelModal && (
         <CancelSaleModal
           saleId={sale.id}
@@ -94,7 +100,7 @@ export function SaleDetail({ sale, businessUnitId, onSaleUpdated }: Props) {
       )}
 
       {/* Header */}
-      <div className="pb-4 border-b border-gray-100">
+      <div className="shrink-0 pb-4 border-b border-gray-100">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-bold text-gray-900">Venta #{sale.saleNumber}</h2>
@@ -120,17 +126,17 @@ export function SaleDetail({ sale, businessUnitId, onSaleUpdated }: Props) {
         )}
       </div>
 
-      {/* Aviso post-anulación con factura */}
-      {cancelSuccess?.hasInvoice && (
-        <div className="mt-3 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2.5">
-          <p className="text-xs text-amber-800 font-semibold">⚠ Esta venta tenía CAE emitido</p>
-          <p className="text-xs text-amber-700 mt-1">
-            Recordá emitir la nota de crédito correspondiente en AFIP (comprobante {sale.invoiceNumber}).
-          </p>
-        </div>
-      )}
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-4 mt-4 pb-4">
+        {/* Aviso post-anulación con factura */}
+        {cancelSuccess?.hasInvoice && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2.5">
+            <p className="text-xs text-amber-800 font-semibold">⚠ Esta venta tenía CAE emitido</p>
+            <p className="text-xs text-amber-700 mt-1">
+              Recordá emitir la nota de crédito correspondiente en AFIP (comprobante {sale.invoiceNumber}).
+            </p>
+          </div>
+        )}
 
-      <div className="flex-1 space-y-4 mt-4 pb-4">
         {/* Cliente */}
         <section>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
@@ -267,9 +273,17 @@ export function SaleDetail({ sale, businessUnitId, onSaleUpdated }: Props) {
       </div>
 
       {/* Acciones */}
-      <div className="border-t border-gray-100 pt-4 space-y-2">
+      <div className="shrink-0 border-t border-gray-100 pt-4 space-y-2 bg-white">
         {reprintMsg && (
-          <p className="text-xs text-center text-gray-500">{reprintMsg}</p>
+          <p
+            className="text-xs text-center px-2 py-1.5 rounded"
+            style={{
+              background: reprintMsg.ok ? '#f0fdf4' : '#fef2f2',
+              color: reprintMsg.ok ? '#16a34a' : '#dc2626',
+            }}
+          >
+            {reprintMsg.text}
+          </p>
         )}
         <button
           onClick={handleReprint}

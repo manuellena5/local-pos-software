@@ -4,12 +4,14 @@ import type { Application } from 'express';
 import { LOCALPOS_VERSION } from '../shared/constants';
 import { errorHandler } from './middleware/errorHandler';
 import { initDatabase } from './db/init';
+import { runSeedIfEmpty } from './db/seed';
 import { createCoreRouter } from './core/router';
 import { startInvoiceProcessor } from './jobs/invoiceProcessor';
 import { startSyncScheduler } from './jobs/syncScheduler';
 
 export function createApp(): Application {
   initDatabase();
+  runSeedIfEmpty();
 
   const app = express();
 

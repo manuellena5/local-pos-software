@@ -12,6 +12,7 @@ export const productSupplierLinks = sqliteTable(
     supplierProductId: integer('supplier_product_id').notNull().references(() => supplierProducts.id),
     businessUnitId:    integer('business_unit_id').notNull().references(() => businessUnits.id),
     isPreferred:       integer('is_preferred').notNull().default(0),
+    supplierCode:      text('supplier_code'),
     createdAt:         text('created_at').notNull().default(sql`(datetime('now'))`),
   },
   (t) => ({

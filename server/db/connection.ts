@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import path from 'path';
 import * as schema from './schema';
 
-const DB_PATH = path.join(process.cwd(), 'localpos.db');
+const DB_PATH = process.env.LOCALPOS_DB_PATH ?? path.join(process.cwd(), 'localpos.db');
 
 export const sqlite = new Database(DB_PATH);
 sqlite.pragma('journal_mode = WAL');

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ProductStats } from '@shared/types';
 import { productsApi } from '@/lib/api/products';
 import { formatCurrency } from '@/lib/utils/pricing';
+import { formatDate } from '@/lib/utils/dateFormat';
 
 interface EstadisticasTabProps {
   productId: number;
@@ -116,7 +117,7 @@ export function EstadisticasTab({ productId, businessUnitId, onOpenHistoryDrawer
               <div className="space-y-1">
                 {data.costHistory.map((c, i) => (
                   <div key={i} className="flex justify-between items-center text-sm py-1 border-b border-gray-50 last:border-0">
-                    <span className="text-gray-500 text-xs">{c.date.slice(0, 10)}</span>
+                    <span className="text-gray-500 text-xs">{formatDate(c.date)}</span>
                     <span className="font-semibold text-gray-800">{formatCurrency(c.unitCost)}</span>
                   </div>
                 ))}
@@ -133,7 +134,7 @@ export function EstadisticasTab({ productId, businessUnitId, onOpenHistoryDrawer
               <div className="divide-y divide-gray-50">
                 {data.recentSales.slice(0, 5).map((sale, i) => (
                   <div key={i} className="flex items-center justify-between px-3.5 py-2 text-sm">
-                    <span className="text-gray-500 text-xs">{sale.date.slice(0, 10)}</span>
+                    <span className="text-gray-500 text-xs">{formatDate(sale.date)}</span>
                     <span className="text-gray-700">{sale.quantity} u.</span>
                     <span className="font-semibold text-gray-900">{formatCurrency(sale.lineTotal)}</span>
                   </div>

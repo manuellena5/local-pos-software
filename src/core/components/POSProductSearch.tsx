@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { LayoutGrid } from 'lucide-react';
-import { useProducts } from '@/core/hooks/useProducts';
 import { usePOSStore } from '@/core/store/posStore';
+import { getPOSProductInterceptors } from '@/core/api/extensions';
+import { productsApi } from '@/lib/api/products';
 import { getDisplayPrice, formatCurrency } from '@/lib/utils/pricing';
 import { POSAdvancedSearchModal } from './POSAdvancedSearchModal';
-import type { Product, StockSummary } from '@shared/types';
+import type { Product, ProductSearchResult, StockSummary } from '@shared/types';
 
 interface POSProductSearchProps {
   businessUnitId: number;
@@ -15,6 +16,7 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const addToCart = usePOSStore((s) => s.addToCart);
@@ -26,9 +28,20 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
     return () => clearTimeout(t);
   }, [query]);
 
-  const { products: searchResults } = useProducts(businessUnitId, debouncedQuery || undefined);
-  // Para la búsqueda avanzada: todos los productos sin filtro
-  const { products: allProducts } = useProducts(businessUnitId);
+  // Búsqueda con info de variantes vía endpoint dedicado
+  useEffect(() => {
+    if (debouncedQuery.length < 1) {
+      setSearchResults([]);
+      return;
+    }
+    productsApi.searchForPOS(businessUnitId, debouncedQuery).then(setSearchResults).catch(() => {});
+  }, [debouncedQuery, businessUnitId]);
+
+  // Para la búsqueda avanzada: todos los productos con info de variantes
+  const [allProductsForSearch, setAllProductsForSearch] = useState<ProductSearchResult[]>([]);
+  useEffect(() => {
+    productsApi.getAllForPOS(businessUnitId).then(setAllProductsForSearch).catch(() => {});
+  }, [businessUnitId]);
 
   const visibleProducts = debouncedQuery.length >= 1 ? searchResults.slice(0, 8) : [];
 
@@ -57,15 +70,19 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
   }, []);
 
   function handleSelect(product: Product) {
-    addToCart({
-      productId: product.id,
-      name: product.name,
-      sku: product.sku,
-      quantity: 1,
-      unitPrice: getDisplayPrice(product.basePrice, product.taxRate),
-      taxRate: product.taxRate,
-      discountPercent: 0,
-    });
+    const interceptors = getPOSProductInterceptors();
+    const handled = interceptors.some((fn) => fn(product, addToCart, businessUnitId));
+    if (!handled) {
+      addToCart({
+        productId: product.id,
+        name: product.name,
+        sku: product.sku,
+        quantity: 1,
+        unitPrice: getDisplayPrice(product.basePrice, product.taxRate),
+        taxRate: product.taxRate,
+        discountPercent: 0,
+      });
+    }
     setQuery('');
     setDebouncedQuery('');
     setOpen(false);
@@ -137,7 +154,13 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
                           {p.category && (
                             <span className="text-xs text-gray-400">· {p.category}</span>
                           )}
-                          {getStockBadge(p.id)}
+                          {(p as ProductSearchResult).hasVariants ? (
+                            <span className="text-xs text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">
+                              {(p as ProductSearchResult).variantCount} variantes
+                            </span>
+                          ) : (
+                            getStockBadge(p.id)
+                          )}
                         </div>
                         {/* Descripción interna — clave para diferenciar variantes */}
                         {p.description && (
@@ -177,9 +200,8 @@ export function POSProductSearch({ businessUnitId, stockData }: POSProductSearch
       {showAdvanced && (
         <POSAdvancedSearchModal
           businessUnitId={businessUnitId}
-          products={allProducts}
+          products={allProductsForSearch}
           stockData={stockData}
-          onSelect={handleSelect}
           onClose={() => setShowAdvanced(false)}
         />
       )}

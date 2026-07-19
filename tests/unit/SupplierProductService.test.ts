@@ -122,6 +122,34 @@ describe('SupplierProductService', () => {
     });
   });
 
+    it('should pass description and imageName to upsertMany', () => {
+      vi.mocked(repo.upsertMany).mockReturnValue({ created: 1, updated: 0, unchanged: 0 });
+
+      const rows: RawImportRow[] = [
+        { name: 'Toalla', unitCost: 500, description: 'Toalla 500g', imageName: 'toalla.jpg' },
+      ];
+
+      service.importFromData(10, 1, rows);
+
+      expect(repo.upsertMany).toHaveBeenCalledWith([
+        expect.objectContaining({ description: 'Toalla 500g', imageName: 'toalla.jpg' }),
+      ]);
+    });
+
+    it('should pass null for description and imageName when not provided', () => {
+      vi.mocked(repo.upsertMany).mockReturnValue({ created: 1, updated: 0, unchanged: 0 });
+
+      const rows: RawImportRow[] = [
+        { name: 'Toalla', unitCost: 500 },
+      ];
+
+      service.importFromData(10, 1, rows);
+
+      expect(repo.upsertMany).toHaveBeenCalledWith([
+        expect.objectContaining({ description: null, imageName: null }),
+      ]);
+    });
+
   // ── createOne ────────────────────────────────────────────────────────────
 
   describe('createOne', () => {

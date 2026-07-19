@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { tallerMedidaApi } from '../api/tallerMedidaApi';
+import { formatDate } from '@/lib/utils/dateFormat';
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_TRANSITIONS,
@@ -136,7 +137,7 @@ export function OrderDetailScreen({ orderId, onBack }: Props) {
           </p>
         )}
         <p className="text-xs text-gray-400">
-          Creado el {new Date(order.createdAt).toLocaleDateString('es-AR', { dateStyle: 'long' })}
+          Creado el {formatDate(order.createdAt)}
         </p>
       </div>
 
@@ -172,7 +173,7 @@ export function OrderDetailScreen({ orderId, onBack }: Props) {
                 <div className="text-right">
                   <span className="font-medium text-gray-900">${p.amount.toLocaleString('es-AR')}</span>
                   <span className="text-gray-400 text-xs ml-2">
-                    {new Date(p.paidAt).toLocaleDateString('es-AR')}
+                    {formatDate(p.paidAt)}
                   </span>
                 </div>
               </div>

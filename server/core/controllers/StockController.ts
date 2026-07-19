@@ -32,7 +32,7 @@ export class StockController {
         throw new ValidationError('businessUnitId debe ser un número válido');
       }
 
-      const movements = this.service.getMovementHistory(businessUnitId, { productId });
+      const movements = this.service.getProductMovements(productId, businessUnitId);
       res.json({ data: movements, error: null });
     } catch (err) {
       next(err);
@@ -64,6 +64,25 @@ export class StockController {
       );
 
       res.status(201).json({ data: result.movement, error: null });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /** GET /stock/:productId/detail — stock actual + variantes para el modal */
+  getDetail(req: Request, res: Response, next: NextFunction): void {
+    try {
+      const productId = Number(req.params.productId);
+      const businessUnitId = Number(req.query.businessUnitId);
+
+      if (!Number.isInteger(productId) || productId <= 0) {
+        throw new ValidationError('ID de producto inválido');
+      }
+      if (!Number.isInteger(businessUnitId) || businessUnitId <= 0) {
+        throw new ValidationError('businessUnitId debe ser un número válido');
+      }
+
+      res.json({ data: this.service.getStockDetail(productId, businessUnitId), error: null });
     } catch (err) {
       next(err);
     }

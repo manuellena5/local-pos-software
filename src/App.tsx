@@ -50,6 +50,7 @@ export function App() {
   const activeBU  = useAppStore((s) => s.activeBU);
   const [tab, setTab] = useState<AppTab>('dashboard');
   const [pendingSettingsTab, setPendingSettingsTab] = useState<string | undefined>(undefined);
+  const [pendingOpenSaleId, setPendingOpenSaleId] = useState<number | null>(null);
 
   // Inicia el polling global del estado de la impresora (30s)
   usePrinterStatus();
@@ -98,6 +99,11 @@ export function App() {
     if (key === 'configuracion') setPendingSettingsTab(undefined);
   }
 
+  function handleNavigateToSale(saleId: number): void {
+    setPendingOpenSaleId(saleId);
+    setTab('ventas');
+  }
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
       <header className="shrink-0 bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-between">
@@ -140,12 +146,24 @@ export function App() {
         </div>
       </div>
 
-      {/* POS: layout full-height sin scroll exterior */}
+      {/* POS y Ventas: layout full-height sin scroll exterior */}
       {tab === 'pos' ? (
         <main className="flex-1 min-h-0 overflow-hidden pt-2 pb-2 px-6 flex flex-col">
           <div className="max-w-6xl mx-auto w-full flex-1 min-h-0 flex flex-col">
             <div className="bg-white rounded-xl shadow px-6 pt-3 pb-2 flex-1 min-h-0 flex flex-col overflow-hidden">
               <POSPage businessUnitId={activeBU.id} />
+            </div>
+          </div>
+        </main>
+      ) : tab === 'ventas' ? (
+        <main className="flex-1 min-h-0 overflow-hidden pt-2 pb-2 px-4 flex flex-col">
+          <div className="max-w-6xl mx-auto w-full flex-1 min-h-0 flex flex-col">
+            <div className="bg-white rounded-xl shadow flex-1 min-h-0 flex flex-col overflow-hidden" style={{ padding: '12px' }}>
+              <SalesPage
+                businessUnitId={activeBU.id}
+                initialOpenSaleId={pendingOpenSaleId}
+                onInitialSaleOpened={() => setPendingOpenSaleId(null)}
+              />
             </div>
           </div>
         </main>
@@ -161,9 +179,10 @@ export function App() {
                 />
               )}
               {tab === 'productos'     && <ProductsPage businessUnitId={activeBU.id} />}
-              {tab === 'ventas'        && <SalesPage businessUnitId={activeBU.id} />}
-              {tab === 'clientes'      && <CustomerList />}
-              {tab === 'caja'          && <CashboxPage businessUnitId={activeBU.id} />}
+              {tab === 'clientes'      && <CustomerList onNavigateToSale={handleNavigateToSale} />}
+              {tab === 'caja'          && (
+                <CashboxPage businessUnitId={activeBU.id} onNavigateToSale={handleNavigateToSale} />
+              )}
               {tab === 'pedidos'       && <TallerMedidaPage />}
               {tab === 'proveedores'   && <ProveedoresPage />}
               {tab === 'reportes'      && <ReportsPage businessUnitId={activeBU.id} />}

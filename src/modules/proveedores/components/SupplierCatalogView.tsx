@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { useAppStore } from '@/core/store/appStore';
 import { apiClient } from '@/lib/api/client';
+import { formatDate } from '@/lib/utils/dateFormat';
 import { useSupplierProducts, useImportCatalog } from '../hooks/useSupplierProducts';
 import { AddToCatalogModal } from './AddToCatalogModal';
 import type { SupplierProduct, ImportResult } from '@shared/types';
@@ -467,7 +468,7 @@ export function SupplierCatalogView({ supplierId, supplierName, onBack }: Suppli
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-center text-xs text-gray-400">
-                    {product.lastUpdated.slice(0, 10)}
+                    {formatDate(product.lastUpdated)}
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-1.5">
@@ -509,7 +510,7 @@ export function SupplierCatalogView({ supplierId, supplierName, onBack }: Suppli
       {products.length > 0 && (
         <p className="text-xs text-gray-400">
           {products.length} producto{products.length !== 1 ? 's' : ''}
-          {lastImport && ` · última actualización: ${lastImport.slice(0, 10)}`}
+          {lastImport && ` · última actualización: ${formatDate(lastImport)}`}
         </p>
       )}
 

@@ -15,14 +15,16 @@ export function usePOS(businessUnitId: number, customerId?: number) {
   const isProcessing = usePOSStore((s) => s.isProcessing);
   const clearCart = usePOSStore((s) => s.clearCart);
 
-  const confirmSale = async (): Promise<SaleWithItems | null> => {
+  const confirmSale = async (): Promise<{ result: SaleWithItems | null; errorMsg: string | null }> => {
     if (cart.length === 0) {
-      setError('El carrito está vacío');
-      return null;
+      const msg = 'El carrito está vacío';
+      setError(msg);
+      return { result: null, errorMsg: msg };
     }
     if (paymentMethods.length === 0) {
-      setError('Debe seleccionar un medio de pago');
-      return null;
+      const msg = 'Debe seleccionar un medio de pago';
+      setError(msg);
+      return { result: null, errorMsg: msg };
     }
 
     setError(null);
@@ -34,7 +36,9 @@ export function usePOS(businessUnitId: number, customerId?: number) {
         customerId: customerId ?? undefined,
         items: cart.map((c) => ({
           productId: c.productId,
-          productName: c.name,
+          variantId: c.variantId,
+          // Snapshot con variante para tickets y reportes: "Velas - Fragancia: Breeze"
+          productName: c.variantLabel ? `${c.name} - ${c.variantLabel}` : c.name,
           quantity: c.quantity,
           unitPrice: c.unitPrice,
           taxRate: c.taxRate,
@@ -47,10 +51,11 @@ export function usePOS(businessUnitId: number, customerId?: number) {
 
       setLastSale(result);
       clearCart();
-      return result;
+      return { result, errorMsg: null };
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al confirmar la venta');
-      return null;
+      const msg = err instanceof Error ? err.message : 'Error al confirmar la venta';
+      setError(msg);
+      return { result: null, errorMsg: msg };
     } finally {
       setIsProcessing(false);
     }

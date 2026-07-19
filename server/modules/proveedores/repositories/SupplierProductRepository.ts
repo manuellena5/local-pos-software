@@ -16,6 +16,8 @@ function mapRow(row: typeof supplierProducts.$inferSelect): SupplierProduct {
     currency:       row.currency,
     unit:           row.unit,
     categoryHint:   row.categoryHint ?? null,
+    description:    row.description ?? null,
+    imageName:      row.imageName ?? null,
     isActive:       row.isActive,
     lastUpdated:    row.lastUpdated,
     createdAt:      row.createdAt,
@@ -111,6 +113,8 @@ export class SupplierProductRepository {
         currency:       data.currency ?? 'ARS',
         unit:           data.unit ?? 'unidad',
         categoryHint:   data.categoryHint ?? null,
+        description:    data.description ?? null,
+        imageName:      data.imageName ?? null,
       })
       .returning()
       .get();
@@ -127,6 +131,8 @@ export class SupplierProductRepository {
         ...(data.currency    !== undefined && { currency: data.currency }),
         ...(data.unit        !== undefined && { unit: data.unit }),
         ...(data.categoryHint !== undefined && { categoryHint: data.categoryHint }),
+        ...(data.description  !== undefined && { description: data.description }),
+        ...(data.imageName    !== undefined && { imageName: data.imageName }),
       })
       .where(eq(supplierProducts.id, id))
       .returning()

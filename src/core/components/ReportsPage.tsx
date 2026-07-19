@@ -4,6 +4,7 @@ import { TopProductsReport } from './TopProductsReport';
 import { TopCustomersReport } from './TopCustomersReport';
 import { StockMovementReport } from './StockMovementReport';
 import { getRegisteredReports } from '@/core/api';
+import { useAppStore } from '@/core/store/appStore';
 
 type CoreTab = 'sales' | 'products' | 'customers' | 'stock';
 
@@ -19,7 +20,10 @@ const CORE_TABS: { key: CoreTab; label: string; icon: string }[] = [
 ];
 
 export function ReportsPage({ businessUnitId }: Props) {
-  const customReports = getRegisteredReports();
+  const activeModuleId = useAppStore((s) => s.activeBU?.moduleId);
+  const customReports = getRegisteredReports().filter(
+    (r) => !r.moduleId || r.moduleId === activeModuleId,
+  );
   const [tab, setTab] = useState<string>('sales');
 
   const allTabs = [

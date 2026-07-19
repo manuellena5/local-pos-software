@@ -1,5 +1,13 @@
 import { apiClient } from './client';
-import type { CashMovement, CashAudit, CashSessionStatus, ReporteZData } from '@shared/types';
+import type {
+  CashMovement,
+  CashAudit,
+  CashSessionStatus,
+  CashSessionSummary,
+  ReporteZData,
+  SessionBalance,
+  CashPaymentMethodType,
+} from '@shared/types';
 
 export interface CashBalance {
   theoretical: number;
@@ -8,6 +16,7 @@ export interface CashBalance {
 
 export interface CashSessionData {
   balance: number;
+  sessionBalance: SessionBalance;
   movements: CashMovement[];
   openingMovement: CashMovement | null;
 }
@@ -15,6 +24,7 @@ export interface CashSessionData {
 export interface AuditWithTimes extends CashAudit {
   openingAt: string | null;
   closingAt: string;
+  code: string | null;
 }
 
 export const cashboxApi = {
@@ -36,7 +46,13 @@ export const cashboxApi = {
 
   recordMovement(
     businessUnitId: number,
-    data: { type: string; amount: number; description: string; saleId?: number },
+    data: {
+      type: string;
+      amount: number;
+      description: string;
+      saleId?: number;
+      paymentMethod?: CashPaymentMethodType;
+    },
   ): Promise<CashMovement> {
     const params = new URLSearchParams({ businessUnitId: String(businessUnitId) });
     return apiClient.post(`/api/cashbox/movements?${params}`, data);
@@ -76,6 +92,10 @@ export const cashboxApi = {
     return apiClient.get(
       `/api/cashbox/audits/${auditId}/reporte-z?businessUnitId=${businessUnitId}`,
     );
+  },
+
+  getSessions(businessUnitId: number): Promise<CashSessionSummary[]> {
+    return apiClient.get(`/api/cashbox/sessions?businessUnitId=${businessUnitId}`);
   },
 
   printReporteZ(data: ReporteZData): Promise<{ success: boolean; error?: string }> {

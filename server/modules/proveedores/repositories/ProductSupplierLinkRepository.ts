@@ -4,6 +4,7 @@ import { productSupplierLinks } from '../../../db/schemas/modules/productSupplie
 import { supplierProducts } from '../../../db/schemas/modules/supplierProducts';
 import { suppliers } from '../../../db/schemas/modules/suppliers';
 import { products, stockItems } from '../../../db/schemas/core/products';
+import { generateSkuCore } from '../../../core/lib/skuUtils';
 import type {
   ProductSupplierLink,
   SuggestedMatch,
@@ -48,19 +49,6 @@ function jaccardScore(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : intersection / union;
 }
 
-/** Genera un SKU único a partir del nombre + timestamp base-36 */
-function generateSku(name: string): string {
-  const base = name
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^A-Z0-9]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 12);
-  const suffix = Date.now().toString(36).toUpperCase().slice(-5);
-  return `${base}-${suffix}`;
-}
 
 // ── repository ────────────────────────────────────────────────────────────
 
@@ -392,10 +380,19 @@ export class ProductSupplierLinkRepository {
    * Todo en una única transacción SQLite.
    */
   createProductFromSupplier(input: CreateFromSupplierInput): Product {
-    const { supplierProductId, businessUnitId, name, salePrice, costPrice, initialStock } = input;
+    const { supplierProductId, businessUnitId, name, salePrice, costPrice, initialStock, categoryName, description } = input;
     const effectiveCost = costPrice ?? 0;
 
-    const sku = generateSku(name);
+    // Leer el producto del proveedor para obtener supplierCode y categoryHint antes de la transacción
+    const supplierProduct = db
+      .select()
+      .from(supplierProducts)
+      .where(eq(supplierProducts.id, supplierProductId))
+      .get();
+
+    const resolvedCategory = categoryName ?? supplierProduct?.categoryHint ?? 'GEN';
+    const sku = generateSkuCore(resolvedCategory, name, businessUnitId, sqlite);
+    const linkSupplierCode = supplierProduct?.supplierCode ?? null;
 
     let createdProduct!: typeof products.$inferSelect;
 
@@ -407,10 +404,11 @@ export class ProductSupplierLinkRepository {
           businessUnitId,
           name,
           sku,
-          costPrice:  effectiveCost,
-          basePrice:  salePrice,
-          taxRate:    21,
-          isActive:   true,
+          costPrice:   effectiveCost,
+          basePrice:   salePrice,
+          taxRate:     21,
+          isActive:    true,
+          description: description ?? null,
         })
         .returning()
         .get();
@@ -422,6 +420,7 @@ export class ProductSupplierLinkRepository {
           supplierProductId,
           businessUnitId,
           isPreferred:       1,
+          supplierCode:      linkSupplierCode,
         })
         .run();
 

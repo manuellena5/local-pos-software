@@ -147,7 +147,9 @@ export class CustomerRepository {
       };
     });
 
-    const totalSpent = purchases.reduce((sum, p) => sum + p.sale.totalAmount, 0);
+    const totalSpent = purchases
+      .filter((p) => p.sale.status !== 'cancelled')
+      .reduce((sum, p) => sum + p.sale.totalAmount, 0);
 
     return { customer, purchases, totalSpent };
   }

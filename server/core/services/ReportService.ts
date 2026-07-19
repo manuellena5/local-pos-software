@@ -9,6 +9,36 @@ import type {
   PaymentMethod,
 } from '../../../shared/types';
 
+// sales.createdAt se guarda vía SQLite datetime('now'), que es siempre UTC.
+// fromDate/toDate llegan como "YYYY-MM-DD" en hora LOCAL (así los interpreta
+// un <input type="date"> o el usuario). Comparar esos strings directamente
+// contra created_at asume que ambos están en el mismo huso horario, lo cual
+// es falso: hay que convertir el día calendario local a su equivalente UTC
+// antes de filtrar, y agrupar por día local (no por el substring UTC crudo).
+function localDateToUtcBoundary(localDate: string): string {
+  const [y, m, d] = localDate.split('-').map(Number);
+  const localMidnight = new Date(y!, m! - 1, d!, 0, 0, 0, 0);
+  return localMidnight.toISOString().replace('T', ' ').slice(0, 19);
+}
+
+function localDateToUtcEndOfDayBoundary(localDate: string): string {
+  const [y, m, d] = localDate.split('-').map(Number);
+  const localEndOfDay = new Date(y!, m! - 1, d!, 23, 59, 59, 999);
+  return localEndOfDay.toISOString().replace('T', ' ').slice(0, 19);
+}
+
+function utcTimestampToLocalDateKey(utcTimestamp: string): string {
+  const iso = utcTimestamp.includes('Z') ? utcTimestamp : utcTimestamp.replace(' ', 'T') + 'Z';
+  return formatLocalDate(new Date(iso));
+}
+
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export class ReportService {
   /**
    * Reporte de ventas para un rango de fechas.
@@ -26,17 +56,17 @@ export class ReportService {
         and(
           eq(sales.businessUnitId, businessUnitId),
           eq(sales.status, 'completed'),
-          gte(sales.createdAt, fromDate),
-          lte(sales.createdAt, toDate + ' 23:59:59'),
+          gte(sales.createdAt, localDateToUtcBoundary(fromDate)),
+          lte(sales.createdAt, localDateToUtcEndOfDayBoundary(toDate)),
         ),
       )
       .orderBy(sales.createdAt)
       .all();
 
-    // Agrupar por día
+    // Agrupar por día calendario local (no por el substring UTC crudo)
     const byDay = new Map<string, typeof rows>();
     for (const row of rows) {
-      const day = row.createdAt.slice(0, 10);
+      const day = utcTimestampToLocalDateKey(row.createdAt);
       if (!byDay.has(day)) byDay.set(day, []);
       byDay.get(day)!.push(row);
     }
@@ -179,10 +209,10 @@ export class ReportService {
   ): StockMovement[] {
     const conditions = [eq(stockMovements.businessUnitId, businessUnitId)];
     if (filters?.fromDate) {
-      conditions.push(gte(stockMovements.createdAt, filters.fromDate));
+      conditions.push(gte(stockMovements.createdAt, localDateToUtcBoundary(filters.fromDate)));
     }
     if (filters?.toDate) {
-      conditions.push(lte(stockMovements.createdAt, filters.toDate + ' 23:59:59'));
+      conditions.push(lte(stockMovements.createdAt, localDateToUtcEndOfDayBoundary(filters.toDate)));
     }
 
     return db

@@ -1,3 +1,5 @@
+import type { InsufficientStockItem } from '../../shared/types';
+
 export class AppError extends Error {
   constructor(
     message: string,
@@ -27,5 +29,13 @@ export class ValidationError extends AppError {
 export class BusinessRuleError extends AppError {
   constructor(message: string) {
     super(message, 422, 'BUSINESS_RULE_VIOLATION');
+  }
+}
+
+export class InsufficientStockError extends AppError {
+  public readonly details: InsufficientStockItem[];
+  constructor(message: string, items: InsufficientStockItem[]) {
+    super(message, 422, 'INSUFFICIENT_STOCK');
+    this.details = items;
   }
 }

@@ -1,4 +1,4 @@
-import type { SaleWithItems, SaleFilters } from '../../../shared/types';
+import type { SaleWithItems, SaleFilters, SaleListEntry, CashPaymentMethodType } from '../../../shared/types';
 import type { ConfirmSaleRequest, SaleItemInput, CancelSaleRequest } from '../types';
 import type { SaleRepository } from '../repositories/SaleRepository';
 import type { ProductRepository } from '../repositories/ProductRepository';
@@ -126,6 +126,7 @@ export class SalesService {
     // Calcular lineTotal de cada ítem
     const itemInputs: SaleItemInput[] = data.items.map((item) => ({
       productId: item.productId,
+      variantId: item.variantId,
       productName: item.productName,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
@@ -152,7 +153,7 @@ export class SalesService {
     const result = this.saleRepo.create({
       businessUnitId: data.businessUnitId,
       userId: data.userId,
-      customerId: data.customerId,
+      customerId: data.customerId ?? null,
       items: itemInputs,
       ...totals,
       taxRate,
@@ -162,6 +163,17 @@ export class SalesService {
     // ── Fase 5: Registrar movimiento de caja automáticamente ─────────────────
     if (this.cashboxService) {
       try {
+        const VALID_METHODS: CashPaymentMethodType[] = [
+          'cash', 'transfer', 'mercadopago', 'card', 'other',
+        ];
+        const dominant = data.paymentMethods.reduce((best, pm) =>
+          pm.amount >= best.amount ? pm : best
+        );
+        const paymentMethod: CashPaymentMethodType =
+          VALID_METHODS.includes(dominant.method as CashPaymentMethodType)
+            ? (dominant.method as CashPaymentMethodType)
+            : 'other';
+
         this.cashboxService.recordMovement(
           data.businessUnitId,
           {
@@ -169,6 +181,7 @@ export class SalesService {
             amount: result.sale.totalAmount,
             description: `Venta #${result.sale.saleNumber}`,
             saleId: result.sale.id,
+            paymentMethod,
           },
           data.userId,
         );
@@ -202,6 +215,14 @@ export class SalesService {
    */
   getSalesFiltered(businessUnitId: number, filters: SaleFilters) {
     return this.saleRepo.getFiltered(businessUnitId, filters);
+  }
+
+  getAllSalesWithPreview(businessUnitId: number): SaleListEntry[] {
+    return this.saleRepo.getAllWithPreview(businessUnitId);
+  }
+
+  getSalesFilteredWithPreview(businessUnitId: number, filters: SaleFilters): SaleListEntry[] {
+    return this.saleRepo.getFilteredWithPreview(businessUnitId, filters);
   }
 
   getSaleWithItems(id: number, businessUnitId: number): SaleWithItems {
@@ -248,6 +269,7 @@ export class SalesService {
               amount: result.sale.totalAmount,
               description: `Anulación venta #${result.sale.saleNumber}`,
               saleId,
+              paymentMethod: 'cash',
             },
             data.userId,
           );
