@@ -105,28 +105,45 @@ export function ProductEditModal({ businessUnitId, onRefetch, onToast }: Product
 
       if (isCreating) {
         const created = await productsApi.create(businessUnitId, formData);
-        savedProductId = (created as { id: number }).id;
+        savedProductId = created.id;
+        // Actualizamos el producto activo del store: si un hook de guardado
+        // (ej. variantes) falla más abajo y el usuario reintenta sin cerrar
+        // el modal, el próximo intento debe actualizar este producto en vez
+        // de crear uno duplicado.
+        useProductsStore.getState().setActiveProduct({
+          ...created,
+          currentStock: 0,
+          minimumThreshold: 5,
+          stockStatus: 'ok',
+          supplierName: null,
+        });
       } else {
         await productsApi.update(product.id, businessUnitId, formData);
         savedProductId = product.id;
       }
 
-      // Ejecutar save hooks de módulos (ej. variantes)
+      // Ejecutar save hooks de módulos (ej. variantes). Si alguno falla, no lo
+      // tragamos: se lo mostramos al usuario y dejamos el modal abierto para
+      // que pueda corregir y reintentar (el producto base ya quedó guardado).
       const hooks = getProductSaveHooks();
+      const hookErrors: string[] = [];
       for (const hook of hooks) {
         try {
           await hook(savedProductId, businessUnitId, isCreating);
         } catch (hookErr) {
           console.error('[ProductEditModal] save hook error:', hookErr);
+          hookErrors.push(hookErr instanceof Error ? hookErr.message : 'Error desconocido');
         }
       }
 
-      // Toast con info de variantes si aplica
-      const variantCount = hooks.length > 0 ? null : null;
-      void variantCount;
+      onRefetch();
+
+      if (hookErrors.length > 0) {
+        onToast(`Producto guardado, pero hubo un error: ${hookErrors.join(' · ')}`, 'error');
+        return;
+      }
 
       onToast(isCreating ? `${formData.name} creado` : `${formData.name ?? product.name} guardado`);
-      onRefetch();
       closeModal();
     } catch (err) {
       if (err instanceof ApiError && Array.isArray(err.details) && err.details.length) {

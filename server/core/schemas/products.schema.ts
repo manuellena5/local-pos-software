@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const baseProductSchema = z.object({
   name:        z.string().min(1, 'El nombre es obligatorio').max(255),
-  description: z.union([z.string().max(1000), z.literal('')]).optional(),
+  description: z.union([z.string().max(1000), z.literal('')]).nullable().optional(),
   category:    z.string().max(100).nullable().optional().transform((v) => v ?? undefined),
   // sku ya NO viene del cliente — se genera en el backend automáticamente
   costPrice:   z.number().min(0, 'El costo debe ser positivo'),

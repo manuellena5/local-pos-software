@@ -5,8 +5,6 @@ interface InlineEditCellProps {
   displayValue: React.ReactNode;
   subValue?: string;
   onConfirm: (raw: string) => Promise<void>;
-  inputType?: 'number';
-  step?: string;
 }
 
 export function InlineEditCell({
@@ -14,7 +12,6 @@ export function InlineEditCell({
   displayValue,
   subValue,
   onConfirm,
-  step = '0.01',
 }: InlineEditCellProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState(value);
@@ -50,12 +47,12 @@ export function InlineEditCell({
       <div className="inline-flex items-center gap-1 px-1.5 py-1 rounded-md bg-white shadow-[0_0_0_2px_#2563eb] min-w-[76px]">
         <input
           ref={inputRef}
-          type="number"
-          step={step}
+          type="text"
+          inputMode="decimal"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
-          onBlur={cancel}
+          onBlur={confirm}
           className="w-20 text-sm font-semibold bg-transparent outline-none border-none text-gray-900"
         />
         <button

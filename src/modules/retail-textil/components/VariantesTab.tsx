@@ -242,7 +242,7 @@ export function VariantesTab({
                       type="number"
                       min={0}
                       step="0.01"
-                      className={`${fiNum} pl-5 ${!isBasePrice(row.price) ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}
+                      className={`${fiNum} pl-5 ${row.price <= 0 ? 'text-red-600 font-semibold' : !isBasePrice(row.price) ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}
                       value={row.price}
                       onChange={(e) => updateVariant(i, { price: parseFloat(e.target.value) || 0 })}
                       onKeyDown={(e) => handleCellTab(e, i, 'price')}
@@ -334,6 +334,12 @@ export function VariantesTab({
           </tbody>
         </table>
       </div>
+
+      {variants.some((v) => v.price <= 0) && (
+        <p className="text-xs text-red-500 px-1">
+          Todas las variantes necesitan un precio mayor a $0 — si no, no se van a poder guardar.
+        </p>
+      )}
 
       {/* Nota de stock en edición */}
       {!isCreating && (

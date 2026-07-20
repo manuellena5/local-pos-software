@@ -16,7 +16,13 @@ export function useProductVariants(
 
   useEffect(() => {
     if (!productId) {
-      resetForNew(basePrice, baseCost);
+      // No pisar variantes ya cargadas en el store: este efecto corre en cada
+      // montaje de VariantesTab, incluida una simple ida y vuelta entre tabs
+      // durante la creación de un producto nuevo (antes de guardar).
+      const { hasVariants, variants } = useVariantsFormStore.getState();
+      if (!hasVariants && variants.length === 0) {
+        resetForNew(basePrice, baseCost);
+      }
       return;
     }
     variantsApi

@@ -37,6 +37,11 @@ export function initRetailTextilModule(): void {
 
     if (!hasVariants || variants.length === 0) return;
 
+    const invalid = variants.find((v) => !v.price || v.price <= 0);
+    if (invalid) {
+      throw new Error(`La variante "${invalid.attributeValue}" debe tener precio mayor a 0`);
+    }
+
     await variantsApi.upsert(productId, businessUnitId, {
       attributeType: attributeType || 'Fragancia',
       variants: variants.map((v) => ({

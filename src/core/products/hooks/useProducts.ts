@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { productsApi } from '@/lib/api/products';
 import type { ProductWithStock } from '@shared/types';
 import { useProductsStore } from '../store/productsStore';
@@ -15,12 +15,18 @@ export function useProducts(businessUnitId: number) {
 
   const filter = useProductsStore((s) => s.filter);
 
+  // Solo mostramos el estado de carga completo (que reemplaza la tabla) en la
+  // carga inicial o al cambiar de unidad de negocio — no en cada refetch tras
+  // una edición, porque eso hace colapsar filas expandidas (ej. variantes).
+  const loadedForBuRef = useRef<number | null>(null);
+
   const refetch = useCallback(async () => {
     try {
-      setLoading(true);
+      if (loadedForBuRef.current !== businessUnitId) setLoading(true);
       setError(null);
       const data = await productsApi.listWithStock(businessUnitId);
       setAllProducts(data);
+      loadedForBuRef.current = businessUnitId;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar productos');
     } finally {

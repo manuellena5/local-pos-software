@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 const baseProductSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(255),
-  description: z.union([z.string().max(1000), z.literal('')]).optional(),
-  category: z.union([z.string().max(100), z.literal('')]).optional(),
+  description: z.union([z.string().max(1000), z.literal('')]).nullable().optional(),
+  category: z.union([z.string().max(100), z.literal('')]).nullable().optional(),
   sku: z.string().min(1, 'El SKU es obligatorio').max(100),
   costPrice: z.number().min(0, 'El costo debe ser positivo'),
   basePrice: z.number().min(0, 'El precio debe ser positivo'),
