@@ -1,77 +1,132 @@
 import bcrypt from 'bcryptjs';
-import { db } from './connection';
-import { sqlite } from './connection';
-import { installationConfig, businessUnits, users } from './schema';
+import { eq, and } from 'drizzle-orm';
+import { db, sqlite } from './connection';
+import { installationConfig, businessUnits, users, paymentMethods, categories } from './schema';
+import { seedDemoProducts } from './seedDemoProducts';
+
+export const AROMAS_BU_NAME = 'Aromas/Home&Deco';
+const ADMIN_EMAIL = 'admin@espaciobip.com';
+
+const PAYMENT_METHODS_SEED = [
+  { code: 'cash', label: 'Efectivo', sortOrder: 1 },
+  { code: 'mercadopago', label: 'Mercado Pago', sortOrder: 2 },
+  { code: 'transfer', label: 'Transferencia', sortOrder: 3 },
+  { code: 'card', label: 'Débito', sortOrder: 4 },
+];
+
+const CATEGORIES_SEED = ['Aromas', 'Decoración', 'Velas', 'Difusores', 'Blanquería'];
 
 /**
- * Corre el seed de datos iniciales solo si la DB está vacía.
- * Se llama desde server.ts después de initDatabase().
- * Es idempotente: si ya hay datos, no hace nada.
+ * Capa 1 — Seed de sistema. Corre en CADA arranque (llamado desde
+ * server.ts). Upsert por clave natural en cada entidad — nunca duplica ni
+ * pisa datos que el usuario ya haya editado (ej. no reescribe el nombre del
+ * negocio si ya existe la fila).
  */
-export function runSeedIfEmpty(): void {
-  const existing = sqlite.prepare('SELECT COUNT(*) as count FROM installation_config').get() as {
-    count: number;
-  };
-
-  if (existing.count > 0) {
-    console.log('[DB] Seed: base de datos ya inicializada');
-    return;
-  }
-
-  const passwordHash = bcrypt.hashSync('admin1234', 12);
-
-  // Transacción única — si cualquier INSERT falla, rollback completo
+export function runSystemSeed(): void {
   const runSeed = sqlite.transaction(() => {
-    db.insert(installationConfig)
-      .values({
-        id: 1,
-        businessName: 'Espacio BIP',
-        cuit: '00-00000000-0',
-        address: 'Landeta, Santa Fe, Argentina',
-      })
-      .run();
+    // installation_config: crear solo si no existe (id=1, singleton)
+    const existingInstallation = db
+      .select()
+      .from(installationConfig)
+      .where(eq(installationConfig.id, 1))
+      .get();
+    if (!existingInstallation) {
+      db.insert(installationConfig)
+        .values({
+          id: 1,
+          businessName: 'Espacio BIP',
+          cuit: '00-00000000-0',
+          address: 'Landeta, Santa Fe, Argentina',
+        })
+        .run();
+    }
 
-    db.insert(businessUnits)
-      .values([
-        {
+    // business_units: upsert por nombre — una sola BU en esta versión
+    let aromasBU = db
+      .select()
+      .from(businessUnits)
+      .where(eq(businessUnits.name, AROMAS_BU_NAME))
+      .get();
+    if (!aromasBU) {
+      aromasBU = db
+        .insert(businessUnits)
+        .values({
           installationId: 1,
-          name: 'Front',
-          description: 'Blanquería, Decoración y Aromas',
+          name: AROMAS_BU_NAME,
+          description: 'Aromas, decoración y hogar',
           moduleId: 'retail-textil',
           invoicePrefix: 'A',
           isActive: true,
-        },
-        {
-          installationId: 1,
-          name: 'Back',
-          description: 'Diseño de vestidos a medida',
-          moduleId: 'taller-medida',
-          invoicePrefix: 'B',
-          isActive: true,
-        },
-      ])
-      .run();
+        })
+        .returning()
+        .get();
+    }
 
-    db.insert(users)
-      .values({
-        installationId: 1,
-        email: 'admin@espaciobip.com',
-        passwordHash,
-        role: 'admin',
-        isActive: true,
-      })
-      .run();
+    // users: admin idempotente por email
+    const existingAdmin = db.select().from(users).where(eq(users.email, ADMIN_EMAIL)).get();
+    if (!existingAdmin) {
+      const passwordHash = bcrypt.hashSync('admin1234', 12);
+      db.insert(users)
+        .values({
+          installationId: 1,
+          email: ADMIN_EMAIL,
+          passwordHash,
+          role: 'admin',
+          isActive: true,
+        })
+        .run();
+    }
+
+    // payment_methods: upsert por code
+    for (const m of PAYMENT_METHODS_SEED) {
+      const existing = db
+        .select()
+        .from(paymentMethods)
+        .where(eq(paymentMethods.code, m.code))
+        .get();
+      if (existing) {
+        db.update(paymentMethods)
+          .set({ label: m.label, sortOrder: m.sortOrder })
+          .where(eq(paymentMethods.code, m.code))
+          .run();
+      } else {
+        db.insert(paymentMethods).values(m).run();
+      }
+    }
+
+    // categories: upsert por (name, businessUnitId)
+    if (aromasBU) {
+      for (const name of CATEGORIES_SEED) {
+        const existing = db
+          .select()
+          .from(categories)
+          .where(and(eq(categories.name, name), eq(categories.businessUnitId, aromasBU.id)))
+          .get();
+        if (!existing) {
+          db.insert(categories).values({ name, businessUnitId: aromasBU.id }).run();
+        }
+      }
+    }
   });
 
   try {
     runSeed();
-    console.log('[DB] Seed aplicado:');
-    console.log('[DB]   Instalación: Espacio BIP (CUIT placeholder — actualizar en Ajustes)');
-    console.log('[DB]   BU 1: Front (retail-textil)');
-    console.log('[DB]   BU 2: Back (taller-medida)');
-    console.log('[DB]   Usuario: admin@espaciobip.com / admin1234');
+    console.log('[DB] Seed de sistema aplicado (Capa 1 — Aromas/Home&Deco)');
   } catch (err) {
-    console.error('[DB] Error en seed — rollback aplicado:', err);
+    console.error('[DB] Error en seed de sistema — rollback aplicado:', err);
     throw err;
   }
+}
+
+/**
+ * Capa 2 — Datos de prueba (catálogo desde CSV). Solo corre si
+ * SEED_DEMO=true. Requiere que runSystemSeed() ya haya corrido (necesita
+ * la BU "Aromas/Home&Deco").
+ */
+export function runDemoSeedIfEnabled(): void {
+  if (process.env.SEED_DEMO !== 'true') {
+    console.log('[DB] Seed demo: SEED_DEMO no está en "true" — se omite');
+    return;
+  }
+  seedDemoProducts();
 }

@@ -8,6 +8,7 @@ import { ProductEditModal } from './ProductEditModal';
 import { ProductHistoryDrawer } from './ProductHistoryDrawer';
 import { StockMovementModal } from './StockMovementModal';
 import { BulkPriceUpdateModal } from './BulkPriceUpdateModal';
+import { ProductImportModal } from './ProductImportModal';
 
 interface ProductsPageProps {
   businessUnitId: number;
@@ -24,6 +25,7 @@ let toastId = 0;
 export function ProductsPage({ businessUnitId }: ProductsPageProps) {
   const { products, loading, error, refetch, chipCounts, categories } = useProducts(businessUnitId);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const search       = useProductsStore((s) => s.filter.search);
   const category     = useProductsStore((s) => s.filter.category);
@@ -54,6 +56,12 @@ export function ProductsPage({ businessUnitId }: ProductsPageProps) {
         </div>
         <div className="flex items-center gap-1.5">
           <button
+            onClick={() => setShowImportModal(true)}
+            className="px-2.5 py-1 border border-gray-200 rounded text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50"
+          >
+            📄 Importar CSV
+          </button>
+          <button
             onClick={openBulkModal}
             className="px-2.5 py-1 border border-gray-200 rounded text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50"
           >
@@ -67,6 +75,14 @@ export function ProductsPage({ businessUnitId }: ProductsPageProps) {
           </button>
         </div>
       </div>
+
+      {showImportModal && (
+        <ProductImportModal
+          businessUnitId={businessUnitId}
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => { addToast('Importación completada'); void refetch(); }}
+        />
+      )}
 
       {/* Summary chips */}
       <div className="px-3 pt-2 shrink-0">

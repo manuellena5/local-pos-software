@@ -1,10 +1,13 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { ProductController } from '../controllers/ProductController';
 import { ProductService } from '../services/ProductService';
 import { ProductRepository } from '../repositories/ProductRepository';
 import { StockController } from '../controllers/StockController';
 import { StockService } from '../services/StockService';
 import { StockRepository } from '../repositories/StockRepository';
+import { ProductImportService } from '../services/ProductImportService';
+import { ProductImportController } from '../controllers/ProductImportController';
 
 const productRepo    = new ProductRepository();
 const stockRepo      = new StockRepository();
@@ -13,12 +16,21 @@ const stockService   = new StockService(stockRepo, productRepo);
 const productController = new ProductController(productService);
 const stockController   = new StockController(stockService);
 
+const productImportService    = new ProductImportService(productRepo);
+const productImportController = new ProductImportController(productImportService);
+// memoryStorage: el buffer queda en RAM, no se escribe en disco
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
 export const productsRouter = Router();
 
 // Existentes
 productsRouter.get('/products',     (req, res, next) => productController.getAll(req, res, next));
 productsRouter.get('/products/barcode/:barcode', (req, res, next) => productController.getByBarcode(req, res, next));
 productsRouter.get('/products/search', (req, res, next) => productController.searchForPOS(req, res, next));
+productsRouter.get('/products/import-template',
+  (req, res, next) => productImportController.downloadTemplate(req, res, next));
+productsRouter.post('/products/import', upload.single('file'),
+  (req, res, next) => productImportController.import(req, res, next));
 productsRouter.get('/products/:id', (req, res, next) => productController.getById(req, res, next));
 productsRouter.post('/products',    (req, res, next) => productController.create(req, res, next));
 productsRouter.patch('/products/:id', (req, res, next) => productController.update(req, res, next));

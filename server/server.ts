@@ -4,18 +4,24 @@ import type { Application } from 'express';
 import { LOCALPOS_VERSION } from '../shared/constants';
 import { errorHandler } from './middleware/errorHandler';
 import { initDatabase } from './db/init';
-import { runSeedIfEmpty } from './db/seed';
+import { runSystemSeed, runDemoSeedIfEnabled } from './db/seed';
 import { createCoreRouter } from './core/router';
 import { startInvoiceProcessor } from './jobs/invoiceProcessor';
 import { startSyncScheduler } from './jobs/syncScheduler';
 
 export function createApp(): Application {
   initDatabase();
-  runSeedIfEmpty();
+  runSystemSeed();
+  runDemoSeedIfEnabled();
 
   const app = express();
 
-  app.use(cors({ origin: 'http://localhost:5173' }));
+  // El renderer llama a este server desde dos orígenes distintos según el
+  // modo: 'http://localhost:5173' en dev (Vite), o 'file://' (Origin: null)
+  // en la app empaquetada. `origin: true` refleja cualquier origen — seguro
+  // acá porque el server solo escucha en localhost, para uso exclusivo de
+  // esta misma app (no es una API pública).
+  app.use(cors({ origin: true }));
   app.use(express.json());
   // Forzar charset UTF-8 explícito en todas las respuestas JSON para evitar
   // que Electron/Chromium infiera incorrectamente la codificación (ej: tildes rotas).

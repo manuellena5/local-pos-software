@@ -3,6 +3,9 @@ import { useAppStore } from '@/core/store/appStore';
 import { apiClient } from '@/lib/api/client';
 import { useCategories } from '@/core/categories/hooks/useCategories';
 import { categoriesApi } from '@/lib/api/categories';
+import { usePaymentMethods } from '@/core/hooks/usePaymentMethods';
+import { paymentMethodsApi } from '@/lib/api/paymentMethods';
+import { systemApi } from '@/lib/api/system';
 import { BusinessUnitsPage } from '@/core/business-units/BusinessUnitsPage';
 import { PrinterSettingsTab } from '@/core/printer/components/PrinterSettingsTab';
 import type { InstallationConfig, BusinessUnit, Category } from '@shared/types';
@@ -13,6 +16,7 @@ const SETTINGS_TABS = [
   { id: 'unidades',  label: 'Unidades de negocio' },
   { id: 'catalogo',  label: 'Catálogo web' },
   { id: 'categorias', label: 'Categorías' },
+  { id: 'medios',    label: 'Medios de pago' },
   { id: 'impresora', label: 'Impresora' },
 ] as const;
 
@@ -43,6 +47,15 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [categoryWorking, setCategoryWorking] = useState(false);
+
+  // ── Medios de pago ───────────────────────────────────────────────────────
+  const { methods: paymentMethodsList, refetch: refetchPaymentMethods } = usePaymentMethods();
+  const [paymentMethodWorking, setPaymentMethodWorking] = useState<number | null>(null);
+
+  // ── Reset de datos de prueba (testing) ──────────────────────────────────
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetWorking, setResetWorking] = useState(false);
+  const [resetResult, setResetResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // General settings
   const [businessName, setBusinessName] = useState('');
@@ -143,6 +156,32 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
       setCategoryError(e instanceof Error ? e.message : 'Error al eliminar categoría');
     } finally {
       setCategoryWorking(false);
+    }
+  }
+
+  // ── Handlers de medios de pago ───────────────────────────────────────────
+  async function handleTogglePaymentMethod(id: number, isActive: boolean): Promise<void> {
+    setPaymentMethodWorking(id);
+    try {
+      await paymentMethodsApi.setActive(id, isActive);
+      await refetchPaymentMethods();
+    } finally {
+      setPaymentMethodWorking(null);
+    }
+  }
+
+  // ── Handler de reset de datos de prueba ──────────────────────────────────
+  async function handleResetDemoData(): Promise<void> {
+    setResetWorking(true);
+    setResetResult(null);
+    try {
+      await systemApi.resetDemoData(resetConfirmText);
+      setResetResult({ ok: true, message: 'Datos de prueba reiniciados. Recargá la página.' });
+      setResetConfirmText('');
+    } catch (e) {
+      setResetResult({ ok: false, message: e instanceof Error ? e.message : 'Error al reiniciar' });
+    } finally {
+      setResetWorking(false);
     }
   }
 
@@ -314,6 +353,40 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
               </div>
             )}
           </div>
+
+          {/* Reset de datos de prueba — solo para testing */}
+          <div className="border-t pt-6">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-1">
+              Zona de testing
+            </h2>
+            <p className="text-xs text-gray-400 mb-3">
+              Borra productos, stock, ventas, caja y clientes, y vuelve a cargar los datos de
+              prueba desde cero. No afecta la configuración del negocio ni el usuario admin.
+              <strong className="text-red-500"> Esta acción no se puede deshacer.</strong>
+            </p>
+            <div className="flex items-center gap-2 max-w-sm">
+              <input
+                type="text"
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder='Escribí "BORRAR" para confirmar'
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => void handleResetDemoData()}
+                disabled={resetWorking || resetConfirmText !== 'BORRAR'}
+                className="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {resetWorking ? 'Reiniciando...' : 'Reiniciar datos de prueba'}
+              </button>
+            </div>
+            {resetResult && (
+              <p className={`text-xs mt-2 ${resetResult.ok ? 'text-green-600' : 'text-red-600'}`}>
+                {resetResult.message}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -483,6 +556,40 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
           {categoryError && (
             <p className="text-red-500 text-xs mt-2">{categoryError}</p>
           )}
+        </div>
+      )}
+
+      {/* Tab: Medios de pago */}
+      {activeTab === 'medios' && (
+        <div className="max-w-lg">
+          <h2 className="text-base font-bold text-gray-900 mb-1">Medios de pago</h2>
+          <p className="text-xs text-gray-500 mb-4">
+            Los medios activos son los que aparecen para elegir en el punto de venta y en los
+            movimientos manuales de caja.
+          </p>
+          <div className="space-y-1">
+            {paymentMethodsList.length === 0 && (
+              <p className="text-sm text-gray-400 py-2">No hay medios de pago configurados.</p>
+            )}
+            {paymentMethodsList.map((m) => (
+              <label
+                key={m.id}
+                className="flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={m.isActive}
+                  disabled={paymentMethodWorking === m.id}
+                  onChange={(e) => void handleTogglePaymentMethod(m.id, e.target.checked)}
+                  className="accent-blue-600"
+                />
+                <span className={`flex-1 text-sm ${m.isActive ? 'text-gray-800' : 'text-gray-400'}`}>
+                  {m.label}
+                </span>
+                <span className="text-[10px] font-mono text-gray-400">{m.code}</span>
+              </label>
+            ))}
+          </div>
         </div>
       )}
 

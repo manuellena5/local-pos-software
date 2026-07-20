@@ -1,0 +1,10 @@
+nombre,categoria,precio,costo,stock,sku,tipo_variante,valor_variante
+Difusor de ambiente,Aromas,4500,2200,10,DIF-001,,
+Home Spray Lavanda,Aromas,3200,1500,15,HS-LAV,Fragancia,Lavanda
+Home Spray Lavanda,Aromas,3200,1500,12,HS-CIT,Fragancia,Citrus
+Vela aromática grande,Velas,2800,1200,20,VEL-GDE,Tamaño,Grande
+Vela aromática chica,Velas,1800,900,25,VEL-CHI,Tamaño,Chica
+Portavelas cerámica,Decoración,3500,1600,8,PORT-CER,,
+Sahumerio caja x20,Aromas,900,400,30,SAH-020,,
+Manta de plaza,Blanquería,6500,3200,6,MANTA-PLZ,Color,Beige
+Manta de plaza,Blanquería,6500,3200,4,MANTA-PLZ-GRIS,Color,Gris

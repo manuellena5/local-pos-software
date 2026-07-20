@@ -56,32 +56,18 @@ function ProductThumbnail({ product }: { product: ProductWithStock }) {
   );
 }
 
-function VariantStockTooltip({ breakdown }: { breakdown: string }) {
-  const [visible, setVisible] = useState(false);
+function VariantStockBreakdown({ breakdown }: { breakdown: string }) {
   const lines = breakdown.split(' · ').map((part) => {
     const sep = part.lastIndexOf(':');
     return { label: part.slice(0, sep), stock: part.slice(sep + 1).trim() };
   });
   return (
-    <span className="relative inline-flex items-center" style={{ marginLeft: 4 }}>
-      <button
-        onMouseEnter={() => setVisible(true)}
-        onMouseLeave={() => setVisible(false)}
-        className="text-purple-500 hover:text-purple-700 leading-none"
-        title="Ver desglose de variantes"
-        style={{ fontSize: 11 }}
-      >
-        ⊞
-      </button>
-      {visible && (
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[11px] rounded px-2 py-1.5 whitespace-nowrap z-30 shadow-lg pointer-events-none">
-          {lines.map((l, i) => (
-            <span key={i} className="block">
-              <span className="text-gray-300">{l.label}:</span> {l.stock} u.
-            </span>
-          ))}
+    <span className="block text-[10px] text-gray-400 leading-tight mt-0.5">
+      {lines.map((l, i) => (
+        <span key={i} className="mr-1.5 whitespace-nowrap">
+          {l.label}: <span className="text-gray-600 font-medium">{l.stock}</span>
         </span>
-      )}
+      ))}
     </span>
   );
 }
@@ -374,12 +360,10 @@ export function ProductsTable({ products, businessUnitId, onRefetch, onToast }: 
 
                   {isVisible('stock') && (
                     <td className={tdCls}>
-                      <span className="inline-flex items-center gap-0.5">
-                        <StockBadge quantity={p.currentStock} minimumThreshold={p.minimumThreshold} />
-                        {p.hasVariants && p.variantBreakdown && (
-                          <VariantStockTooltip breakdown={p.variantBreakdown} />
-                        )}
-                      </span>
+                      <StockBadge quantity={p.currentStock} minimumThreshold={p.minimumThreshold} />
+                      {p.hasVariants && p.variantBreakdown && (
+                        <VariantStockBreakdown breakdown={p.variantBreakdown} />
+                      )}
                     </td>
                   )}
 

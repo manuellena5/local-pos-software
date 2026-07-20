@@ -13,7 +13,9 @@ import { dashboardRouter } from './routes/dashboard.routes';
 import { publicRouter } from './routes/public.routes';
 import { catalogRouter } from './routes/catalog.routes';
 import { categoriesRouter } from './routes/categories.routes';
+import { paymentMethodsRouter } from './routes/paymentMethods.routes';
 import { printerRouter } from './routes/printer.routes';
+import { systemRouter } from './routes/system.routes';
 import { syncService } from './services/SyncService';
 import { retailTextilRouter } from '../modules/retail-textil/router';
 import { tallerMedidaRouter } from '../modules/taller-medida/router';
@@ -33,7 +35,9 @@ export function createCoreRouter(): Router {
   router.use('/api', reportsRouter);
   router.use('/api', dashboardRouter);
   router.use('/api', categoriesRouter);
+  router.use('/api', paymentMethodsRouter);
   router.use('/api', printerRouter);
+  router.use('/api', systemRouter);
   // Fase 6: API pública (catálogo read-only, CORS abierto)
   router.use('/api/public', publicRouter);
   // Fase 7: Catálogo web HTML

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { InvoiceQueueService } from '../../server/core/services/InvoiceQueueService';
 import type { AFIPService } from '../../server/core/services/AFIPService';
 import type { PendingInvoiceRepository } from '../../server/core/repositories/PendingInvoiceRepository';
@@ -59,6 +59,33 @@ describe('InvoiceQueueService', () => {
     } as unknown as SaleRepository;
 
     service = new InvoiceQueueService(afipService, pendingRepo, saleRepo);
+  });
+
+  describe('AFIP disabled (AFIP_ENVIRONMENT=disabled)', () => {
+    const originalEnv = process.env['AFIP_ENVIRONMENT'];
+
+    afterEach(() => {
+      process.env['AFIP_ENVIRONMENT'] = originalEnv;
+    });
+
+    it('tryIssueAfterSale should not call AFIP and should not touch the sale', async () => {
+      process.env['AFIP_ENVIRONMENT'] = 'disabled';
+
+      await service.tryIssueAfterSale(makeSale());
+
+      expect(afipService.requestCAE).not.toHaveBeenCalled();
+      expect(saleRepo.updateInvoiceFields).not.toHaveBeenCalled();
+      expect(pendingRepo.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('processPendingQueue should not touch the pending queue', async () => {
+      process.env['AFIP_ENVIRONMENT'] = 'disabled';
+
+      await service.processPendingQueue();
+
+      expect(pendingRepo.getPending).not.toHaveBeenCalled();
+      expect(afipService.requestCAE).not.toHaveBeenCalled();
+    });
   });
 
   describe('tryIssueAfterSale', () => {

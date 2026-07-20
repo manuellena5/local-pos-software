@@ -179,6 +179,73 @@ Comparten entre sí:
 
 ---
 
+## 📦 Generar el instalador de Windows (versión de prueba)
+
+```bash
+npm run dist:win
+```
+
+Esto compila el renderer (Vite) y el server (tsc), y empaqueta todo con
+electron-builder. Al terminar, el instalador queda en:
+
+```
+dist/Espacio BIP Setup 0.1.0.exe
+```
+
+### Instalar en otra PC
+
+1. Copiar `Espacio BIP Setup 0.1.0.exe` a la notebook de destino y ejecutarlo.
+2. Windows SmartScreen puede advertir porque el instalador no está firmado —
+   click en "Más información" → "Ejecutar de todas formas".
+3. El instalador permite elegir carpeta de destino (no requiere admin).
+
+### Dónde queda todo
+
+| Qué | Dónde |
+| --- | --- |
+| Base de datos (`localpos.db`) | `%APPDATA%\Espacio BIP\localpos.db` |
+| Log de diagnóstico | `%APPDATA%\Espacio BIP\logs\main.log` |
+| Config editable (`.env`) | `<carpeta de instalación>\resources\.env` |
+| Catálogo de prueba (`productos.csv`) | `<carpeta de instalación>\resources\seed\productos.csv` |
+
+La base de datos vive en `userData`, **no** en la carpeta de instalación —
+persiste entre reinstalaciones/actualizaciones y no se borra si reinstalás
+encima.
+
+### Qué trae esta versión
+
+- **AFIP desactivada**: las ventas se registran e imprimen como ticket
+  interno, sin factura electrónica (`resources/.env` → `AFIP_ENVIRONMENT=disabled`).
+- **Catálogo de prueba**: se carga automáticamente desde
+  `resources/seed/productos.csv` en cada arranque (`SEED_DEMO=true`).
+  Podés editar ese CSV con tu catálogo real y reiniciar la app — no hace
+  falta recompilar. Ver `resources/seed/README.md` para el formato exacto
+  de columnas (incluye variantes de color/tamaño/fragancia/material).
+- **Una sola unidad de negocio**: "Aromas/Home&Deco", activa por defecto.
+- **Medios de pago**: Efectivo, Mercado Pago, Transferencia y Débito,
+  editables (activar/desactivar) desde Configuración → Medios de pago.
+- **Reiniciar datos de prueba**: Configuración → pestaña "Negocio" → sección
+  "Zona de testing" al final. Borra productos/stock/ventas/caja/clientes y
+  vuelve a cargar el CSV desde cero (requiere escribir "BORRAR" para
+  confirmar). No afecta la configuración del negocio ni el usuario admin.
+- **Supabase opcional**: completar `SUPABASE_URL`/`SUPABASE_ANON_KEY` en
+  `resources/.env` con un proyecto de **test** si querés probar la
+  sincronización. Si se dejan vacíos, la app funciona 100% offline.
+
+### Si vas a seguir developeando después de generar el instalador
+
+`electron-builder` recompila `better-sqlite3` para el ABI de Electron al
+empaquetar. Si después corrés `npm run dev`, vas a ver un error de
+`NODE_MODULE_VERSION` — corré `npm run rebuild` para volver a compilarlo
+para el Node del sistema:
+
+```bash
+npm run dist:win
+npm run rebuild   # necesario antes de volver a "npm run dev"
+```
+
+---
+
 ## 📁 Estructura del proyecto
 
 ```

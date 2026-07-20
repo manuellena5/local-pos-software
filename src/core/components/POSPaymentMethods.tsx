@@ -1,19 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/core/hooks/useCart';
 import { formatCurrency } from '@/lib/utils/pricing';
+import { paymentMethodsApi } from '@/lib/api/paymentMethods';
 import type { PaymentMethod } from '@shared/types';
 
-const METHODS = [
+// Fallback si falla el fetch a /api/payment-methods/active — el POS no debe
+// quedar sin opciones de cobro por un error de red.
+const FALLBACK_METHODS = [
   { id: 'cash',        label: 'Efectivo' },
   { id: 'card',        label: 'Tarjeta' },
   { id: 'mercadopago', label: 'Mercado Pago' },
   { id: 'transfer',    label: 'Transferencia' },
-  { id: 'modo',        label: 'Modo / Ualá' },
 ];
 
 export function POSPaymentMethods() {
   const { totals, paymentMethods, setPaymentMethods } = useCart();
   const [amountStr, setAmountStr] = useState('');
+  const [methods, setMethods] = useState(FALLBACK_METHODS);
+
+  useEffect(() => {
+    paymentMethodsApi
+      .listActive()
+      .then((active) => {
+        if (active.length > 0) {
+          setMethods(active.map((m) => ({ id: m.code, label: m.label })));
+        }
+      })
+      .catch(() => { /* se mantiene FALLBACK_METHODS */ });
+  }, []);
 
   const selectedMethodId = paymentMethods[0]?.method ?? '';
   const totalPaid        = paymentMethods.reduce((s, p) => s + p.amount, 0);
@@ -53,7 +67,7 @@ export function POSPaymentMethods() {
         className="w-full border border-gray-300 rounded-lg px-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
       >
         <option value="">— Seleccionar medio de pago —</option>
-        {METHODS.map((m) => (
+        {methods.map((m) => (
           <option key={m.id} value={m.id}>{m.label}</option>
         ))}
       </select>

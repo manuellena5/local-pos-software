@@ -1,132 +1,175 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock better-sqlite3 connection before importing seed
-vi.mock('../../server/db/connection', () => {
-  const mockPrepare = vi.fn();
-  const mockTransaction = vi.fn((fn: () => void) => fn);
-  return {
-    sqlite: {
-      prepare: mockPrepare,
-      transaction: mockTransaction,
-    },
-    db: {
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      run: vi.fn(),
-    },
+// ── Hoist mocks ──────────────────────────────────────────────────────────────
+
+const { mockDb, mockSqlite } = vi.hoisted(() => {
+  const mockDb = {
+    select: vi.fn(),
+    from: vi.fn(),
+    where: vi.fn(),
+    get: vi.fn(),
+    insert: vi.fn(),
+    values: vi.fn(),
+    update: vi.fn(),
+    set: vi.fn(),
+    returning: vi.fn(),
+    run: vi.fn(),
   };
+  const chain = mockDb as Record<string, ReturnType<typeof vi.fn>>;
+  for (const key of ['select', 'from', 'where', 'insert', 'values', 'update', 'set', 'returning']) {
+    chain[key].mockReturnValue(mockDb);
+  }
+  const mockSqlite = { transaction: vi.fn((fn: () => void) => fn) };
+  return { mockDb, mockSqlite };
 });
 
-vi.mock('bcryptjs', () => ({
-  default: {
-    hashSync: vi.fn().mockReturnValue('$2b$12$hashedpassword'),
-  },
+vi.mock('../../server/db/connection', () => ({ db: mockDb, sqlite: mockSqlite }));
+
+vi.mock('../../server/db/schema', () => ({
+  installationConfig: { id: 'installationConfig.id' },
+  businessUnits: { name: 'businessUnits.name' },
+  users: { email: 'users.email' },
+  paymentMethods: { code: 'paymentMethods.code' },
+  categories: { name: 'categories.name', businessUnitId: 'categories.businessUnitId' },
 }));
 
-import { sqlite, db } from '../../server/db/connection';
-import { runSeedIfEmpty } from '../../server/db/seed';
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn((col: unknown, val: unknown) => `eq:${String(col)}:${String(val)}`),
+  and: vi.fn((...conds: unknown[]) => `and:${conds.join(',')}`),
+}));
 
-function mockEmpty() {
-  vi.mocked(sqlite.prepare).mockReturnValue({
-    get: vi.fn().mockReturnValue({ count: 0 }),
-  } as unknown as ReturnType<typeof sqlite.prepare>);
+vi.mock('bcryptjs', () => ({
+  default: { hashSync: vi.fn().mockReturnValue('$2b$12$hashedpassword') },
+}));
+
+const seedDemoProductsMock = vi.hoisted(() => vi.fn());
+vi.mock('../../server/db/seedDemoProducts', () => ({ seedDemoProducts: seedDemoProductsMock }));
+
+import { runSystemSeed, runDemoSeedIfEnabled } from '../../server/db/seed';
+
+// 11 llamadas secuenciales a .get() dentro de runSystemSeed(): installationConfig,
+// businessUnits, users, 4x paymentMethods, 5x categories.
+function mockAllGetsReturn(value: unknown) {
+  mockDb.get.mockReturnValue(value);
 }
 
-function mockNotEmpty() {
-  vi.mocked(sqlite.prepare).mockReturnValue({
-    get: vi.fn().mockReturnValue({ count: 1 }),
-  } as unknown as ReturnType<typeof sqlite.prepare>);
-}
-
-describe('runSeedIfEmpty', () => {
+describe('runSystemSeed', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: transaction executes the function immediately
-    vi.mocked(sqlite.transaction).mockImplementation((fn) => fn as () => void);
-    vi.mocked(db.insert).mockReturnThis();
-    vi.mocked((db as unknown as { values: ReturnType<typeof vi.fn> }).values).mockReturnThis();
-    vi.mocked((db as unknown as { run: ReturnType<typeof vi.fn> }).run).mockReturnValue(undefined);
+    for (const key of ['select', 'from', 'where', 'insert', 'values', 'update', 'set', 'returning']) {
+      (mockDb as unknown as Record<string, ReturnType<typeof vi.fn>>)[key].mockReturnValue(mockDb);
+    }
+    mockDb.run.mockReturnValue(undefined);
   });
 
-  it('should run seed when installation_config is empty', () => {
-    mockEmpty();
+  it('should insert everything when the database is empty', () => {
+    mockAllGetsReturn(undefined);
+    // businessUnits insert().returning().get() debe devolver una BU con id
+    mockDb.get
+      .mockReturnValueOnce(undefined) // installationConfig existente?
+      .mockReturnValueOnce(undefined) // businessUnits existente?
+      .mockReturnValueOnce({ id: 7, name: 'Aromas/Home&Deco' }); // returning().get() tras insert
 
-    runSeedIfEmpty();
+    runSystemSeed();
 
-    expect(sqlite.transaction).toHaveBeenCalledOnce();
+    expect(mockSqlite.transaction).toHaveBeenCalledOnce();
+    expect(mockDb.insert).toHaveBeenCalled();
   });
 
-  it('should not run seed when installation_config has rows', () => {
-    mockNotEmpty();
+  it('should not duplicate installation_config when it already exists', () => {
+    // 1er get() (installationConfig) devuelve una fila existente
+    mockDb.get.mockReturnValueOnce({ id: 1, businessName: 'Espacio BIP' });
+    // El resto de los get() (businessUnits, users, payment methods, categories) también "existen"
+    mockDb.get.mockReturnValue({ id: 1 });
 
-    runSeedIfEmpty();
+    runSystemSeed();
 
-    expect(sqlite.transaction).not.toHaveBeenCalled();
+    // Ningún insert de installation_config (values con businessName) debería ocurrir
+    const insertedInstallation = mockDb.values.mock.calls.some(
+      ([v]) => v && typeof v === 'object' && 'businessName' in v,
+    );
+    expect(insertedInstallation).toBe(false);
   });
 
-  it('should create both BUs with correct moduleId', () => {
-    mockEmpty();
+  it('should seed exactly one business unit "Aromas/Home&Deco" with moduleId retail-textil', () => {
+    mockDb.get
+      .mockReturnValueOnce(undefined) // installationConfig no existe
+      .mockReturnValueOnce(undefined) // businessUnits no existe
+      .mockReturnValueOnce({ id: 7, name: 'Aromas/Home&Deco' }); // returning().get()
+    mockDb.get.mockReturnValue({ id: 1 }); // el resto (users, payment methods, categories) "existen"
 
-    const insertedValues: unknown[] = [];
-    vi.mocked(db.insert).mockReturnThis();
-    vi.mocked(sqlite.transaction).mockImplementation((fn) => {
-      // Capture what gets inserted by running the transaction fn
-      const originalInsert = db.insert.bind(db);
-      vi.mocked(db.insert).mockImplementation((...args) => {
-        const chain = {
-          values: (vals: unknown) => {
-            insertedValues.push(vals);
-            return { run: vi.fn() };
-          },
-          run: vi.fn(),
-        };
-        void originalInsert;
-        void args;
-        return chain as unknown as ReturnType<typeof db.insert>;
-      });
-      fn();
-      return fn;
-    });
+    runSystemSeed();
 
-    runSeedIfEmpty();
-
-    const buInsert = insertedValues.find(
-      (v) => Array.isArray(v) && (v as { moduleId: string }[])[0]?.moduleId !== undefined,
-    ) as { moduleId: string; name: string }[] | undefined;
+    const buInsert = mockDb.values.mock.calls
+      .map(([v]) => v)
+      .find((v) => v && typeof v === 'object' && (v as { moduleId?: string }).moduleId !== undefined) as
+      | { name: string; moduleId: string }
+      | undefined;
 
     expect(buInsert).toBeDefined();
-    if (buInsert) {
-      expect(buInsert[0]!.moduleId).toBe('retail-textil');
-      expect(buInsert[1]!.moduleId).toBe('taller-medida');
-    }
+    expect(buInsert?.name).toBe('Aromas/Home&Deco');
+    expect(buInsert?.moduleId).toBe('retail-textil');
   });
 
-  it('should create admin user with correct role', () => {
-    mockEmpty();
+  it('should upsert (update) an existing payment method instead of duplicating', () => {
+    mockAllGetsReturn({ id: 1, code: 'cash', label: 'Efectivo' });
 
-    const insertedValues: unknown[] = [];
-    vi.mocked(sqlite.transaction).mockImplementation((fn) => {
-      vi.mocked(db.insert).mockImplementation(() => ({
-        values: (vals: unknown) => {
-          insertedValues.push(vals);
-          return { run: vi.fn() };
-        },
-        run: vi.fn(),
-      }) as unknown as ReturnType<typeof db.insert>);
-      fn();
-      return fn;
-    });
+    runSystemSeed();
 
-    runSeedIfEmpty();
+    expect(mockDb.update).toHaveBeenCalled();
+    const paymentMethodInsert = mockDb.values.mock.calls.some(
+      ([v]) => v && typeof v === 'object' && (v as { code?: string }).code === 'cash',
+    );
+    expect(paymentMethodInsert).toBe(false);
+  });
 
-    const userInsert = insertedValues.find(
-      (v) => !Array.isArray(v) && (v as { role?: string }).role !== undefined,
-    ) as { role: string; email: string } | undefined;
+  it('should create admin user with correct role when it does not exist', () => {
+    mockDb.get
+      .mockReturnValueOnce({ id: 1 }) // installationConfig existe
+      .mockReturnValueOnce({ id: 1, name: 'Aromas/Home&Deco' }) // businessUnits existe
+      .mockReturnValueOnce(undefined); // users no existe
+    mockDb.get.mockReturnValue({ id: 1 }); // payment methods / categories "existen"
+
+    runSystemSeed();
+
+    const userInsert = mockDb.values.mock.calls
+      .map(([v]) => v)
+      .find((v) => v && typeof v === 'object' && (v as { role?: string }).role !== undefined) as
+      | { role: string; email: string }
+      | undefined;
 
     expect(userInsert).toBeDefined();
-    if (userInsert) {
-      expect(userInsert.role).toBe('admin');
-      expect(userInsert.email).toBe('admin@espaciobip.com');
-    }
+    expect(userInsert?.role).toBe('admin');
+    expect(userInsert?.email).toBe('admin@espaciobip.com');
+  });
+});
+
+describe('runDemoSeedIfEnabled', () => {
+  const originalEnv = process.env['SEED_DEMO'];
+
+  beforeEach(() => {
+    seedDemoProductsMock.mockClear();
+  });
+
+  afterEach(() => {
+    process.env['SEED_DEMO'] = originalEnv;
+  });
+
+  it('should call seedDemoProducts when SEED_DEMO=true', () => {
+    process.env['SEED_DEMO'] = 'true';
+    runDemoSeedIfEnabled();
+    expect(seedDemoProductsMock).toHaveBeenCalledOnce();
+  });
+
+  it('should not call seedDemoProducts when SEED_DEMO is unset', () => {
+    delete process.env['SEED_DEMO'];
+    runDemoSeedIfEnabled();
+    expect(seedDemoProductsMock).not.toHaveBeenCalled();
+  });
+
+  it('should not call seedDemoProducts when SEED_DEMO=false', () => {
+    process.env['SEED_DEMO'] = 'false';
+    runDemoSeedIfEnabled();
+    expect(seedDemoProductsMock).not.toHaveBeenCalled();
   });
 });

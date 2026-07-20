@@ -34,3 +34,13 @@ export function getPointOfSale(): number {
 export function isMockMode(): boolean {
   return (process.env.AFIP_ENVIRONMENT ?? 'mock') === 'mock';
 }
+
+/**
+ * AFIP completamente desactivada: no se intenta facturar (ni siquiera con
+ * CAE mock). La venta queda como ticket interno (invoiceStatus 'pending').
+ * Usado en versiones de prueba donde la facturación electrónica todavía
+ * no está habilitada para el comercio.
+ */
+export function isAfipDisabled(): boolean {
+  return process.env.AFIP_ENVIRONMENT === 'disabled';
+}

@@ -3,6 +3,8 @@ node_modules/
 
 # Build outputs
 dist/
+dist_new/
+dist_final/
 dist-electron/
 dist-server/
 build/
@@ -10,6 +12,10 @@ build/
 
 # Environment
 .env
+# Excepción: plantilla sin secretos que electron-builder empaqueta como
+# recurso (extraResources) — necesaria para que el instalador se genere
+# igual en cualquier máquina que clone el repo.
+!resources/.env
 
 # Database
 *.db

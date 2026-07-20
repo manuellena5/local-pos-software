@@ -4,6 +4,11 @@ import { logError } from '@/lib/errorLog';
 // En Electron usa puerto absoluto; en browser/preview usa ruta relativa (proxy Vite)
 const BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:3001' : '';
 
+/** Para fetch() manuales (ej. subida de archivos con FormData) que no pasan por apiClient. */
+export function getApiBaseUrl(): string {
+  return BASE_URL;
+}
+
 export class ApiError extends Error {
   constructor(
     public code: string,

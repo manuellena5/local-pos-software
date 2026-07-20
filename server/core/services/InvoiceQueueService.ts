@@ -1,4 +1,5 @@
 import { logger } from '../../lib/logger';
+import { isAfipDisabled } from '../../config/afip.config';
 import type { AFIPService } from './AFIPService';
 import type { PendingInvoiceRepository } from '../repositories/PendingInvoiceRepository';
 import type { SaleRepository } from '../repositories/SaleRepository';
@@ -22,6 +23,10 @@ export class InvoiceQueueService {
    * Si falla, encola en pending_invoices para reintentos automáticos.
    */
   async tryIssueAfterSale(sale: Sale): Promise<void> {
+    if (isAfipDisabled()) {
+      logger.debug(CTX, 'AFIP disabled — sale stays as internal ticket', { saleId: sale.id });
+      return;
+    }
     logger.info(CTX, 'Attempting immediate invoice after sale', { saleId: sale.id });
 
     const req = this.buildRequest(sale);
@@ -80,6 +85,8 @@ export class InvoiceQueueService {
    * Llamado por el cron job cada 5 minutos.
    */
   async processPendingQueue(): Promise<void> {
+    if (isAfipDisabled()) return;
+
     const pending = this.pendingRepo.getPending(MAX_RETRIES);
 
     if (pending.length === 0) {

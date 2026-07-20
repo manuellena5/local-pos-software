@@ -108,6 +108,27 @@ export interface ProductWithStock extends Product {
   variantBreakdown?: string | null;
 }
 
+/** Fila del CSV de importación masiva de productos (formato largo: una fila
+ *  = producto simple, o una variante de un producto agrupado por `nombre`
+ *  repetido). Ver resources/seed/README.md para el detalle de columnas. */
+export interface ProductImportRow {
+  nombre?: string;
+  categoria?: string;
+  precio?: string | number;
+  costo?: string | number;
+  stock?: string | number;
+  sku?: string;
+  tipo_variante?: string;
+  valor_variante?: string;
+}
+
+export interface ProductImportResult {
+  productsCreated: number;
+  productsExisting: number;
+  variantsWritten: number;
+  totalRows: number;
+}
+
 export type StockMovementType = 'entrada' | 'salida' | 'ajuste';
 
 export interface CreateStockMovementRequest {
@@ -605,6 +626,18 @@ export interface Category {
   name: string;
   businessUnitId: number;
   isActive: boolean;
+  createdAt: string;
+}
+
+/** Medio de pago configurable (Configuración → Medios de pago). `code` es
+ *  uno de los valores fijos ya usados en ventas/caja (cash, transfer,
+ *  mercadopago, card, other) — isActive solo controla si se ofrece en la UI. */
+export interface PaymentMethodConfig {
+  id: number;
+  code: string;
+  label: string;
+  isActive: boolean;
+  sortOrder: number;
   createdAt: string;
 }
 

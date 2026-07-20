@@ -41,6 +41,7 @@ export function initDatabase(): void {
     '0029_supplier_products_description_image.sql',
     '0030_cash_movements_code.sql',
     '0031_cash_payment_methods.sql',
+    '0032_payment_methods.sql',
   ];
 
   const migrationsDir =

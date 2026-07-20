@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, getApiBaseUrl } from './client';
 import type {
   Product,
   ProductWithStock,
@@ -7,6 +7,7 @@ import type {
   ProductStats,
   CreateStockMovementRequest,
   BulkPriceUpdateRequest,
+  ProductImportResult,
 } from '@shared/types';
 
 export const productsApi = {
@@ -89,6 +90,25 @@ export const productsApi = {
     return apiClient.get(
       `/api/products/search?businessUnitId=${businessUnitId}&q=&all=1`,
     );
+  },
+
+  getImportTemplateUrl(): string {
+    return `${getApiBaseUrl()}/api/products/import-template`;
+  },
+
+  async importCsv(businessUnitId: number, file: File): Promise<ProductImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(
+      `${getApiBaseUrl()}/api/products/import?businessUnitId=${businessUnitId}`,
+      { method: 'POST', body: formData },
+    );
+    const json = (await res.json()) as { data: ProductImportResult | null; error: { message: string } | null };
+    if (!res.ok || json.error) {
+      throw new Error(json.error?.message ?? `Error ${res.status}`);
+    }
+    return json.data!;
   },
 
   findByBarcode(

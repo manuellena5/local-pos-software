@@ -74,7 +74,8 @@ export interface AFIPCredentials {
   cuit: string;
   certPath: string;
   keyPath: string;
-  environment: 'testing' | 'production' | 'mock';
+  /** 'disabled': no se intenta facturar nunca — la venta queda como ticket interno. */
+  environment: 'testing' | 'production' | 'mock' | 'disabled';
 }
 
 export interface AFIPInvoiceRequest {

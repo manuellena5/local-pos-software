@@ -1,5 +1,5 @@
 appId: com.espaciobip.localpos
-productName: LocalPosSoftware
+productName: Espacio BIP
 copyright: Espacio BIP
 
 directories:
@@ -15,6 +15,10 @@ extraResources:
     to: migrations
   - from: assets
     to: assets
+  - from: resources/seed
+    to: seed
+  - from: resources/.env
+    to: .env
 
 win:
   target:
