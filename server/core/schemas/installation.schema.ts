@@ -11,6 +11,7 @@ export const updateInstallationSchema = z.object({
   logoPath:               z.string().nullable().optional(),
   whatsappNumber:         z.string().max(30).nullable().optional(),
   catalogBusinessUnitId:  z.number().int().positive().nullable().optional(),
+  roundingMultiple:       z.number().int().min(0).optional(),
 });
 
 export type UpdateInstallationDto = z.infer<typeof updateInstallationSchema>;

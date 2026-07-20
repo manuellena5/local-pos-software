@@ -20,6 +20,7 @@ export class InstallationRepository {
       logo_path: string | null; created_at: string; updated_at: string;
       whatsapp_number: string | null; catalog_business_unit_id: number | null;
       printer_config: string | null; printer_enabled: number | null;
+      rounding_multiple: number | null;
     };
     const row = sqlite
       .prepare('SELECT * FROM installation_config LIMIT 1')
@@ -46,6 +47,7 @@ export class InstallationRepository {
       catalogBusinessUnitId: row.catalog_business_unit_id ?? null,
       printerConfig:         row.printer_config ? JSON.parse(row.printer_config) : null,
       printerEnabled:        Boolean(row.printer_enabled),
+      roundingMultiple:      row.rounding_multiple ?? 50,
     };
   }
 

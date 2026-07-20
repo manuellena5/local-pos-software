@@ -146,7 +146,22 @@ export class SalesService {
       data.discountAmount ?? 0
     );
 
-    // Validar medios de pago
+    // ── Redondeo de efectivo (comercial, no fiscal) ───────────────────────
+    // Solo aplica si el pago es 100% efectivo. El cajero ya vio/editó la
+    // sugerencia en el POS; acá solo la acotamos a un ajuste válido:
+    // nunca positivo (no se puede "redondear para arriba") y nunca más
+    // grande que el propio total (no puede quedar en negativo).
+    const isCashOnly = data.paymentMethods.length === 1 && data.paymentMethods[0]!.method === 'cash';
+    let roundingAdjustment = 0;
+    if (isCashOnly && data.roundingAdjustment) {
+      roundingAdjustment = Math.max(
+        -totals.totalAmount,
+        Math.min(0, Math.round(data.roundingAdjustment * 100) / 100),
+      );
+      totals.totalAmount = Math.round((totals.totalAmount + roundingAdjustment) * 100) / 100;
+    }
+
+    // Validar medios de pago (ya contra el total con redondeo aplicado)
     this.validatePaymentMethods(data.paymentMethods, totals.totalAmount);
 
     // Persistir en transacción (el repo maneja el rollback)
@@ -156,6 +171,7 @@ export class SalesService {
       customerId: data.customerId ?? null,
       items: itemInputs,
       ...totals,
+      roundingAdjustment,
       taxRate,
       paymentMethods: data.paymentMethods,
     });

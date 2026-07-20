@@ -405,6 +405,7 @@ export class SaleRepository {
           taxRate: data.taxRate,
           taxAmount: data.taxAmount,
           totalAmount: data.totalAmount,
+          roundingAdjustment: data.roundingAdjustment,
           paymentMethods: JSON.stringify(data.paymentMethods),
           status: 'completed',
         })

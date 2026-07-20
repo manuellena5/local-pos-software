@@ -65,6 +65,7 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
   const [addressCity, setAddressCity] = useState('');
   const [ingBrutos, setIngBrutos] = useState('');
   const [fiscalCondition, setFiscalCondition] = useState<'monotributo' | 'responsable_inscripto'>('monotributo');
+  const [roundingMultiple, setRoundingMultiple] = useState('50');
 
   // Catalog settings
   const [whatsappNumber, setWhatsappNumber] = useState('');
@@ -81,6 +82,7 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
     setAddressCity(config.addressCity ?? '');
     setIngBrutos(config.ingBrutos ?? '');
     setFiscalCondition(config.fiscalCondition ?? 'monotributo');
+    setRoundingMultiple(String(config.roundingMultiple ?? 50));
     setWhatsappNumber(config.whatsappNumber ?? '');
     setCatalogBuId(config.catalogBusinessUnitId != null ? String(config.catalogBusinessUnitId) : '');
   }, [config]);
@@ -97,6 +99,7 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
         addressCity: addressCity || null,
         ingBrutos: ingBrutos || undefined,
         fiscalCondition: fiscalCondition,
+        roundingMultiple: Math.max(0, Math.trunc(Number(roundingMultiple) || 0)),
         whatsappNumber: whatsappNumber || null,
         catalogBusinessUnitId: catalogBuId ? Number(catalogBuId) : null,
       };
@@ -288,6 +291,30 @@ export function SettingsPage({ initialTab }: SettingsPageProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Redondeo de efectivo */}
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Efectivo</h2>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Redondeo de efectivo (múltiplo)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={roundingMultiple}
+                onChange={(e) => setRoundingMultiple(e.target.value)}
+                placeholder="50"
+                className="w-full max-w-[160px] px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Al cobrar en efectivo, el sistema sugiere redondear hacia abajo al múltiplo
+                configurado (ej: $50). El cajero puede editar el monto sugerido. Poné 0 para
+                desactivar. No aplica a pagos con tarjeta, transferencia u otros medios.
+              </p>
             </div>
           </div>
 

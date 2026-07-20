@@ -538,6 +538,11 @@ class PrinterService {
     p.println(ticketRightAlign('Ing. manuales:', ticketMoney(data.cash.manualIncome), W));
     p.println(ticketRightAlign('Egr. manuales:', ticketMoney(data.cash.manualExpense), W));
     p.println(ticketRightAlign('Cobros:', ticketMoney(data.cash.cashSalesTotal), W));
+    if (data.cash.totalRoundingAdjustment < 0) {
+      p.println(
+        ticketRightAlign('Redondeo:', `-${ticketMoney(Math.abs(data.cash.totalRoundingAdjustment))}`, W),
+      );
+    }
     p.println(ticketRightAlign('Saldo teorico:', ticketMoney(data.cash.theoreticalBalance), W));
     p.println(ticketRightAlign('Saldo declarado:', ticketMoney(data.cash.declaredBalance), W));
     const diffSign = data.cash.difference >= 0 ? '+' : '-';
@@ -657,6 +662,10 @@ class PrinterService {
           W,
         ),
       );
+    }
+
+    if (data.roundingAdjustment && data.roundingAdjustment < 0) {
+      p.println(ticketRightAlign('Redondeo', `-${ticketMoney(Math.abs(data.roundingAdjustment))}`, W));
     }
 
     p.bold(true);

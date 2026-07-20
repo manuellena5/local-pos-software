@@ -20,6 +20,9 @@ export const sales = sqliteTable('sales', {
   taxRate: real('tax_rate').notNull().default(21),
   taxAmount: real('tax_amount').notNull(),
   totalAmount: real('total_amount').notNull(),
+  // Ajuste de redondeo aplicado (siempre <= 0, floor a favor del cliente).
+  // totalAmount ya es el monto cobrado con este ajuste incluido.
+  roundingAdjustment: real('rounding_adjustment').notNull().default(0),
   // JSON string: [{method: "cash", amount: 1000}, ...]
   paymentMethods: text('payment_methods').notNull(),
   status: text('status', { enum: ['completed', 'cancelled'] })

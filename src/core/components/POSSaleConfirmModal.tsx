@@ -28,6 +28,8 @@ interface POSSaleConfirmModalProps {
   paymentMethods: PaymentMethod[];
   totals: CartTotals;
   printerStatus: PrinterStatus;
+  /** Ajuste de redondeo de efectivo (siempre <= 0) — 0 si no aplica */
+  roundingAdjustment?: number;
   /** Ejecuta la venta y opcionalmente imprime. Resuelve con errores si los hay. */
   onConfirm: (shouldPrint: boolean) => Promise<ConfirmResult>;
   /** Cierra el modal sin hacer nada — el carrito queda intacto */
@@ -42,6 +44,7 @@ export function POSSaleConfirmModal({
   paymentMethods,
   totals,
   printerStatus,
+  roundingAdjustment = 0,
   onConfirm,
   onCancel,
 }: POSSaleConfirmModalProps) {
@@ -82,8 +85,9 @@ export function POSSaleConfirmModal({
     // Si no hay errores, el padre cierra el modal vía onConfirm resolviendo sin error
   }
 
+  const amountOwed = Math.round((totals.totalAmount + roundingAdjustment) * 100) / 100;
   const totalPaid = paymentMethods.reduce((s, p) => s + p.amount, 0);
-  const change = Math.max(0, totalPaid - totals.totalAmount);
+  const change = Math.max(0, totalPaid - amountOwed);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -142,9 +146,15 @@ export function POSSaleConfirmModal({
                 </div>
               </>
             )}
+            {roundingAdjustment !== 0 && (
+              <div className="flex justify-between text-sm text-amber-700">
+                <span>Redondeo (efectivo)</span>
+                <span className="tabular-nums">−{formatCurrency(Math.abs(roundingAdjustment))}</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-gray-900">
               <span>TOTAL</span>
-              <span className="tabular-nums text-base">{formatCurrency(totals.totalAmount)}</span>
+              <span className="tabular-nums text-base">{formatCurrency(amountOwed)}</span>
             </div>
           </div>
 
@@ -252,7 +262,7 @@ export function POSSaleConfirmModal({
                     Procesando...
                   </>
                 ) : (
-                  `✓ Confirmar — ${formatCurrency(totals.totalAmount)}`
+                  `✓ Confirmar — ${formatCurrency(amountOwed)}`
                 )}
               </button>
             </>

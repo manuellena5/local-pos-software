@@ -13,7 +13,12 @@ const FALLBACK_METHODS = [
   { id: 'transfer',    label: 'Transferencia' },
 ];
 
-export function POSPaymentMethods() {
+interface POSPaymentMethodsProps {
+  /** Total sugerido (con redondeo de efectivo ya aplicado, editable por el cajero) */
+  cashSuggestedTotal?: number;
+}
+
+export function POSPaymentMethods({ cashSuggestedTotal }: POSPaymentMethodsProps) {
   const { totals, paymentMethods, setPaymentMethods } = useCart();
   const [amountStr, setAmountStr] = useState('');
   const [methods, setMethods] = useState(FALLBACK_METHODS);
@@ -29,13 +34,25 @@ export function POSPaymentMethods() {
       .catch(() => { /* se mantiene FALLBACK_METHODS */ });
   }, []);
 
+  // Si "A cobrar" cambia (el cajero lo edita, o cambia el carrito), el monto
+  // sugerido en efectivo debe reflejarse acá también — pero sin pisar lo que
+  // el cajero haya tipeado a mano para calcular vuelto de un billete grande.
+  useEffect(() => {
+    if (paymentMethods[0]?.method === 'cash' && cashSuggestedTotal !== undefined) {
+      setAmountStr(cashSuggestedTotal > 0 ? cashSuggestedTotal.toFixed(2) : '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cashSuggestedTotal]);
+
   const selectedMethodId = paymentMethods[0]?.method ?? '';
   const totalPaid        = paymentMethods.reduce((s, p) => s + p.amount, 0);
   const isCash           = selectedMethodId === 'cash';
-  const change           = totalPaid > totals.totalAmount
-    ? Math.round((totalPaid - totals.totalAmount) * 100) / 100
+  // El redondeo solo aplica a efectivo — otros medios usan el total exacto
+  const effectiveTotal = isCash ? (cashSuggestedTotal ?? totals.totalAmount) : totals.totalAmount;
+  const change           = totalPaid > effectiveTotal
+    ? Math.round((totalPaid - effectiveTotal) * 100) / 100
     : 0;
-  const missingAmount = totals.totalAmount - totalPaid;
+  const missingAmount = effectiveTotal - totalPaid;
 
   function selectMethod(methodId: string) {
     if (!methodId) {
@@ -43,7 +60,7 @@ export function POSPaymentMethods() {
       setAmountStr('');
       return;
     }
-    const fullAmount = totals.totalAmount;
+    const fullAmount = methodId === 'cash' ? (cashSuggestedTotal ?? totals.totalAmount) : totals.totalAmount;
     const updated: PaymentMethod[] = [{ method: methodId, amount: fullAmount }];
     setPaymentMethods(updated);
     setAmountStr(fullAmount > 0 ? fullAmount.toFixed(2) : '');

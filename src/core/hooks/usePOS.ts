@@ -15,7 +15,9 @@ export function usePOS(businessUnitId: number, customerId?: number) {
   const isProcessing = usePOSStore((s) => s.isProcessing);
   const clearCart = usePOSStore((s) => s.clearCart);
 
-  const confirmSale = async (): Promise<{ result: SaleWithItems | null; errorMsg: string | null }> => {
+  const confirmSale = async (
+    roundingAdjustment?: number,
+  ): Promise<{ result: SaleWithItems | null; errorMsg: string | null }> => {
     if (cart.length === 0) {
       const msg = 'El carrito está vacío';
       setError(msg);
@@ -47,6 +49,7 @@ export function usePOS(businessUnitId: number, customerId?: number) {
         discountPercent,
         discountAmount,
         paymentMethods,
+        ...(roundingAdjustment ? { roundingAdjustment } : {}),
       });
 
       setLastSale(result);

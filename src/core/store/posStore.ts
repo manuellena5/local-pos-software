@@ -71,7 +71,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   removeFromCart: (productId, variantId) => {
-    set((state) => ({ cart: state.cart.filter((c) => !sameKey(c, productId, variantId)) }));
+    set((state) => {
+      const cart = state.cart.filter((c) => !sameKey(c, productId, variantId));
+      // Sin productos no hay nada que cobrar — limpiar el medio de pago para
+      // que no quede un "vuelto" fantasma calculado contra un total viejo.
+      return cart.length === 0 ? { cart, paymentMethods: [] } : { cart };
+    });
   },
 
   updateQuantity: (productId, quantity, variantId) => {

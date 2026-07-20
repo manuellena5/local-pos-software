@@ -1,6 +1,6 @@
 export interface CreateProductRequest {
   name: string;
-  description?: string;
+  description?: string | null;
   category?: string;
   brand?: string | null;
   // sku ya no viene del cliente — se genera en el backend automáticamente
@@ -11,7 +11,7 @@ export interface CreateProductRequest {
 
 export interface UpdateProductRequest {
   name?: string;
-  description?: string;
+  description?: string | null;
   category?: string;
   brand?: string | null;
   basePrice?: number;
@@ -66,6 +66,12 @@ export interface ConfirmSaleRequest {
   discountPercent?: number;
   discountAmount?: number;
   paymentMethods: Array<{ method: string; amount: number }>;
+  /**
+   * Ajuste de redondeo de efectivo sugerido/editado por el cajero (siempre
+   * <= 0). Solo se aplica si el pago es 100% efectivo; se ignora en pago
+   * mixto o con otros medios.
+   */
+  roundingAdjustment?: number;
 }
 
 // ── Fase 4: AFIP ─────────────────────────────────────────────────────────────
@@ -113,6 +119,7 @@ export interface CreateSaleRequest {
   taxRate: number;
   taxAmount: number;
   totalAmount: number;
+  roundingAdjustment: number;
   paymentMethods: Array<{ method: string; amount: number }>;
 }
 

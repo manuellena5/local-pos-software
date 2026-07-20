@@ -29,6 +29,8 @@ export interface InstallationConfig {
   catalogBusinessUnitId: number | null;
   printerConfig: PrinterConfig | null;
   printerEnabled: boolean;
+  /** Múltiplo de redondeo comercial para pagos 100% en efectivo — 0 = desactivado */
+  roundingMultiple: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -241,9 +243,11 @@ export interface StockMovement {
   notes?: string | null;
   variantId?: number | null;
   supplierId?: number | null;
-  /** Enriquecidos por el endpoint de historial */
+  /** Enriquecidos por el endpoint de historial / reporte de stock */
   variantLabel?: string | null;
   supplierName?: string | null;
+  productName?: string | null;
+  productSku?: string | null;
   createdAt: string;
 }
 
@@ -274,6 +278,8 @@ export interface Sale {
   taxRate: number;
   taxAmount: number;
   totalAmount: number;
+  /** Ajuste de redondeo aplicado (siempre <= 0). totalAmount ya lo incluye. */
+  roundingAdjustment: number;
   paymentMethods: PaymentMethod[];
   customerId: number | null;
   status: 'completed' | 'cancelled';
@@ -408,6 +414,8 @@ export interface SaleTicketData {
   globalDiscount?: number;
   /** Monto descontado en $ */
   globalDiscountAmount?: number;
+  /** Ajuste de redondeo aplicado (negativo o 0) — se imprime antes del TOTAL */
+  roundingAdjustment?: number;
   total: number;
   payments: Array<{
     method: string;
@@ -526,6 +534,8 @@ export interface ReporteZData {
     theoreticalBalance: number;
     declaredBalance: number;
     difference: number;
+    /** Suma de los ajustes de redondeo de efectivo de la sesión (siempre <= 0) */
+    totalRoundingAdjustment: number;
   };
 
   afip: {

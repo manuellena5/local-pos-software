@@ -359,6 +359,11 @@ export function SalesList({
                       >
                         ${sale.totalAmount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
+                      {sale.roundingAdjustment < 0 && (
+                        <div className="text-orange-600" style={{ fontSize: '10px' }}>
+                          redondeo −${Math.abs(sale.roundingAdjustment).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      )}
                     </td>
 
                     {/* Col 5 — Pago */}

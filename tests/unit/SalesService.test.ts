@@ -202,4 +202,137 @@ describe('SalesService', () => {
       ).toThrow();
     });
   });
+
+  describe('confirmSale — redondeo de efectivo', () => {
+    const baseItem = {
+      productId: 1,
+      productName: 'Producto',
+      quantity: 1,
+      unitPrice: 1230,
+      taxRate: 21,
+      discountPercent: 0,
+    };
+
+    function setup() {
+      const fakeProduct = { id: 1, businessUnitId: 1 };
+      const fakeResult = {
+        sale: { id: 1, saleNumber: 1, totalAmount: 1230, roundingAdjustment: 0, paymentMethods: [] },
+        items: [],
+      };
+      const mockProductRepo = { getById: vi.fn().mockReturnValue(fakeProduct) } as unknown as never;
+      const mockSaleRepo = { create: vi.fn().mockReturnValue(fakeResult) } as unknown as never;
+      const svc = new SalesService(mockSaleRepo, mockProductRepo);
+      return { svc, mockSaleRepo };
+    }
+
+    it('should apply rounding adjustment when payment is 100% cash', () => {
+      const { svc, mockSaleRepo } = setup();
+
+      svc.confirmSale({
+        businessUnitId: 1,
+        items: [baseItem],
+        paymentMethods: [{ method: 'cash', amount: 1200 }],
+        roundingAdjustment: -30,
+      });
+
+      const callArgs = vi.mocked(mockSaleRepo.create).mock.calls[0]?.[0] as {
+        totalAmount: number;
+        roundingAdjustment: number;
+      };
+      expect(callArgs.totalAmount).toBe(1200);
+      expect(callArgs.roundingAdjustment).toBe(-30);
+    });
+
+    it('should ignore rounding adjustment for non-cash payments', () => {
+      const { svc, mockSaleRepo } = setup();
+
+      svc.confirmSale({
+        businessUnitId: 1,
+        items: [baseItem],
+        paymentMethods: [{ method: 'card', amount: 1230 }],
+        roundingAdjustment: -30,
+      });
+
+      const callArgs = vi.mocked(mockSaleRepo.create).mock.calls[0]?.[0] as {
+        totalAmount: number;
+        roundingAdjustment: number;
+      };
+      expect(callArgs.totalAmount).toBe(1230);
+      expect(callArgs.roundingAdjustment).toBe(0);
+    });
+
+    it('should ignore rounding adjustment for mixed payments (cash + other)', () => {
+      const { svc, mockSaleRepo } = setup();
+
+      svc.confirmSale({
+        businessUnitId: 1,
+        items: [baseItem],
+        paymentMethods: [
+          { method: 'cash', amount: 600 },
+          { method: 'card', amount: 630 },
+        ],
+        roundingAdjustment: -30,
+      });
+
+      const callArgs = vi.mocked(mockSaleRepo.create).mock.calls[0]?.[0] as {
+        totalAmount: number;
+        roundingAdjustment: number;
+      };
+      expect(callArgs.totalAmount).toBe(1230);
+      expect(callArgs.roundingAdjustment).toBe(0);
+    });
+
+    it('should never allow a positive adjustment (rounding up)', () => {
+      const { svc, mockSaleRepo } = setup();
+
+      svc.confirmSale({
+        businessUnitId: 1,
+        items: [baseItem],
+        paymentMethods: [{ method: 'cash', amount: 1300 }],
+        roundingAdjustment: 70, // intento de "redondear para arriba"
+      });
+
+      const callArgs = vi.mocked(mockSaleRepo.create).mock.calls[0]?.[0] as {
+        totalAmount: number;
+        roundingAdjustment: number;
+      };
+      expect(callArgs.totalAmount).toBe(1230);
+      expect(callArgs.roundingAdjustment).toBe(0);
+    });
+
+    it('should clamp the adjustment so the total never goes negative', () => {
+      const { svc, mockSaleRepo } = setup();
+
+      svc.confirmSale({
+        businessUnitId: 1,
+        items: [baseItem],
+        paymentMethods: [{ method: 'cash', amount: 0 }],
+        roundingAdjustment: -5000, // mucho mayor al total
+      });
+
+      const callArgs = vi.mocked(mockSaleRepo.create).mock.calls[0]?.[0] as {
+        totalAmount: number;
+        roundingAdjustment: number;
+      };
+      expect(callArgs.totalAmount).toBe(0);
+      expect(callArgs.roundingAdjustment).toBe(-1230);
+    });
+
+    it('should default to 0 adjustment when none is sent', () => {
+      const { svc, mockSaleRepo } = setup();
+
+      svc.confirmSale({
+        businessUnitId: 1,
+        items: [baseItem],
+        paymentMethods: [{ method: 'cash', amount: 1230 }],
+      });
+
+      const callArgs = vi.mocked(mockSaleRepo.create).mock.calls[0]?.[0] as {
+        totalAmount: number;
+        roundingAdjustment: number;
+      };
+      expect(callArgs.totalAmount).toBe(1230);
+      expect(callArgs.roundingAdjustment).toBe(0);
+    });
+  });
 });

@@ -9,6 +9,8 @@ export const installationConfig = sqliteTable('installation_config', {
   logoPath: text('logo_path'),
   printerConfig: text('printer_config'),
   printerEnabled: integer('printer_enabled', { mode: 'boolean' }).notNull().default(false),
+  // Redondeo comercial de efectivo — 0 = desactivado. Ver 0033_sales_rounding.sql.
+  roundingMultiple: integer('rounding_multiple').notNull().default(50),
   createdAt: text('created_at')
     .notNull()
     .default(sql`(datetime('now'))`),

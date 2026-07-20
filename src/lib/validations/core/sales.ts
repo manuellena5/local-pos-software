@@ -24,6 +24,8 @@ export const confirmSaleSchema = z.object({
   paymentMethods: z
     .array(paymentMethodSchema)
     .min(1, 'Debe indicar al menos un medio de pago'),
+  /** Ajuste de redondeo de efectivo sugerido/editado (siempre <= 0) */
+  roundingAdjustment: z.number().max(0).optional(),
 });
 
 export type ConfirmSaleInput = z.infer<typeof confirmSaleSchema>;

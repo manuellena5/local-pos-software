@@ -207,6 +207,16 @@ export function SaleDetail({ sale, businessUnitId, onSaleUpdated }: Props) {
                       </td>
                     </tr>
                   )}
+                  {sale.roundingAdjustment < 0 && (
+                    <tr>
+                      <td colSpan={3} className="py-1.5 px-3 text-orange-700">
+                        Redondeo (efectivo)
+                      </td>
+                      <td className="py-1.5 px-3 text-right text-orange-700">
+                        −{fmtMoney(sale.roundingAdjustment)}
+                      </td>
+                    </tr>
+                  )}
                   <tr>
                     <td colSpan={3} className="py-2 px-3 font-semibold text-gray-900">
                       Total

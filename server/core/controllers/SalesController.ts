@@ -100,7 +100,7 @@ export class SalesController {
         throw new ValidationError('businessUnitId debe ser un número válido');
       }
 
-      const { items, discountPercent, discountAmount, paymentMethods, userId, customerId } = req.body;
+      const { items, discountPercent, discountAmount, paymentMethods, userId, customerId, roundingAdjustment } = req.body;
 
       if (!Array.isArray(items) || items.length === 0) {
         throw new ValidationError('Se requiere al menos un item en el carrito');
@@ -117,6 +117,7 @@ export class SalesController {
         discountPercent: discountPercent ? Number(discountPercent) : 0,
         discountAmount: discountAmount ? Number(discountAmount) : 0,
         paymentMethods,
+        roundingAdjustment: roundingAdjustment ? Number(roundingAdjustment) : undefined,
       });
 
       res.status(201).json({ data: result, error: null });

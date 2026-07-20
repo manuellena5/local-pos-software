@@ -137,6 +137,12 @@ export function ReporteZModal({ auditId, businessUnitId, onClose }: Props) {
               <Row label="Ingresos manuales:" value={fmtMoney(data.cash.manualIncome)} />
               <Row label="Egresos manuales:" value={fmtMoney(data.cash.manualExpense)} />
               <Row label="Cobros en efectivo:" value={fmtMoney(data.cash.cashSalesTotal)} />
+              {data.cash.totalRoundingAdjustment < 0 && (
+                <Row
+                  label="Redondeo aplicado:"
+                  value={`−${fmtMoney(Math.abs(data.cash.totalRoundingAdjustment))}`}
+                />
+              )}
               <Separator />
               <Row label="Saldo teórico:" value={fmtMoney(data.cash.theoreticalBalance)} />
               <Row label="Saldo declarado:" value={fmtMoney(data.cash.declaredBalance)} />

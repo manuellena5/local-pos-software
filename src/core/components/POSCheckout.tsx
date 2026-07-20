@@ -5,7 +5,7 @@ import { POSDiscountSection } from './POSDiscountSection';
 import { POSPaymentMethods } from './POSPaymentMethods';
 import { buildTicketData } from './POSReceiptModal';
 import { POSSaleConfirmModal } from './POSSaleConfirmModal';
-import { formatCurrency } from '@/lib/utils/pricing';
+import { formatCurrency, roundDownToMultiple } from '@/lib/utils/pricing';
 import { printerApi } from '@/lib/api/printer';
 import { customersApi } from '@/lib/api/customers';
 import { useAppStore } from '@/core/store/appStore';
@@ -24,7 +24,7 @@ interface POSCheckoutProps {
 }
 
 export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCheckoutProps) {
-  const { cart, totals, paymentMethods, discountPercent, discountAmount, setDiscountPercent, setDiscountAmount, clearCart } = useCart();
+  const { cart, totals, paymentMethods, discountPercent, discountAmount, setDiscountPercent, setDiscountAmount, setPaymentMethods, clearCart } = useCart();
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>(undefined);
   const { confirmSale, isProcessing, error } = usePOS(businessUnitId, selectedCustomerId);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -32,6 +32,32 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   const printerStatus = useAppStore((s) => s.printerStatus);
   const config = useAppStore((s) => s.config);
   const activeBU = useAppStore((s) => s.activeBU);
+
+  // ── Redondeo de efectivo (comercial) ──────────────────────────────────────
+  // Solo aplica si el medio de pago es 100% efectivo. El monto sugerido
+  // (floor al múltiplo configurado) es editable por el cajero antes de confirmar.
+  const roundingMultiple = config?.roundingMultiple ?? 0;
+  const isCashOnly = paymentMethods.length === 1 && paymentMethods[0]?.method === 'cash';
+  const cashSuggestedTotal = roundDownToMultiple(totals.totalAmount, roundingMultiple);
+  const [cashOverride, setCashOverride] = useState<number | null>(null);
+  useEffect(() => { setCashOverride(null); }, [cashSuggestedTotal]);
+  const cashChargedTotal = cashOverride ?? cashSuggestedTotal;
+  const roundingAdjustment = isCashOnly
+    ? Math.round((cashChargedTotal - totals.totalAmount) * 100) / 100
+    : 0;
+  // Monto realmente adeudado — total con redondeo si aplica, si no el total normal
+  const amountOwed = isCashOnly ? cashChargedTotal : totals.totalAmount;
+
+  // "A cobrar" y "Monto $" (POSPaymentMethods) deben mostrar el mismo número
+  // por defecto. Si el cajero después edita "Monto $" a mano (para calcular
+  // vuelto de un billete más grande), ese valor no se pisa — este efecto solo
+  // reacciona a cambios en el monto a cobrar, no en paymentMethods.
+  useEffect(() => {
+    if (isCashOnly) {
+      setPaymentMethods([{ method: 'cash', amount: cashChargedTotal }]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cashChargedTotal, isCashOnly]);
 
   // ── Clientes ────────────────────────────────────────────────────────────────
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -64,7 +90,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   const canConfirm =
     cart.length > 0 &&
     paymentMethods.length > 0 &&
-    totalPaid >= totals.totalAmount - 1 &&
+    totalPaid >= amountOwed - 1 &&
     !isProcessing &&
     !hasStockIssues;
 
@@ -73,8 +99,8 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   if (cart.length === 0) disabledReason = 'Agregá productos al carrito';
   else if (hasStockIssues) disabledReason = 'Hay productos sin stock suficiente';
   else if (paymentMethods.length === 0) disabledReason = 'Seleccioná un medio de pago';
-  else if (totalPaid < totals.totalAmount - 1)
-    disabledReason = `Falta cubrir ${formatCurrency(totals.totalAmount - totalPaid)}`;
+  else if (totalPaid < amountOwed - 1)
+    disabledReason = `Falta cubrir ${formatCurrency(amountOwed - totalPaid)}`;
 
   // Abre el modal de confirmación (no confirma todavía)
   const openConfirmModal = useCallback(() => {
@@ -84,7 +110,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
   // Callback que recibe el modal: confirma la venta y opcionalmente imprime
   const handleConfirmWithPrint = useCallback(async (shouldPrint: boolean): Promise<ConfirmResult> => {
     const customerAtConfirm = selectedCustomer;
-    const { result, errorMsg } = await confirmSale();
+    const { result, errorMsg } = await confirmSale(isCashOnly ? roundingAdjustment : undefined);
     if (!result) {
       return { saleError: errorMsg ?? 'No se pudo registrar la venta. Intentá nuevamente.' };
     }
@@ -108,7 +134,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
       return { printError: 'No se pudo conectar con el servicio de impresión.' };
     }
     return {};
-  }, [confirmSale, selectedCustomer, config, activeBU, onSaleComplete]);
+  }, [confirmSale, selectedCustomer, config, activeBU, onSaleComplete, isCashOnly, roundingAdjustment]);
 
   // Shortcuts globales: Enter → confirmar, Esc → vaciar carrito
   useEffect(() => {
@@ -229,11 +255,43 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
         </div>
 
         {/* ── TOTAL A PAGAR ────────────────────────────────────────────────── */}
-        <div className="shrink-0 px-3 py-1.5 bg-blue-50 border-y-2 border-blue-400 flex items-center justify-between">
-          <span style={{ fontSize: 11 }} className="font-semibold text-blue-700 uppercase tracking-wide">Total a pagar</span>
-          <span style={{ fontSize: 20 }} className="font-bold text-blue-800 tabular-nums">
-            {formatCurrency(totals.totalAmount)}
-          </span>
+        <div className="shrink-0 px-3 py-1.5 bg-blue-50 border-y-2 border-blue-400">
+          <div className="flex items-center justify-between">
+            <span style={{ fontSize: 11 }} className="font-semibold text-blue-700 uppercase tracking-wide">
+              {isCashOnly && roundingAdjustment !== 0 ? 'Total (sin redondear)' : 'Total a pagar'}
+            </span>
+            <span style={{ fontSize: isCashOnly && roundingAdjustment !== 0 ? 13 : 20 }} className="font-bold text-blue-800 tabular-nums">
+              {formatCurrency(totals.totalAmount)}
+            </span>
+          </div>
+
+          {isCashOnly && roundingAdjustment !== 0 && (
+            <>
+              <div className="flex items-center justify-between mt-0.5" style={{ fontSize: 12 }}>
+                <span className="text-amber-700">Redondeo (efectivo)</span>
+                <span className="font-medium text-amber-700 tabular-nums">
+                  −{formatCurrency(Math.abs(roundingAdjustment))}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span style={{ fontSize: 11 }} className="font-semibold text-blue-700 uppercase tracking-wide">A cobrar</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-800" style={{ fontSize: 16 }}>$</span>
+                  <input
+                    type="number"
+                    step={1}
+                    value={cashChargedTotal}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setCashOverride(isNaN(val) ? 0 : val);
+                    }}
+                    style={{ fontSize: 20, width: 100 }}
+                    className="font-bold text-blue-800 tabular-nums text-right bg-white border border-blue-300 rounded px-1"
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* ── DESGLOSE FISCAL (colapsable) ─────────────────────────────────── */}
@@ -288,7 +346,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
         {/* ── MEDIOS DE PAGO ───────────────────────────────────────────────── */}
         <div className="shrink-0 px-3 py-1.5 border-b border-gray-100">
           <SectionLabel>Medios de pago</SectionLabel>
-          <POSPaymentMethods />
+          <POSPaymentMethods cashSuggestedTotal={cashChargedTotal} />
         </div>
 
         </div>{/* fin bloque scrolleable */}
@@ -313,7 +371,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
             }`}
           >
             {canConfirm
-              ? `✓ Confirmar — ${formatCurrency(totals.totalAmount)}`
+              ? `✓ Confirmar — ${formatCurrency(amountOwed)}`
               : '✓ Confirmar venta'}
           </button>
 
@@ -364,6 +422,7 @@ export function POSCheckout({ businessUnitId, stockData, onSaleComplete }: POSCh
           paymentMethods={paymentMethods}
           totals={totals}
           printerStatus={printerStatus}
+          roundingAdjustment={isCashOnly ? roundingAdjustment : 0}
           onConfirm={handleConfirmWithPrint}
           onCancel={() => setShowConfirmModal(false)}
         />

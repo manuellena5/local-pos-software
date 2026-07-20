@@ -42,6 +42,7 @@ export function initDatabase(): void {
     '0030_cash_movements_code.sql',
     '0031_cash_payment_methods.sql',
     '0032_payment_methods.sql',
+    '0033_sales_rounding.sql',
   ];
 
   const migrationsDir =

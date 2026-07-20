@@ -70,6 +70,7 @@ export class ReporteZService {
     const completedSales = sessionSales.filter((s) => s.status === 'completed');
     const cancelledCount = sessionSales.filter((s) => s.status === 'cancelled').length;
     const salesTotal = completedSales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalRoundingAdjustment = completedSales.reduce((sum, s) => sum + s.roundingAdjustment, 0);
     const salesCount = completedSales.length;
     const averageTicket = salesCount > 0 ? Math.round((salesTotal / salesCount) * 100) / 100 : 0;
 
@@ -137,6 +138,7 @@ export class ReporteZService {
         theoreticalBalance: audit.theoreticalBalance,
         declaredBalance: audit.realBalance,
         difference: audit.difference,
+        totalRoundingAdjustment: Math.round(totalRoundingAdjustment * 100) / 100,
       },
       afip: {
         emitted: afipEmitted,

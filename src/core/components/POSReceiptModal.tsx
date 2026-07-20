@@ -79,6 +79,7 @@ export function buildTicketData(
     subtotalBeforeDiscount: s.discountAmount > 0 ? s.subtotal : undefined,
     globalDiscount: s.discountPercent > 0 ? s.discountPercent : undefined,
     globalDiscountAmount: s.discountAmount > 0 ? s.discountAmount : undefined,
+    roundingAdjustment: s.roundingAdjustment < 0 ? s.roundingAdjustment : undefined,
     total: s.totalAmount,
     payments: s.paymentMethods.map((p) => ({
       method: METHOD_LABELS[p.method] ?? p.method,
@@ -179,6 +180,12 @@ export function POSReceiptModal({ sale, customer, onClose }: POSReceiptModalProp
               <div className="flex justify-between text-green-600">
                 <span>Descuento</span>
                 <span>−{formatCurrency(s.discountAmount)}</span>
+              </div>
+            )}
+            {s.roundingAdjustment < 0 && (
+              <div className="flex justify-between text-amber-600">
+                <span>Redondeo</span>
+                <span>−{formatCurrency(Math.abs(s.roundingAdjustment))}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-gray-900 text-sm border-t pt-1 mt-1">
