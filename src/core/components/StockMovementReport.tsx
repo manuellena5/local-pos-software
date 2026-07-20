@@ -82,6 +82,7 @@ export function StockMovementReport({ businessUnitId }: Props) {
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">Fecha</th>
+                <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">Producto</th>
                 <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">Tipo</th>
                 <th className="text-right text-xs text-gray-500 font-medium py-2 px-3">Cantidad</th>
                 <th className="text-left text-xs text-gray-500 font-medium py-2 px-3">Motivo</th>
@@ -94,6 +95,18 @@ export function StockMovementReport({ businessUnitId }: Props) {
                     {formatDateTime(m.createdAt)}
                   </td>
                   <td className="py-2 px-3">
+                    {m.productName ? (
+                      <>
+                        <div className="text-gray-800 font-medium">{m.productName}</div>
+                        <div className="text-[11px] text-gray-400 font-mono">
+                          {m.productSku}{m.variantLabel ? ` · ${m.variantLabel}` : ''}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                  <td className="py-2 px-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_COLORS[m.type] ?? 'bg-gray-100 text-gray-600'}`}>
                       {TYPE_LABELS[m.type] ?? m.type}
                     </span>
@@ -101,7 +114,7 @@ export function StockMovementReport({ businessUnitId }: Props) {
                   <td className={`py-2 px-3 text-right font-medium ${m.quantity > 0 ? 'text-green-700' : 'text-red-600'}`}>
                     {m.quantity > 0 ? '+' : ''}{m.quantity}
                   </td>
-                  <td className="py-2 px-3 text-gray-600">{m.reason}</td>
+                  <td className="py-2 px-3 text-gray-600">{m.reasonLabel ?? m.reason}</td>
                 </tr>
               ))}
             </tbody>

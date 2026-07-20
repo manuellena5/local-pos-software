@@ -1,5 +1,5 @@
-import { db } from '../../db/connection';
-import { sales, saleItems, products, customers, stockMovements } from '../../db/schema';
+import { db, sqlite } from '../../db/connection';
+import { sales, saleItems, products, customers, stockMovements, stockItems } from '../../db/schema';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import type {
   SalesReport,
@@ -201,7 +201,10 @@ export class ReportService {
   }
 
   /**
-   * Movimientos de stock de una BU en un rango de fechas.
+   * Movimientos de stock de una BU en un rango de fechas, con nombre/SKU del
+   * producto (join con stock_items → products) y etiqueta de variante si
+   * corresponde (join "suave" con la tabla del módulo retail-textil — puede
+   * no estar migrada, de ahí el try/catch).
    */
   getStockMovements(
     businessUnitId: number,
@@ -215,12 +218,49 @@ export class ReportService {
       conditions.push(lte(stockMovements.createdAt, localDateToUtcEndOfDayBoundary(filters.toDate)));
     }
 
-    return db
-      .select()
+    const rows = db
+      .select({
+        id:             stockMovements.id,
+        stockItemId:    stockMovements.stockItemId,
+        businessUnitId: stockMovements.businessUnitId,
+        type:           stockMovements.type,
+        quantity:       stockMovements.quantity,
+        reason:         stockMovements.reason,
+        reasonLabel:    stockMovements.reasonLabel,
+        unitCost:       stockMovements.unitCost,
+        userId:         stockMovements.userId,
+        quantityBefore: stockMovements.quantityBefore,
+        quantityAfter:  stockMovements.quantityAfter,
+        notes:          stockMovements.notes,
+        variantId:      stockMovements.variantId,
+        supplierId:     stockMovements.supplierId,
+        createdAt:      stockMovements.createdAt,
+        productName:    products.name,
+        productSku:     products.sku,
+      })
       .from(stockMovements)
+      .leftJoin(stockItems, eq(stockMovements.stockItemId, stockItems.id))
+      .leftJoin(products, eq(stockItems.productId, products.id))
       .where(and(...conditions))
       .orderBy(desc(stockMovements.createdAt))
-      .all() as StockMovement[];
+      .all();
+
+    return rows.map((m) => {
+      let variantLabel: string | null = null;
+      if (m.variantId) {
+        try {
+          type VRow = { attribute_type: string; attribute_value: string };
+          const v = sqlite
+            .prepare('SELECT attribute_type, attribute_value FROM product_variants WHERE id = ?')
+            .get(m.variantId) as VRow | undefined;
+          if (v) variantLabel = `${v.attribute_type}: ${v.attribute_value}`;
+        } catch { /* tabla del módulo retail-textil no migrada */ }
+      }
+      if (!variantLabel && m.notes?.startsWith('Variante: ')) {
+        variantLabel = m.notes.slice('Variante: '.length);
+      }
+      return { ...m, variantLabel } as StockMovement;
+    });
   }
 
   /**
