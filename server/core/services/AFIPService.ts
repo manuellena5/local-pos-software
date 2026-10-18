@@ -110,6 +110,8 @@ export class AFIPService {
         'Concepto': 1, // Productos
         'DocTipo': 99, // Consumidor final
         'DocNro': 0,
+        // parche: 5 = Consumidor Final (DocTipo 99, sin identificar)
+        'CondicionIVAReceptorId': 5,
         'CbteDesde': nextNumber,
         'CbteHasta': nextNumber,
         'CbteFch': req.date,
