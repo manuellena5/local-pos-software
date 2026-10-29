@@ -1,5 +1,5 @@
 -- Fase 4: AFIP Electronic Invoicing fields on sales table
-ALTER TABLE sales ADD COLUMN invoice_number TEXT;
+-- invoice_number ya se crea en 0003_sales_and_sale_items.sql — no se repite acá.
 ALTER TABLE sales ADD COLUMN cae TEXT;
 ALTER TABLE sales ADD COLUMN cae_expiration TEXT;
 ALTER TABLE sales ADD COLUMN invoice_status TEXT NOT NULL DEFAULT 'pending';
