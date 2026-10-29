@@ -5,7 +5,8 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    environment: 'node',
+    environmentMatchGlobs: [['tests/unit/useColumnResize.test.ts', 'jsdom']],
     globals: true,
     include: ['tests/**/*.test.{ts,tsx}'],
   },
