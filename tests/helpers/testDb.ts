@@ -35,6 +35,21 @@ export interface TestDb {
  * singleton cacheado por un test anterior del mismo archivo.
  */
 export async function createTestDb(): Promise<TestDb> {
+  const { db, sqlite, initDatabase, cleanup } = await createRawTestDb();
+  initDatabase();
+  return { db, sqlite, cleanup };
+}
+
+export interface RawTestDb extends TestDb {
+  initDatabase: () => void;
+}
+
+/**
+ * Como createTestDb(), pero NO corre initDatabase() — para tests que
+ * necesitan controlar manualmente cuándo y cuántas veces se migra
+ * (doble arranque, baseline sobre una base preexistente, etc.).
+ */
+export async function createRawTestDb(): Promise<RawTestDb> {
   const dbPath = path.join(os.tmpdir(), `localpos-test-${randomUUID()}.db`);
   process.env.LOCALPOS_DB_PATH = dbPath;
   process.env.LOCALPOS_MIGRATIONS_PATH = path.join(__dirname, '../../server/db/migrations');
@@ -43,7 +58,6 @@ export async function createTestDb(): Promise<TestDb> {
 
   const { db, sqlite } = await import('../../server/db/connection');
   const { initDatabase } = await import('../../server/db/init');
-  initDatabase();
 
   const cleanup = (): void => {
     sqlite.close();
@@ -53,7 +67,7 @@ export async function createTestDb(): Promise<TestDb> {
     }
   };
 
-  return { db, sqlite, cleanup };
+  return { db, sqlite, initDatabase, cleanup };
 }
 
 export function seedInstallation(
